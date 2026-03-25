@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\ClassificationController;
 use App\Http\Controllers\Api\ClusterController;
+use App\Http\Controllers\Api\DashboardController;
 use App\Http\Controllers\Api\DomainController;
 use App\Http\Controllers\Api\KeywordController;
 use App\Http\Controllers\Api\ProjectController;
@@ -22,6 +23,9 @@ Route::middleware('auth:sanctum')->group(function () {
 });
 
 Route::middleware(['auth:sanctum', 'org'])->group(function () {
+    // Dashboard
+    Route::get('dashboard/summary', [DashboardController::class, 'summary']);
+
     // Projects
     Route::apiResource('projects', ProjectController::class);
 
