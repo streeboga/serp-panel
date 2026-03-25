@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\RegionController;
 use App\Http\Controllers\Api\ScheduleController;
 use App\Http\Controllers\Api\ScraperController;
 use App\Http\Controllers\Api\SerpController;
+use App\Http\Controllers\Api\WordstatController;
+use App\Http\Controllers\Api\WordstatScheduleController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -65,4 +67,11 @@ Route::middleware(['auth:sanctum', 'org'])->group(function () {
     Route::apiResource('classification/rules', ClassificationController::class);
     Route::put('domains/{domain}/classify', [ClassificationController::class, 'classifyDomain']);
     Route::get('site-types', [ClassificationController::class, 'siteTypes']);
+
+    // Wordstat
+    Route::get('keywords/{keyword}/wordstat', [WordstatController::class, 'frequencies']);
+    Route::get('keywords/{keyword}/wordstat/trends', [WordstatController::class, 'trends']);
+    Route::get('keywords/{keyword}/wordstat/suggestions', [WordstatController::class, 'suggestions']);
+    Route::apiResource('wordstat-schedules', WordstatScheduleController::class);
+    Route::post('wordstat-schedules/{wordstatSchedule}/run-now', [WordstatScheduleController::class, 'runNow']);
 });

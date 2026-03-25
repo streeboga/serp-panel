@@ -12,3 +12,4 @@ Schedule::command('schedules:check')->everyMinute();
 Schedule::command('scrape-jobs:dispatch')->everyMinute();
 Schedule::command('partitions:create')->daily();
 Schedule::command('cleanup:raw-responses')->daily();
+Schedule::command('wordstat:check')->everyFifteenMinutes();
