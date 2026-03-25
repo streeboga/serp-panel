@@ -12,6 +12,16 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SettingsIndexRouteImport } from './routes/settings/index'
+import { Route as ScrapersIndexRouteImport } from './routes/scrapers/index'
+import { Route as SchedulesIndexRouteImport } from './routes/schedules/index'
+import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
+import { Route as ClassificationIndexRouteImport } from './routes/classification/index'
+import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
+import { Route as ClassificationDomainsRouteImport } from './routes/classification/domains'
+import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
+import { Route as ProjectsProjectIdKeywordsRouteImport } from './routes/projects/$projectId/keywords'
+import { Route as ProjectsProjectIdKeywordsKeywordIdRouteImport } from './routes/projects/$projectId/keywords/$keywordId'
 
 const RegisterRoute = RegisterRouteImport.update({
   id: '/register',
@@ -28,35 +38,162 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsIndexRoute = SettingsIndexRouteImport.update({
+  id: '/settings/',
+  path: '/settings/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ScrapersIndexRoute = ScrapersIndexRouteImport.update({
+  id: '/scrapers/',
+  path: '/scrapers/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SchedulesIndexRoute = SchedulesIndexRouteImport.update({
+  id: '/schedules/',
+  path: '/schedules/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
+  id: '/projects/',
+  path: '/projects/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClassificationIndexRoute = ClassificationIndexRouteImport.update({
+  id: '/classification/',
+  path: '/classification/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
+  id: '/projects/$projectId',
+  path: '/projects/$projectId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ClassificationDomainsRoute = ClassificationDomainsRouteImport.update({
+  id: '/classification/domains',
+  path: '/classification/domains',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProjectsProjectIdIndexRoute = ProjectsProjectIdIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ProjectsProjectIdRoute,
+} as any)
+const ProjectsProjectIdKeywordsRoute =
+  ProjectsProjectIdKeywordsRouteImport.update({
+    id: '/keywords',
+    path: '/keywords',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ProjectsProjectIdKeywordsKeywordIdRoute =
+  ProjectsProjectIdKeywordsKeywordIdRouteImport.update({
+    id: '/$keywordId',
+    path: '/$keywordId',
+    getParentRoute: () => ProjectsProjectIdKeywordsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/classification/domains': typeof ClassificationDomainsRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/classification/': typeof ClassificationIndexRoute
+  '/projects/': typeof ProjectsIndexRoute
+  '/schedules/': typeof SchedulesIndexRoute
+  '/scrapers/': typeof ScrapersIndexRoute
+  '/settings/': typeof SettingsIndexRoute
+  '/projects/$projectId/keywords': typeof ProjectsProjectIdKeywordsRouteWithChildren
+  '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
+  '/projects/$projectId/keywords/$keywordId': typeof ProjectsProjectIdKeywordsKeywordIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/classification/domains': typeof ClassificationDomainsRoute
+  '/classification': typeof ClassificationIndexRoute
+  '/projects': typeof ProjectsIndexRoute
+  '/schedules': typeof SchedulesIndexRoute
+  '/scrapers': typeof ScrapersIndexRoute
+  '/settings': typeof SettingsIndexRoute
+  '/projects/$projectId/keywords': typeof ProjectsProjectIdKeywordsRouteWithChildren
+  '/projects/$projectId': typeof ProjectsProjectIdIndexRoute
+  '/projects/$projectId/keywords/$keywordId': typeof ProjectsProjectIdKeywordsKeywordIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
+  '/classification/domains': typeof ClassificationDomainsRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/classification/': typeof ClassificationIndexRoute
+  '/projects/': typeof ProjectsIndexRoute
+  '/schedules/': typeof SchedulesIndexRoute
+  '/scrapers/': typeof ScrapersIndexRoute
+  '/settings/': typeof SettingsIndexRoute
+  '/projects/$projectId/keywords': typeof ProjectsProjectIdKeywordsRouteWithChildren
+  '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
+  '/projects/$projectId/keywords/$keywordId': typeof ProjectsProjectIdKeywordsKeywordIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/login' | '/register'
+  fullPaths:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/classification/domains'
+    | '/projects/$projectId'
+    | '/classification/'
+    | '/projects/'
+    | '/schedules/'
+    | '/scrapers/'
+    | '/settings/'
+    | '/projects/$projectId/keywords'
+    | '/projects/$projectId/'
+    | '/projects/$projectId/keywords/$keywordId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/login' | '/register'
-  id: '__root__' | '/' | '/login' | '/register'
+  to:
+    | '/'
+    | '/login'
+    | '/register'
+    | '/classification/domains'
+    | '/classification'
+    | '/projects'
+    | '/schedules'
+    | '/scrapers'
+    | '/settings'
+    | '/projects/$projectId/keywords'
+    | '/projects/$projectId'
+    | '/projects/$projectId/keywords/$keywordId'
+  id:
+    | '__root__'
+    | '/'
+    | '/login'
+    | '/register'
+    | '/classification/domains'
+    | '/projects/$projectId'
+    | '/classification/'
+    | '/projects/'
+    | '/schedules/'
+    | '/scrapers/'
+    | '/settings/'
+    | '/projects/$projectId/keywords'
+    | '/projects/$projectId/'
+    | '/projects/$projectId/keywords/$keywordId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
+  ClassificationDomainsRoute: typeof ClassificationDomainsRoute
+  ProjectsProjectIdRoute: typeof ProjectsProjectIdRouteWithChildren
+  ClassificationIndexRoute: typeof ClassificationIndexRoute
+  ProjectsIndexRoute: typeof ProjectsIndexRoute
+  SchedulesIndexRoute: typeof SchedulesIndexRoute
+  ScrapersIndexRoute: typeof ScrapersIndexRoute
+  SettingsIndexRoute: typeof SettingsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,13 +219,118 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/settings/': {
+      id: '/settings/'
+      path: '/settings'
+      fullPath: '/settings/'
+      preLoaderRoute: typeof SettingsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/scrapers/': {
+      id: '/scrapers/'
+      path: '/scrapers'
+      fullPath: '/scrapers/'
+      preLoaderRoute: typeof ScrapersIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/schedules/': {
+      id: '/schedules/'
+      path: '/schedules'
+      fullPath: '/schedules/'
+      preLoaderRoute: typeof SchedulesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/': {
+      id: '/projects/'
+      path: '/projects'
+      fullPath: '/projects/'
+      preLoaderRoute: typeof ProjectsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/classification/': {
+      id: '/classification/'
+      path: '/classification'
+      fullPath: '/classification/'
+      preLoaderRoute: typeof ClassificationIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/$projectId': {
+      id: '/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof ProjectsProjectIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/classification/domains': {
+      id: '/classification/domains'
+      path: '/classification/domains'
+      fullPath: '/classification/domains'
+      preLoaderRoute: typeof ClassificationDomainsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/projects/$projectId/': {
+      id: '/projects/$projectId/'
+      path: '/'
+      fullPath: '/projects/$projectId/'
+      preLoaderRoute: typeof ProjectsProjectIdIndexRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/keywords': {
+      id: '/projects/$projectId/keywords'
+      path: '/keywords'
+      fullPath: '/projects/$projectId/keywords'
+      preLoaderRoute: typeof ProjectsProjectIdKeywordsRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/keywords/$keywordId': {
+      id: '/projects/$projectId/keywords/$keywordId'
+      path: '/$keywordId'
+      fullPath: '/projects/$projectId/keywords/$keywordId'
+      preLoaderRoute: typeof ProjectsProjectIdKeywordsKeywordIdRouteImport
+      parentRoute: typeof ProjectsProjectIdKeywordsRoute
+    }
   }
 }
+
+interface ProjectsProjectIdKeywordsRouteChildren {
+  ProjectsProjectIdKeywordsKeywordIdRoute: typeof ProjectsProjectIdKeywordsKeywordIdRoute
+}
+
+const ProjectsProjectIdKeywordsRouteChildren: ProjectsProjectIdKeywordsRouteChildren =
+  {
+    ProjectsProjectIdKeywordsKeywordIdRoute:
+      ProjectsProjectIdKeywordsKeywordIdRoute,
+  }
+
+const ProjectsProjectIdKeywordsRouteWithChildren =
+  ProjectsProjectIdKeywordsRoute._addFileChildren(
+    ProjectsProjectIdKeywordsRouteChildren,
+  )
+
+interface ProjectsProjectIdRouteChildren {
+  ProjectsProjectIdKeywordsRoute: typeof ProjectsProjectIdKeywordsRouteWithChildren
+  ProjectsProjectIdIndexRoute: typeof ProjectsProjectIdIndexRoute
+}
+
+const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
+  ProjectsProjectIdKeywordsRoute: ProjectsProjectIdKeywordsRouteWithChildren,
+  ProjectsProjectIdIndexRoute: ProjectsProjectIdIndexRoute,
+}
+
+const ProjectsProjectIdRouteWithChildren =
+  ProjectsProjectIdRoute._addFileChildren(ProjectsProjectIdRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
+  ClassificationDomainsRoute: ClassificationDomainsRoute,
+  ProjectsProjectIdRoute: ProjectsProjectIdRouteWithChildren,
+  ClassificationIndexRoute: ClassificationIndexRoute,
+  ProjectsIndexRoute: ProjectsIndexRoute,
+  SchedulesIndexRoute: SchedulesIndexRoute,
+  ScrapersIndexRoute: ScrapersIndexRoute,
+  SettingsIndexRoute: SettingsIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
