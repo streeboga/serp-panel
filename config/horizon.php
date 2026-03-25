@@ -214,16 +214,52 @@ return [
 
     'environments' => [
         'production' => [
-            'supervisor-1' => [
+            'serp-supervisor' => [
+                'connection' => 'redis',
+                'queue' => ['serp-scrape'],
+                'balance' => 'auto',
+                'minProcesses' => 1,
                 'maxProcesses' => 10,
-                'balanceMaxShift' => 1,
-                'balanceCooldown' => 3,
+                'tries' => 3,
+                'timeout' => 300,
+            ],
+            'wordstat-supervisor' => [
+                'connection' => 'redis',
+                'queue' => ['wordstat'],
+                'balance' => 'auto',
+                'minProcesses' => 1,
+                'maxProcesses' => 5,
+                'tries' => 3,
+                'timeout' => 300,
+            ],
+            'classification-supervisor' => [
+                'connection' => 'redis',
+                'queue' => ['classification'],
+                'balance' => 'auto',
+                'minProcesses' => 1,
+                'maxProcesses' => 3,
+                'tries' => 3,
+                'timeout' => 60,
+            ],
+            'default-supervisor' => [
+                'connection' => 'redis',
+                'queue' => ['default'],
+                'balance' => 'auto',
+                'minProcesses' => 1,
+                'maxProcesses' => 3,
+                'tries' => 3,
+                'timeout' => 60,
             ],
         ],
-
         'local' => [
-            'supervisor-1' => [
+            'default-supervisor' => [
+                'connection' => 'redis',
+                'queue' => ['serp-scrape', 'wordstat', 'classification', 'default'],
+                'balance' => 'auto',
+                'minProcesses' => 1,
                 'maxProcesses' => 3,
+                'tries' => 3,
+                'timeout' => 300,
             ],
         ],
     ],
