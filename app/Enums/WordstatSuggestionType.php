@@ -1,0 +1,9 @@
+<?php
+
+namespace App\Enums;
+
+enum WordstatSuggestionType: string
+{
+    case Suggestion = 'suggestion';
+    case Association = 'association';
+}
