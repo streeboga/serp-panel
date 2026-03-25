@@ -15,8 +15,14 @@ export function useKeywords(params: KeywordsParams) {
   return useQuery({
     queryKey: ['keywords', projectId, { page, per_page, search, engine, device }],
     queryFn: () =>
-      api.get(`/projects/${projectId}/keywords`, {
-        params: { page, per_page, search, engine, device },
+      api.get('/keywords', {
+        params: {
+          page,
+          per_page,
+          'filter[keyword]': search || undefined,
+          'filter[engine]': engine || undefined,
+          'filter[device]': device || undefined,
+        },
       }).then(r => r.data),
     enabled: !!projectId,
   })

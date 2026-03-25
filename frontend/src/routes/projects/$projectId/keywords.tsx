@@ -240,11 +240,13 @@ function KeywordsPage() {
                       <SelectValue placeholder="Select region" />
                     </SelectTrigger>
                     <SelectContent>
-                      {(regions ?? []).map((r: { id: number; name: string }) => (
-                        <SelectItem key={r.id} value={String(r.id)}>
-                          {r.name}
-                        </SelectItem>
-                      ))}
+                      {Object.entries(regions ?? {}).flatMap(([eng, list]: [string, any]) =>
+                        (list ?? []).map((r: { id: number; name: string }) => (
+                          <SelectItem key={r.id} value={String(r.id)}>
+                            {eng}: {r.name}
+                          </SelectItem>
+                        ))
+                      )}
                     </SelectContent>
                   </Select>
                 </div>
