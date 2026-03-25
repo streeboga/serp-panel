@@ -21,6 +21,8 @@ import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projec
 import { Route as ClassificationDomainsRouteImport } from './routes/classification/domains'
 import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
 import { Route as ProjectsProjectIdKeywordsRouteImport } from './routes/projects/$projectId/keywords'
+import { Route as ProjectsProjectIdDomainsRouteImport } from './routes/projects/$projectId/domains'
+import { Route as ProjectsProjectIdCompetitorsRouteImport } from './routes/projects/$projectId/competitors'
 import { Route as ProjectsProjectIdKeywordsKeywordIdRouteImport } from './routes/projects/$projectId/keywords/$keywordId'
 
 const RegisterRoute = RegisterRouteImport.update({
@@ -84,6 +86,18 @@ const ProjectsProjectIdKeywordsRoute =
     path: '/keywords',
     getParentRoute: () => ProjectsProjectIdRoute,
   } as any)
+const ProjectsProjectIdDomainsRoute =
+  ProjectsProjectIdDomainsRouteImport.update({
+    id: '/domains',
+    path: '/domains',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
+const ProjectsProjectIdCompetitorsRoute =
+  ProjectsProjectIdCompetitorsRouteImport.update({
+    id: '/competitors',
+    path: '/competitors',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
 const ProjectsProjectIdKeywordsKeywordIdRoute =
   ProjectsProjectIdKeywordsKeywordIdRouteImport.update({
     id: '/$keywordId',
@@ -102,6 +116,8 @@ export interface FileRoutesByFullPath {
   '/schedules/': typeof SchedulesIndexRoute
   '/scrapers/': typeof ScrapersIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/projects/$projectId/competitors': typeof ProjectsProjectIdCompetitorsRoute
+  '/projects/$projectId/domains': typeof ProjectsProjectIdDomainsRoute
   '/projects/$projectId/keywords': typeof ProjectsProjectIdKeywordsRouteWithChildren
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/keywords/$keywordId': typeof ProjectsProjectIdKeywordsKeywordIdRoute
@@ -116,6 +132,8 @@ export interface FileRoutesByTo {
   '/schedules': typeof SchedulesIndexRoute
   '/scrapers': typeof ScrapersIndexRoute
   '/settings': typeof SettingsIndexRoute
+  '/projects/$projectId/competitors': typeof ProjectsProjectIdCompetitorsRoute
+  '/projects/$projectId/domains': typeof ProjectsProjectIdDomainsRoute
   '/projects/$projectId/keywords': typeof ProjectsProjectIdKeywordsRouteWithChildren
   '/projects/$projectId': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/keywords/$keywordId': typeof ProjectsProjectIdKeywordsKeywordIdRoute
@@ -132,6 +150,8 @@ export interface FileRoutesById {
   '/schedules/': typeof SchedulesIndexRoute
   '/scrapers/': typeof ScrapersIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/projects/$projectId/competitors': typeof ProjectsProjectIdCompetitorsRoute
+  '/projects/$projectId/domains': typeof ProjectsProjectIdDomainsRoute
   '/projects/$projectId/keywords': typeof ProjectsProjectIdKeywordsRouteWithChildren
   '/projects/$projectId/': typeof ProjectsProjectIdIndexRoute
   '/projects/$projectId/keywords/$keywordId': typeof ProjectsProjectIdKeywordsKeywordIdRoute
@@ -149,6 +169,8 @@ export interface FileRouteTypes {
     | '/schedules/'
     | '/scrapers/'
     | '/settings/'
+    | '/projects/$projectId/competitors'
+    | '/projects/$projectId/domains'
     | '/projects/$projectId/keywords'
     | '/projects/$projectId/'
     | '/projects/$projectId/keywords/$keywordId'
@@ -163,6 +185,8 @@ export interface FileRouteTypes {
     | '/schedules'
     | '/scrapers'
     | '/settings'
+    | '/projects/$projectId/competitors'
+    | '/projects/$projectId/domains'
     | '/projects/$projectId/keywords'
     | '/projects/$projectId'
     | '/projects/$projectId/keywords/$keywordId'
@@ -178,6 +202,8 @@ export interface FileRouteTypes {
     | '/schedules/'
     | '/scrapers/'
     | '/settings/'
+    | '/projects/$projectId/competitors'
+    | '/projects/$projectId/domains'
     | '/projects/$projectId/keywords'
     | '/projects/$projectId/'
     | '/projects/$projectId/keywords/$keywordId'
@@ -282,6 +308,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdKeywordsRouteImport
       parentRoute: typeof ProjectsProjectIdRoute
     }
+    '/projects/$projectId/domains': {
+      id: '/projects/$projectId/domains'
+      path: '/domains'
+      fullPath: '/projects/$projectId/domains'
+      preLoaderRoute: typeof ProjectsProjectIdDomainsRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
+    '/projects/$projectId/competitors': {
+      id: '/projects/$projectId/competitors'
+      path: '/competitors'
+      fullPath: '/projects/$projectId/competitors'
+      preLoaderRoute: typeof ProjectsProjectIdCompetitorsRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
     '/projects/$projectId/keywords/$keywordId': {
       id: '/projects/$projectId/keywords/$keywordId'
       path: '/$keywordId'
@@ -308,11 +348,15 @@ const ProjectsProjectIdKeywordsRouteWithChildren =
   )
 
 interface ProjectsProjectIdRouteChildren {
+  ProjectsProjectIdCompetitorsRoute: typeof ProjectsProjectIdCompetitorsRoute
+  ProjectsProjectIdDomainsRoute: typeof ProjectsProjectIdDomainsRoute
   ProjectsProjectIdKeywordsRoute: typeof ProjectsProjectIdKeywordsRouteWithChildren
   ProjectsProjectIdIndexRoute: typeof ProjectsProjectIdIndexRoute
 }
 
 const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
+  ProjectsProjectIdCompetitorsRoute: ProjectsProjectIdCompetitorsRoute,
+  ProjectsProjectIdDomainsRoute: ProjectsProjectIdDomainsRoute,
   ProjectsProjectIdKeywordsRoute: ProjectsProjectIdKeywordsRouteWithChildren,
   ProjectsProjectIdIndexRoute: ProjectsProjectIdIndexRoute,
 }

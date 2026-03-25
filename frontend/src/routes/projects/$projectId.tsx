@@ -46,11 +46,25 @@ function ProjectDetailPage() {
                 Overview
               </Link>
               <Link
+                to="/projects/$projectId/domains"
+                params={{ projectId }}
+                className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
+              >
+                Domains
+              </Link>
+              <Link
                 to="/projects/$projectId/keywords"
                 params={{ projectId }}
                 className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
               >
                 Keywords
+              </Link>
+              <Link
+                to="/projects/$projectId/competitors"
+                params={{ projectId }}
+                className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
+              >
+                Competitors
               </Link>
             </nav>
 
