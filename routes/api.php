@@ -2,12 +2,15 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
+use App\Http\Controllers\Api\ClassificationController;
 use App\Http\Controllers\Api\ClusterController;
 use App\Http\Controllers\Api\DomainController;
 use App\Http\Controllers\Api\KeywordController;
 use App\Http\Controllers\Api\ProjectController;
 use App\Http\Controllers\Api\RegionController;
+use App\Http\Controllers\Api\ScheduleController;
 use App\Http\Controllers\Api\ScraperController;
+use App\Http\Controllers\Api\SerpController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/register', [AuthController::class, 'register']);
@@ -45,4 +48,17 @@ Route::middleware(['auth:sanctum', 'org'])->group(function () {
     // Scrapers
     Route::apiResource('scrapers', ScraperController::class);
     Route::post('scrapers/{scraper}/test', [ScraperController::class, 'test']);
+
+    // Scrape Schedules
+    Route::apiResource('schedules', ScheduleController::class);
+    Route::post('schedules/{schedule}/run-now', [ScheduleController::class, 'runNow']);
+
+    // SERP
+    Route::get('keywords/{keyword}/serp', [SerpController::class, 'index']);
+    Route::get('keywords/{keyword}/serp/history', [SerpController::class, 'history']);
+
+    // Classification
+    Route::apiResource('classification/rules', ClassificationController::class);
+    Route::put('domains/{domain}/classify', [ClassificationController::class, 'classifyDomain']);
+    Route::get('site-types', [ClassificationController::class, 'siteTypes']);
 });
