@@ -68,6 +68,36 @@ class KeywordController extends Controller
         return response()->json($keyword);
     }
 
+    public function import(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'keywords' => 'required|array',
+            'keywords.*' => 'required|string|max:500',
+            'cluster_id' => 'required|exists:clusters,id',
+            'engine' => 'required|in:google,yandex',
+            'device' => 'in:desktop,mobile',
+            'region_id' => 'required|exists:regions,id',
+        ]);
+
+        $created = [];
+        foreach ($validated['keywords'] as $kw) {
+            $kw = trim($kw);
+            if ($kw === '') {
+                continue;
+            }
+
+            $created[] = Keyword::create([
+                'keyword' => $kw,
+                'cluster_id' => $validated['cluster_id'],
+                'engine' => $validated['engine'],
+                'device' => $validated['device'] ?? 'desktop',
+                'region_id' => $validated['region_id'],
+            ]);
+        }
+
+        return response()->json($created, 201);
+    }
+
     public function bulkDestroy(Request $request): JsonResponse
     {
         $validated = $request->validate([

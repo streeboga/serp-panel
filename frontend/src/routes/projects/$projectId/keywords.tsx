@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from '@tanstack/react-router'
 import { useState } from 'react'
-import { useKeywords, useImportKeywords } from '@/hooks/useKeywords'
+import { useKeywords, useImportKeywords, useRegions, useProjectClusters } from '@/hooks/useKeywords'
 import {
   useReactTable, getCoreRowModel, createColumnHelper, flexRender,
 } from '@tanstack/react-table'
@@ -58,10 +58,16 @@ function KeywordsPage() {
     projectId, page, per_page: 20, search: search || undefined, engine, device,
   })
 
-  const importKeywords = useImportKeywords(projectId)
+  const importKeywords = useImportKeywords()
   const [importOpen, setImportOpen] = useState(false)
   const [importText, setImportText] = useState('')
   const [importEngine, setImportEngine] = useState('google')
+  const [importDevice, setImportDevice] = useState('desktop')
+  const [importClusterId, setImportClusterId] = useState<string>('')
+  const [importRegionId, setImportRegionId] = useState<string>('')
+
+  const { data: clusters } = useProjectClusters(projectId)
+  const { data: regions } = useRegions()
 
   const keywords: KeywordRow[] = data?.data ?? []
   const meta = data?.meta ?? { last_page: 1, current_page: 1, total: 0 }
@@ -132,7 +138,13 @@ function KeywordsPage() {
     e.preventDefault()
     const lines = importText.split('\n').map(l => l.trim()).filter(Boolean)
     if (lines.length === 0) return
-    await importKeywords.mutateAsync({ keywords: lines, engine: importEngine })
+    await importKeywords.mutateAsync({
+      keywords: lines,
+      engine: importEngine,
+      device: importDevice,
+      cluster_id: Number(importClusterId),
+      region_id: Number(importRegionId),
+    })
     setImportText('')
     setImportOpen(false)
   }
@@ -181,6 +193,23 @@ function KeywordsPage() {
               </DialogHeader>
               <form onSubmit={handleImport} className="space-y-4">
                 <div className="space-y-2">
+                  <Label>Upload CSV/TXT file</Label>
+                  <Input
+                    type="file"
+                    accept=".csv,.txt"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0]
+                      if (file) {
+                        const reader = new FileReader()
+                        reader.onload = (ev) => {
+                          setImportText(ev.target?.result as string)
+                        }
+                        reader.readAsText(file)
+                      }
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label>Keywords (one per line)</Label>
                   <textarea
                     className="w-full min-h-32 rounded-lg border border-input bg-transparent px-3 py-2 text-sm"
@@ -188,6 +217,36 @@ function KeywordsPage() {
                     onChange={(e) => setImportText(e.target.value)}
                     required
                   />
+                </div>
+                <div className="space-y-2">
+                  <Label>Cluster</Label>
+                  <Select value={importClusterId} onValueChange={(v: string | null) => setImportClusterId(v ?? '')}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select cluster" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(clusters ?? []).map((c: { id: number; name: string; category?: { name: string } }) => (
+                        <SelectItem key={c.id} value={String(c.id)}>
+                          {c.category?.name ? `${c.category.name} / ${c.name}` : c.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Region</Label>
+                  <Select value={importRegionId} onValueChange={(v: string | null) => setImportRegionId(v ?? '')}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select region" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(regions ?? []).map((r: { id: number; name: string }) => (
+                        <SelectItem key={r.id} value={String(r.id)}>
+                          {r.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className="space-y-2">
                   <Label>Engine</Label>
@@ -201,8 +260,20 @@ function KeywordsPage() {
                     </SelectContent>
                   </Select>
                 </div>
+                <div className="space-y-2">
+                  <Label>Device</Label>
+                  <Select value={importDevice} onValueChange={(v: string | null) => setImportDevice(v ?? 'desktop')}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="desktop">Desktop</SelectItem>
+                      <SelectItem value="mobile">Mobile</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={importKeywords.isPending}>
+                  <Button type="submit" disabled={importKeywords.isPending || !importClusterId || !importRegionId}>
                     {importKeywords.isPending ? 'Importing...' : 'Import'}
                   </Button>
                 </DialogFooter>

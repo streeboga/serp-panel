@@ -31,17 +31,32 @@ export function useKeyword(projectId: string, keywordId: string) {
   })
 }
 
-export function useImportKeywords(projectId: string) {
+export function useImportKeywords() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: {
       keywords: string[]
-      engine?: string
+      engine: string
       device?: string
-      cluster_id?: number
-      region_id?: number
-    }) => api.post(`/projects/${projectId}/keywords/import`, data).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['keywords', projectId] }),
+      cluster_id: number
+      region_id: number
+    }) => api.post('/keywords/import', data).then(r => r.data),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['keywords'] }),
+  })
+}
+
+export function useRegions() {
+  return useQuery({
+    queryKey: ['regions'],
+    queryFn: () => api.get('/regions').then(r => r.data),
+  })
+}
+
+export function useProjectClusters(projectId: string) {
+  return useQuery({
+    queryKey: ['project-clusters', projectId],
+    queryFn: () => api.get(`/projects/${projectId}/clusters`).then(r => r.data),
+    enabled: !!projectId,
   })
 }
 
