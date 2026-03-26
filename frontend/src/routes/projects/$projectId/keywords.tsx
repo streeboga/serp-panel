@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from '@tanstack/react-router'
+import { createFileRoute, Link, Outlet, useMatch } from '@tanstack/react-router'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useImportKeywords, useDeleteKeywords, useRegions, useProjectClusters } from '@/hooks/useKeywords'
@@ -104,6 +104,14 @@ function savePresets(presets: FilterPreset[]) {
 
 // ─── Main ───
 function KeywordsPage() {
+  // If a child route (keyword detail) is active, render it instead
+  const childMatch = useMatch({ from: '/projects/$projectId/keywords/$keywordId', shouldThrow: false })
+  if (childMatch) return <Outlet />
+
+  return <KeywordsTable />
+}
+
+function KeywordsTable() {
   const { t } = useTranslation()
   const { projectId } = Route.useParams()
 
