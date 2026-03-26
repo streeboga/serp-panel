@@ -53,15 +53,17 @@ final readonly class SerpSnapshotService
             'total_results' => $response->totalResults,
         ]);
 
+        $sanitize = fn (?string $s): ?string => $s !== null ? mb_convert_encoding($s, 'UTF-8', 'UTF-8') : null;
+
         $rows = array_map(fn ($item) => [
             'snapshot_id' => $snapshot->id,
             'collected_at' => $collectedAt,
             'position' => $item->position,
-            'url' => $item->url,
-            'domain' => $item->domain,
-            'title' => $item->title,
-            'description' => $item->description,
-            'snippet_type' => $item->snippetType,
+            'url' => $sanitize($item->url),
+            'domain' => $sanitize($item->domain),
+            'title' => $sanitize($item->title),
+            'description' => $sanitize($item->description),
+            'snippet_type' => $sanitize($item->snippetType),
             'is_ads' => $item->isAds,
         ], $response->results);
 
@@ -70,7 +72,7 @@ final readonly class SerpSnapshotService
         $this->scrapeJobRepository->update($job, [
             'status' => 'completed',
             'completed_at' => now(),
-            'raw_response' => $response->rawResponse,
+            'raw_response' => mb_convert_encoding($response->rawResponse ?? '', 'UTF-8', 'UTF-8'),
         ]);
     }
 }
