@@ -24,42 +24,75 @@ final class XmlRiverAdapter implements SerpScraperAdapter
             'user' => $this->credentials['user'] ?? '',
             'key' => $this->credentials['key'] ?? '',
             'query' => $request->keyword,
-            'groupby' => $request->limit,
-            'device' => $request->device,
+            'num' => $request->limit,
         ];
 
         if ($request->engine === 'yandex') {
             $params['lr'] = $request->yandexLr;
-            $params['engine'] = 'yandex';
         } else {
             $params['gl'] = $request->googleGl;
             $params['hl'] = $request->googleHl;
-            $params['engine'] = 'google';
         }
 
-        $response = Http::timeout(60)->get($this->baseUrl.'/search', $params);
+        // XMLRiver returns XML at /search/xml
+        $url = rtrim($this->baseUrl, '/');
+        if (!str_contains($url, '/search')) {
+            $url .= '/search/xml';
+        }
+
+        $response = Http::timeout(60)->get($url, $params);
         $body = $response->body();
-        $data = json_decode($body, true) ?: [];
 
-        $results = [];
-        foreach (($data['results'] ?? []) as $i => $item) {
-            $url = $item['url'] ?? '';
-            $results[] = new SerpResultItem(
-                position: $i + 1,
-                url: $url,
-                domain: parse_url($url, PHP_URL_HOST) ?: '',
-                title: $item['title'] ?? null,
-                description: $item['snippet'] ?? $item['description'] ?? null,
-                snippetType: $item['type'] ?? 'organic',
-                isAds: (bool) ($item['is_ad'] ?? false),
-            );
-        }
+        $results = $this->parseXmlResponse($body);
 
         return new ScrapeResponse(
             results: $results,
-            totalResults: $data['total_results'] ?? count($results),
+            totalResults: count($results),
             rawResponse: $body,
         );
+    }
+
+    /** @return SerpResultItem[] */
+    private function parseXmlResponse(string $xml): array
+    {
+        $results = [];
+
+        try {
+            $doc = new \SimpleXMLElement($xml);
+
+            // Check for error
+            if (isset($doc->response->error)) {
+                return [];
+            }
+
+            $position = 0;
+            $groups = $doc->response->results->grouping->group ?? [];
+
+            foreach ($groups as $group) {
+                $position++;
+                $doc2 = $group->doc;
+                if (!$doc2) {
+                    continue;
+                }
+
+                $url = (string) ($doc2->url ?? '');
+                $host = parse_url($url, PHP_URL_HOST) ?: '';
+
+                $results[] = new SerpResultItem(
+                    position: $position,
+                    url: $url,
+                    domain: $host,
+                    title: (string) ($doc2->title ?? ''),
+                    description: (string) ($doc2->passages->passage ?? ''),
+                    snippetType: (string) ($doc2->contenttype ?? 'organic'),
+                    isAds: false,
+                );
+            }
+        } catch (\Exception) {
+            // XML parsing failed — return empty
+        }
+
+        return $results;
     }
 
     public function supportedEngines(): array
@@ -70,7 +103,19 @@ final class XmlRiverAdapter implements SerpScraperAdapter
     public function healthCheck(): bool
     {
         try {
-            return Http::timeout(10)->get($this->baseUrl.'/status')->ok();
+            $url = rtrim($this->baseUrl, '/');
+            if (!str_contains($url, '/search')) {
+                $url .= '/search/xml';
+            }
+
+            $response = Http::timeout(10)->get($url, [
+                'user' => $this->credentials['user'] ?? '',
+                'key' => $this->credentials['key'] ?? '',
+                'query' => 'test',
+                'num' => 1,
+            ]);
+
+            return str_contains($response->body(), '<yandexsearch');
         } catch (\Exception) {
             return false;
         }
