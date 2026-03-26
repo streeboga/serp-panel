@@ -14,7 +14,7 @@ final class ProjectRepository implements ProjectRepositoryInterface
     /** @return Collection<int, Project> */
     public function allForOrganization(Organization $organization): Collection
     {
-        return $organization->projects()->get();
+        return $organization->projects()->withCount('domains')->get();
     }
 
     public function findById(int $id): Project

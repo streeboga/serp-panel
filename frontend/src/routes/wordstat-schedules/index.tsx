@@ -115,6 +115,7 @@ function WordstatSchedulesPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Проект</TableHead>
+                    <TableHead>Регионы</TableHead>
                     <TableHead>{t('wordstatSchedules.frequencyDays')}</TableHead>
                     <TableHead>Тренды</TableHead>
                     <TableHead>Подсказки</TableHead>
@@ -129,6 +130,13 @@ function WordstatSchedulesPage() {
                     <TableRow key={s.id}>
                       <TableCell className="text-sm">
                         {projects.find((p) => p.id === s.project_id)?.name ?? `#${s.project_id}`}
+                      </TableCell>
+                      <TableCell>
+                        {s.regions && s.regions.length > 0 ? (
+                          <Badge variant="secondary">{s.regions.length} {s.regions.length === 1 ? 'регион' : s.regions.length < 5 ? 'региона' : 'регионов'}</Badge>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Все</span>
+                        )}
                       </TableCell>
                       <TableCell>{s.frequency_days} дн.</TableCell>
                       <TableCell>

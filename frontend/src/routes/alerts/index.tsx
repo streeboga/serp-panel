@@ -69,6 +69,7 @@ function AlertsPage() {
                     <TableHead>{t('alerts.threshold')}</TableHead>
                     <TableHead>{t('alerts.direction')}</TableHead>
                     <TableHead>{t('alerts.channel')}</TableHead>
+                    <TableHead>Получатель</TableHead>
                     <TableHead>{t('alerts.status')}</TableHead>
                     <TableHead>{t('alerts.lastTriggered')}</TableHead>
                     <TableHead>{t('common.actions')}</TableHead>
@@ -90,6 +91,9 @@ function AlertsPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="secondary">{alert.channel}</Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {alert.recipient || '—'}
                       </TableCell>
                       <TableCell>
                         <Badge

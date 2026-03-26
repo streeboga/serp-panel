@@ -95,7 +95,7 @@ function ScrapersPage() {
           name,
           type,
           base_url: baseUrl,
-          engines: engines.split(',').map((e) => e.trim()),
+          supported_engines: engines.split(',').map((e) => e.trim()),
           rate_limit: Number(rateLimit),
           is_active: true,
         })
@@ -134,7 +134,7 @@ function ScrapersPage() {
     setEditName(scraper.name)
     setEditType(scraper.type)
     setEditBaseUrl(scraper.base_url)
-    setEditEngines((scraper.engines ?? []).join(', '))
+    setEditEngines((scraper.supported_engines ?? scraper.engines ?? []).join(', '))
     setEditRateLimit(String(scraper.rate_limit ?? 10))
     setEditIsActive(scraper.is_active)
     setEditDialogOpen(true)
@@ -151,7 +151,7 @@ function ScrapersPage() {
           name: editName,
           type: editType,
           base_url: editBaseUrl,
-          engines: editEngines.split(',').map((e) => e.trim()),
+          supported_engines: editEngines.split(',').map((e) => e.trim()),
           rate_limit: Number(editRateLimit),
           is_active: editIsActive,
         })
@@ -278,7 +278,7 @@ function ScrapersPage() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      {(scraper.engines ?? []).map((eng) => (
+                      {(scraper.supported_engines ?? scraper.engines ?? []).map((eng) => (
                         <Badge key={eng} variant="secondary">
                           {eng}
                         </Badge>

@@ -119,6 +119,7 @@ function SchedulesPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Проект</TableHead>
+                <TableHead>Парсер</TableHead>
                 <TableHead>Частота</TableHead>
                 <TableHead>Последний запуск</TableHead>
                 <TableHead>Следующий запуск</TableHead>
@@ -130,10 +131,13 @@ function SchedulesPage() {
               {schedules.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell className="text-sm">
-                    {s.schedulable_name ?? projects.find((p) => p.id === Number(s.schedulable_type === 'project' ? s.schedulable_type : ''))?.name ?? `#${s.id}`}
+                    {s.project?.name ?? projects.find((p) => p.id === s.project_id)?.name ?? `#${s.id}`}
+                  </TableCell>
+                  <TableCell className="text-sm">
+                    {s.scraper ? `${s.scraper.name} (${s.scraper.type})` : scrapers.find((sc) => sc.id === s.scraper_id)?.name ?? '—'}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{s.frequency}</Badge>
+                    <Badge variant="secondary">{s.frequency_days ? FREQ_DAYS_LABELS[String(s.frequency_days)] ?? `${s.frequency_days} дн.` : s.frequency}</Badge>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
                     {s.last_run_at ? new Date(s.last_run_at).toLocaleString() : '—'}

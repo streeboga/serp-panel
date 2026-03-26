@@ -104,19 +104,26 @@ export interface Scraper {
   name: string
   type: string
   base_url: string
-  engines: string[]
+  supported_engines?: string[]
+  engines?: string[]
   rate_limit: number
   is_active: boolean
 }
 
 export interface Schedule {
   id: number
-  schedulable_type: string
-  schedulable_name?: string
-  frequency: string
+  project_id?: number
+  scraper_id?: number
+  frequency_days: number
+  frequency?: string
   last_run_at: string | null
   next_run_at: string | null
   is_active: boolean
+  project?: { id: number; name: string }
+  scraper?: { id: number; name: string; type: string }
+  // legacy fields (may still appear)
+  schedulable_type?: string
+  schedulable_name?: string
 }
 
 export interface Member {
