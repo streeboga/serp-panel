@@ -1,10 +1,23 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $keyword_id
+ * @property int $region_id
+ * @property Carbon $month
+ * @property int $absolute_value
+ * @property Carbon $collected_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ */
 class WordstatTrend extends Model
 {
     protected $fillable = ['keyword_id', 'region_id', 'month', 'absolute_value', 'collected_at'];

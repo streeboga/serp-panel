@@ -1,10 +1,20 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AppLayout } from '@/components/AppLayout'
+import { SummaryCard } from '@/components/SummaryCard'
+import { EmptyState } from '@/components/EmptyState'
+import { CardGridSkeleton } from '@/components/PageSkeleton'
 import { useDashboardSummary } from '@/hooks/useDashboard'
 import { useProjects } from '@/hooks/useProjects'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import type { Project } from '@/types/api'
 
 export const Route = createFileRoute('/')({
   beforeLoad: () => {
@@ -16,27 +26,34 @@ export const Route = createFileRoute('/')({
 })
 
 function DashboardPage() {
+  const { t } = useTranslation()
   const [projectId, setProjectId] = useState<number | undefined>(undefined)
   const { data: projects } = useProjects()
   const { data: summary, isLoading } = useDashboardSummary(projectId)
 
-  const projectList = Array.isArray(projects) ? projects : projects?.data ?? []
+  const projectList: Project[] = Array.isArray(projects)
+    ? projects
+    : (projects?.data ?? [])
+
+  const handleProjectChange = useCallback((v: string | null) => {
+    setProjectId(v ? Number(v) : undefined)
+  }, [])
 
   return (
     <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl font-bold">{t('dashboard.title')}</h1>
           {projectList.length > 0 && (
             <Select
               value={projectId ? String(projectId) : undefined}
-              onValueChange={(v: string | null) => setProjectId(v ? Number(v) : undefined)}
+              onValueChange={handleProjectChange}
             >
               <SelectTrigger>
-                <SelectValue placeholder="All projects" />
+                <SelectValue placeholder={t('dashboard.allProjects')} />
               </SelectTrigger>
               <SelectContent>
-                {projectList.map((p: { id: number; name: string }) => (
+                {projectList.map((p) => (
                   <SelectItem key={p.id} value={String(p.id)}>
                     {p.name}
                   </SelectItem>
@@ -47,36 +64,33 @@ function DashboardPage() {
         </div>
 
         {isLoading ? (
-          <p className="text-muted-foreground">Loading...</p>
+          <CardGridSkeleton count={7} />
         ) : summary ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             <SummaryCard title="TOP-3" value={summary.top3 ?? 0} />
             <SummaryCard title="TOP-10" value={summary.top10 ?? 0} />
             <SummaryCard title="TOP-20" value={summary.top20 ?? 0} />
             <SummaryCard title="TOP-100" value={summary.top100 ?? 0} />
-            <SummaryCard title="Total Keywords" value={summary.total_keywords ?? 0} />
-            <SummaryCard title="Google Keywords" value={summary.google_keywords ?? 0} />
-            <SummaryCard title="Yandex Keywords" value={summary.yandex_keywords ?? 0} />
+            <SummaryCard
+              title={t('dashboard.totalKeywords')}
+              value={summary.total_keywords ?? 0}
+            />
+            <SummaryCard
+              title={t('dashboard.googleKeywords')}
+              value={summary.google_keywords ?? 0}
+            />
+            <SummaryCard
+              title={t('dashboard.yandexKeywords')}
+              value={summary.yandex_keywords ?? 0}
+            />
           </div>
         ) : (
-          <p className="text-muted-foreground">
-            Welcome to SEO Monitor. Create a project to get started.
-          </p>
+          <EmptyState
+            title={t('dashboard.welcome')}
+            description={t('dashboard.welcomeDesc')}
+          />
         )}
       </div>
     </AppLayout>
-  )
-}
-
-function SummaryCard({ title, value }: { title: string; value: number }) {
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <p className="text-3xl font-bold">{value}</p>
-      </CardContent>
-    </Card>
   )
 }

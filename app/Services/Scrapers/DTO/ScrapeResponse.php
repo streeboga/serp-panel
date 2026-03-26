@@ -1,8 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Scrapers\DTO;
 
-readonly class ScrapeResponse
+final readonly class ScrapeResponse
 {
     /** @param SerpResultItem[] $results */
     public function __construct(

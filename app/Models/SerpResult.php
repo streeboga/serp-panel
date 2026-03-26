@@ -1,10 +1,30 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $snapshot_id
+ * @property Carbon $collected_at
+ * @property int $position
+ * @property string $url
+ * @property string $domain
+ * @property string|null $title
+ * @property string|null $description
+ * @property string $snippet_type
+ * @property bool $is_ads
+ * @property string|null $cached_page_url
+ * @property int|null $keyword_count
+ * @property int|null $top3
+ * @property int|null $top10
+ * @property int|null $top20
+ */
 class SerpResult extends Model
 {
     public $timestamps = false;

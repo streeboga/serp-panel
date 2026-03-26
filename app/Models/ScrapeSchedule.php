@@ -1,10 +1,28 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int|null $project_id
+ * @property int|null $category_id
+ * @property int|null $cluster_id
+ * @property int|null $keyword_id
+ * @property int $scraper_id
+ * @property int $frequency_days
+ * @property Carbon|null $last_run_at
+ * @property Carbon|null $next_run_at
+ * @property bool $is_active
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read Scraper $scraper
+ */
 class ScrapeSchedule extends Model
 {
     protected $fillable = [

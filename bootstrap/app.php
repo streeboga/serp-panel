@@ -1,5 +1,10 @@
 <?php
 
+use App\Http\Middleware\CheckOrganizationRole;
+use App\Http\Middleware\ForceJsonApiContentType;
+use App\Http\Middleware\SecurityHeaders;
+use App\Http\Middleware\SetLocale;
+use App\Http\Middleware\SetOrganization;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,8 +18,18 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'org' => \App\Http\Middleware\SetOrganization::class,
-            'org.role' => \App\Http\Middleware\CheckOrganizationRole::class,
+            'org' => SetOrganization::class,
+            'org.role' => CheckOrganizationRole::class,
+            'json-api' => ForceJsonApiContentType::class,
+            'locale' => SetLocale::class,
+        ]);
+
+        $middleware->api(prepend: [
+            SetLocale::class,
+        ]);
+
+        $middleware->api(append: [
+            SecurityHeaders::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

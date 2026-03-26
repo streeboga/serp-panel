@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use App\Enums\Device;
@@ -7,7 +9,20 @@ use App\Enums\Engine;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $cluster_id
+ * @property string $keyword
+ * @property Engine $engine
+ * @property Device $device
+ * @property int $region_id
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read Cluster $cluster
+ * @property-read Region $region
+ */
 class Keyword extends Model
 {
     protected $fillable = ['cluster_id', 'keyword', 'engine', 'device', 'region_id'];

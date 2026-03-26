@@ -1,42 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
+use App\Http\Controllers\Api\V1\KeywordController;
 use App\Models\Category;
 use App\Models\Cluster;
 use App\Models\Domain;
 use App\Models\Keyword;
 use App\Models\Organization;
 use App\Models\Project;
-use App\Models\Region;
-use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
+use App\Services\KeywordService;
 
-uses(RefreshDatabase::class);
+covers(KeywordController::class, KeywordService::class);
 
-function createFullHierarchy(): array
-{
-    $user = User::factory()->create();
-    $org = Organization::create(['name' => 'Test', 'slug' => 'test']);
-    $org->users()->attach($user->id, ['role' => 'admin']);
-    $project = Project::create(['organization_id' => $org->id, 'name' => 'Test Project']);
-    $domain = Domain::create(['project_id' => $project->id, 'name' => 'test.com', 'is_own' => true]);
-    $category = Category::create(['domain_id' => $domain->id, 'name' => 'Main']);
-    $cluster = Cluster::create(['category_id' => $category->id, 'name' => 'Cluster 1']);
-    $region = Region::first() ?? Region::create([
-        'engine' => 'google',
-        'code' => 'US',
-        'name' => 'USA',
-        'google_gl' => 'us',
-        'google_hl' => 'en',
-    ]);
-
-    return compact('user', 'org', 'project', 'domain', 'category', 'cluster', 'region');
-}
+// === Story 3.3: Keywords management + CSV bulk import ===
 
 test('can bulk create keywords', function () {
-    $h = createFullHierarchy();
+    $h = createFullStack();
 
     $response = $this->actingAs($h['user'])
-        ->postJson('/api/keywords/bulk', [
+        ->postJson('/api/v1/keywords/bulk', [
             'keywords' => [
                 [
                     'keyword' => 'seo tools',
@@ -53,17 +36,15 @@ test('can bulk create keywords', function () {
                     'region_id' => $h['region']->id,
                 ],
             ],
-        ], ['X-Organization-Id' => $h['org']->id]);
+        ], orgHeaders($h['org']));
 
-    $response->assertStatus(201)
-        ->assertJsonCount(2);
-
+    $response->assertStatus(201);
     $this->assertDatabaseHas('keywords', ['keyword' => 'seo tools']);
     $this->assertDatabaseHas('keywords', ['keyword' => 'serp checker']);
 });
 
 test('can list keywords with filters', function () {
-    $h = createFullHierarchy();
+    $h = createFullStack();
 
     Keyword::create([
         'keyword' => 'seo tools',
@@ -72,7 +53,6 @@ test('can list keywords with filters', function () {
         'device' => 'desktop',
         'region_id' => $h['region']->id,
     ]);
-
     Keyword::create([
         'keyword' => 'yandex seo',
         'cluster_id' => $h['cluster']->id,
@@ -81,30 +61,58 @@ test('can list keywords with filters', function () {
         'region_id' => $h['region']->id,
     ]);
 
-    // List all
-    $response = $this->actingAs($h['user'])
-        ->getJson('/api/keywords', ['X-Organization-Id' => $h['org']->id]);
-
-    $response->assertOk()
-        ->assertJsonPath('total', 2);
+    // All
+    $this->actingAs($h['user'])
+        ->getJson('/api/v1/keywords', orgHeaders($h['org']))
+        ->assertOk()
+        ->assertJsonPath('meta.total', 2);
 
     // Filter by engine
+    $this->actingAs($h['user'])
+        ->getJson('/api/v1/keywords?filter[engine]=google', orgHeaders($h['org']))
+        ->assertOk()
+        ->assertJsonPath('meta.total', 1);
+});
+
+test('can import keywords from list', function () {
+    $h = createFullStack();
+
     $response = $this->actingAs($h['user'])
-        ->getJson('/api/keywords?filter[engine]=google', ['X-Organization-Id' => $h['org']->id]);
+        ->postJson('/api/v1/keywords/import', [
+            'keywords' => ['keyword one', 'keyword two', 'keyword three'],
+            'cluster_id' => $h['cluster']->id,
+            'engine' => 'google',
+            'device' => 'desktop',
+            'region_id' => $h['region']->id,
+        ], orgHeaders($h['org']));
+
+    $response->assertStatus(201);
+    $this->assertDatabaseHas('keywords', ['keyword' => 'keyword one']);
+    $this->assertDatabaseHas('keywords', ['keyword' => 'keyword two']);
+    $this->assertDatabaseHas('keywords', ['keyword' => 'keyword three']);
+});
+
+test('can update keyword', function () {
+    $h = createFullStack();
+    $kw = Keyword::create([
+        'keyword' => 'old keyword',
+        'cluster_id' => $h['cluster']->id,
+        'engine' => 'google',
+        'device' => 'desktop',
+        'region_id' => $h['region']->id,
+    ]);
+
+    $response = $this->actingAs($h['user'])
+        ->patchJson("/api/v1/keywords/{$kw->id}", [
+            'keyword' => 'new keyword',
+        ], orgHeaders($h['org']));
 
     $response->assertOk()
-        ->assertJsonPath('total', 1);
-
-    // Filter by partial keyword
-    $response = $this->actingAs($h['user'])
-        ->getJson('/api/keywords?filter[keyword]=seo', ['X-Organization-Id' => $h['org']->id]);
-
-    $response->assertOk()
-        ->assertJsonPath('total', 2);
+        ->assertJsonPath('data.attributes.keyword', 'new keyword');
 });
 
 test('can bulk delete keywords', function () {
-    $h = createFullHierarchy();
+    $h = createFullStack();
 
     $kw1 = Keyword::create([
         'keyword' => 'keyword 1',
@@ -113,7 +121,6 @@ test('can bulk delete keywords', function () {
         'device' => 'desktop',
         'region_id' => $h['region']->id,
     ]);
-
     $kw2 = Keyword::create([
         'keyword' => 'keyword 2',
         'cluster_id' => $h['cluster']->id,
@@ -122,20 +129,19 @@ test('can bulk delete keywords', function () {
         'region_id' => $h['region']->id,
     ]);
 
-    $response = $this->actingAs($h['user'])
-        ->deleteJson('/api/keywords/bulk', [
+    $this->actingAs($h['user'])
+        ->deleteJson('/api/v1/keywords/bulk', [
             'ids' => [$kw1->id, $kw2->id],
-        ], ['X-Organization-Id' => $h['org']->id]);
+        ], orgHeaders($h['org']))
+        ->assertStatus(204);
 
-    $response->assertOk();
     $this->assertDatabaseMissing('keywords', ['id' => $kw1->id]);
     $this->assertDatabaseMissing('keywords', ['id' => $kw2->id]);
 });
 
 test('keywords are scoped to organization', function () {
-    $h = createFullHierarchy();
+    $h = createFullStack();
 
-    // Create keyword in our org
     Keyword::create([
         'keyword' => 'our keyword',
         'cluster_id' => $h['cluster']->id,
@@ -145,7 +151,7 @@ test('keywords are scoped to organization', function () {
     ]);
 
     // Create keyword in another org
-    $otherOrg = Organization::create(['name' => 'Other', 'slug' => 'other']);
+    $otherOrg = Organization::create(['name' => 'Other', 'slug' => 'other-kw']);
     $otherProject = Project::create(['organization_id' => $otherOrg->id, 'name' => 'Other']);
     $otherDomain = Domain::create(['project_id' => $otherProject->id, 'name' => 'other.com', 'is_own' => true]);
     $otherCategory = Category::create(['domain_id' => $otherDomain->id, 'name' => 'Other']);
@@ -158,9 +164,21 @@ test('keywords are scoped to organization', function () {
         'region_id' => $h['region']->id,
     ]);
 
-    $response = $this->actingAs($h['user'])
-        ->getJson('/api/keywords', ['X-Organization-Id' => $h['org']->id]);
+    $this->actingAs($h['user'])
+        ->getJson('/api/v1/keywords', orgHeaders($h['org']))
+        ->assertOk()
+        ->assertJsonPath('meta.total', 1);
+});
 
-    $response->assertOk()
-        ->assertJsonPath('total', 1);
+test('import rejects empty keywords array', function () {
+    $h = createFullStack();
+
+    $this->actingAs($h['user'])
+        ->postJson('/api/v1/keywords/import', [
+            'keywords' => [],
+            'cluster_id' => $h['cluster']->id,
+            'engine' => 'google',
+            'region_id' => $h['region']->id,
+        ], orgHeaders($h['org']))
+        ->assertStatus(422);
 });

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Scrapers\Adapters;
 
 use App\Services\Scrapers\Contracts\SerpScraperAdapter;
@@ -8,8 +10,9 @@ use App\Services\Scrapers\DTO\ScrapeResponse;
 use App\Services\Scrapers\DTO\SerpResultItem;
 use Illuminate\Support\Facades\Http;
 
-class XmlRiverAdapter implements SerpScraperAdapter
+final class XmlRiverAdapter implements SerpScraperAdapter
 {
+    /** @param array<string, mixed> $credentials */
     public function __construct(
         private readonly string $baseUrl,
         private readonly array $credentials,

@@ -1,78 +1,99 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { useMemo } from 'react'
+import { useMemo, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useCompetitors } from '@/hooks/useCompetitors'
 import {
-  useReactTable, getCoreRowModel, getSortedRowModel, createColumnHelper, flexRender,
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  createColumnHelper,
+  flexRender,
 } from '@tanstack/react-table'
 import { Badge } from '@/components/ui/badge'
+import { EmptyState } from '@/components/EmptyState'
+import { DataExportButton } from '@/components/DataExportButton'
+import { TableSkeleton } from '@/components/PageSkeleton'
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table'
+import type { Competitor } from '@/types/api'
 
 export const Route = createFileRoute('/projects/$projectId/competitors')({
   component: CompetitorsPage,
 })
 
-interface CompetitorRow {
-  domain: string
-  site_type: string | null
-  site_type_color: string | null
-  is_own: boolean
-  top3: number
-  top10: number
-  top20: number
-  total_keywords: number
-}
-
-const columnHelper = createColumnHelper<CompetitorRow>()
+const columnHelper = createColumnHelper<Competitor>()
 
 function CompetitorsPage() {
+  const { t } = useTranslation()
   const { projectId } = Route.useParams()
   const { data, isLoading } = useCompetitors(projectId)
 
-  const competitors: CompetitorRow[] = useMemo(() => {
-    const raw: CompetitorRow[] = data?.data ?? data ?? []
+  const competitors: Competitor[] = useMemo(() => {
+    const raw: Competitor[] = data?.data ?? data ?? []
     return [...raw].sort((a, b) => b.top10 - a.top10)
   }, [data])
 
-  const columns = [
-    columnHelper.accessor('domain', {
-      header: 'Domain',
-      cell: (info) => <span className="font-medium">{info.getValue()}</span>,
-    }),
-    columnHelper.accessor('site_type', {
-      header: 'Site Type',
-      cell: (info) => {
-        const siteType = info.getValue()
-        const color = info.row.original.site_type_color
-        if (!siteType) return '-'
-        return (
-          <Badge
-            style={color ? { backgroundColor: color, color: '#fff' } : undefined}
-            variant={color ? 'default' : 'secondary'}
-          >
-            {siteType}
-          </Badge>
-        )
-      },
-    }),
-    columnHelper.accessor('top3', {
-      header: 'TOP-3',
-      cell: (info) => info.getValue(),
-    }),
-    columnHelper.accessor('top10', {
-      header: 'TOP-10',
-      cell: (info) => <span className="font-semibold">{info.getValue()}</span>,
-    }),
-    columnHelper.accessor('top20', {
-      header: 'TOP-20',
-      cell: (info) => info.getValue(),
-    }),
-    columnHelper.accessor('total_keywords', {
-      header: 'Total Keywords',
-      cell: (info) => info.getValue(),
-    }),
-  ]
+  const columns = useMemo(
+    () => [
+      columnHelper.accessor('domain', {
+        header: t('competitors.domain'),
+        cell: (info) => (
+          <span className="font-medium">{info.getValue()}</span>
+        ),
+      }),
+      columnHelper.accessor('site_type', {
+        header: t('competitors.siteType'),
+        cell: (info) => {
+          const siteType = info.getValue()
+          const color = info.row.original.site_type_color
+          if (!siteType) return '-'
+          return (
+            <Badge
+              style={
+                color ? { backgroundColor: color, color: '#fff' } : undefined
+              }
+              variant={color ? 'default' : 'secondary'}
+            >
+              {siteType}
+            </Badge>
+          )
+        },
+      }),
+      columnHelper.accessor('top3', {
+        header: 'TOP-3',
+        cell: (info) => (
+          <span className="tabular-nums">{info.getValue()}</span>
+        ),
+      }),
+      columnHelper.accessor('top10', {
+        header: 'TOP-10',
+        cell: (info) => (
+          <span className="font-semibold tabular-nums">
+            {info.getValue()}
+          </span>
+        ),
+      }),
+      columnHelper.accessor('top20', {
+        header: 'TOP-20',
+        cell: (info) => (
+          <span className="tabular-nums">{info.getValue()}</span>
+        ),
+      }),
+      columnHelper.accessor('total_keywords', {
+        header: t('competitors.totalKeywords'),
+        cell: (info) => (
+          <span className="tabular-nums">{info.getValue()}</span>
+        ),
+      }),
+    ],
+    [t],
+  )
 
   const table = useReactTable({
     data: competitors,
@@ -81,12 +102,34 @@ function CompetitorsPage() {
     getSortedRowModel: getSortedRowModel(),
   })
 
+  const getExportData = useCallback(
+    () =>
+      competitors.map((c) => ({
+        domain: c.domain,
+        site_type: c.site_type ?? '',
+        top3: c.top3,
+        top10: c.top10,
+        top20: c.top20,
+        total_keywords: c.total_keywords,
+        is_own: c.is_own ? 'yes' : 'no',
+      })),
+    [competitors],
+  )
+
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Competitors</h2>
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-semibold">{t('competitors.title')}</h2>
+        <DataExportButton
+          getData={getExportData}
+          filename={`competitors-project-${projectId}`}
+        />
+      </div>
 
       {isLoading ? (
-        <p className="text-muted-foreground">Loading...</p>
+        <TableSkeleton rows={8} />
+      ) : competitors.length === 0 ? (
+        <EmptyState title={t('competitors.noData')} />
       ) : (
         <Table>
           <TableHeader>
@@ -94,33 +137,33 @@ function CompetitorsPage() {
               <TableRow key={hg.id}>
                 {hg.headers.map((header) => (
                   <TableHead key={header.id}>
-                    {header.isPlaceholder ? null : flexRender(header.column.columnDef.header, header.getContext())}
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext(),
+                        )}
                   </TableHead>
                 ))}
               </TableRow>
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={columns.length} className="text-center text-muted-foreground">
-                  No competitor data found
-                </TableCell>
+            {table.getRowModel().rows.map((row) => (
+              <TableRow
+                key={row.id}
+                className={row.original.is_own ? 'bg-green-50 dark:bg-green-950/20' : undefined}
+              >
+                {row.getVisibleCells().map((cell) => (
+                  <TableCell key={cell.id}>
+                    {flexRender(
+                      cell.column.columnDef.cell,
+                      cell.getContext(),
+                    )}
+                  </TableCell>
+                ))}
               </TableRow>
-            ) : (
-              table.getRowModel().rows.map((row) => (
-                <TableRow
-                  key={row.id}
-                  className={row.original.is_own ? 'bg-green-50' : undefined}
-                >
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
-            )}
+            ))}
           </TableBody>
         </Table>
       )}

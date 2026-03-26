@@ -1,11 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use App\Enums\ClassificationRuleType;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $organization_id
+ * @property ClassificationRuleType $rule_type
+ * @property string $pattern
+ * @property int $site_type_id
+ * @property int $priority
+ * @property bool $is_system
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ */
 class ClassificationRule extends Model
 {
     protected $fillable = [

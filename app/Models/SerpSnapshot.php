@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use App\Enums\Device;
@@ -7,7 +9,18 @@ use App\Enums\Engine;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $keyword_id
+ * @property Carbon $collected_at
+ * @property Engine $search_engine
+ * @property Device $device
+ * @property int $region_id
+ * @property int $total_results
+ * @property string|null $latest_date
+ */
 class SerpSnapshot extends Model
 {
     public $timestamps = false;

@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Console\Commands;
 
 use App\Models\Category;
@@ -55,10 +57,11 @@ class CheckSchedulesCommand extends Command
         return self::SUCCESS;
     }
 
+    /** @return Collection<int, Keyword> */
     private function resolveKeywords(ScrapeSchedule $schedule): Collection
     {
         if ($schedule->keyword_id) {
-            return collect([Keyword::find($schedule->keyword_id)]);
+            return collect([Keyword::findOrFail($schedule->keyword_id)]);
         }
 
         if ($schedule->cluster_id) {

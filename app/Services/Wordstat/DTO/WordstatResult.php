@@ -1,8 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Wordstat\DTO;
 
-readonly class WordstatResult
+final readonly class WordstatResult
 {
     /**
      * @param  array{exact: int, broad: int, phrase: int}  $frequencies

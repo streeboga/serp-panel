@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use App\Enums\Device;
@@ -7,7 +9,27 @@ use App\Enums\Engine;
 use App\Enums\ScrapeJobStatus;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $keyword_id
+ * @property int $scraper_id
+ * @property int|null $schedule_id
+ * @property ScrapeJobStatus $status
+ * @property Engine $engine
+ * @property int $region_id
+ * @property Device $device
+ * @property int $attempts
+ * @property Carbon|null $started_at
+ * @property Carbon|null $completed_at
+ * @property string|null $error_message
+ * @property string|null $raw_response
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read Keyword $keyword
+ * @property-read Scraper $scraper
+ */
 class ScrapeJob extends Model
 {
     protected $fillable = [

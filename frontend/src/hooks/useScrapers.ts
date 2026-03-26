@@ -1,10 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { queryKeys } from '@/lib/query-keys'
 
 export function useScrapers() {
   return useQuery({
-    queryKey: ['scrapers'],
-    queryFn: () => api.get('/scrapers').then(r => r.data),
+    queryKey: queryKeys.scrapers.all,
+    queryFn: () => api.get('/scrapers').then((r) => r.data),
+    staleTime: 30_000,
   })
 }
 
@@ -18,15 +20,19 @@ export function useCreateScraper() {
       engines: string[]
       rate_limit?: number
       is_active?: boolean
-    }) => api.post('/scrapers', data).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['scrapers'] }),
+    }) => api.post('/scrapers', data).then((r) => r.data),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: queryKeys.scrapers.all }),
   })
 }
 
 export function useUpdateScraper() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ id, ...data }: {
+    mutationFn: ({
+      id,
+      ...data
+    }: {
       id: number
       name?: string
       type?: string
@@ -34,21 +40,25 @@ export function useUpdateScraper() {
       engines?: string[]
       rate_limit?: number
       is_active?: boolean
-    }) => api.put(`/scrapers/${id}`, data).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['scrapers'] }),
+    }) => api.put(`/scrapers/${id}`, data).then((r) => r.data),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: queryKeys.scrapers.all }),
   })
 }
 
 export function useDeleteScraper() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (id: number) => api.delete(`/scrapers/${id}`).then(r => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['scrapers'] }),
+    mutationFn: (id: number) =>
+      api.delete(`/scrapers/${id}`).then((r) => r.data),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: queryKeys.scrapers.all }),
   })
 }
 
 export function useTestScraper() {
   return useMutation({
-    mutationFn: (id: number) => api.post(`/scrapers/${id}/test`).then(r => r.data),
+    mutationFn: (id: number) =>
+      api.post(`/scrapers/${id}/test`).then((r) => r.data),
   })
 }

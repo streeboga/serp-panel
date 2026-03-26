@@ -1,8 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Jobs;
 
-use App\Models\ScrapeJob;
+use App\Contracts\Repositories\ScrapeJobRepositoryInterface;
 use App\Services\SerpSnapshotService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -24,15 +26,15 @@ class ScrapeSerpJob implements ShouldQueue
         $this->onQueue('serp-scrape');
     }
 
-    public function handle(SerpSnapshotService $service): void
+    public function handle(SerpSnapshotService $service, ScrapeJobRepositoryInterface $scrapeJobRepository): void
     {
-        $job = ScrapeJob::findOrFail($this->scrapeJobId);
-        $job->update(['status' => 'running', 'started_at' => now(), 'attempts' => $job->attempts + 1]);
+        $job = $scrapeJobRepository->findById($this->scrapeJobId);
+        $scrapeJobRepository->update($job, ['status' => 'running', 'started_at' => now(), 'attempts' => $job->attempts + 1]);
 
         try {
             $service->scrape($job);
         } catch (\Exception $e) {
-            $job->update([
+            $scrapeJobRepository->update($job, [
                 'status' => $job->attempts >= $this->tries ? 'failed' : 'retrying',
                 'error_message' => $e->getMessage(),
             ]);

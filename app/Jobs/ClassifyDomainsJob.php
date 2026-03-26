@@ -1,8 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Jobs;
 
-use App\Models\SerpResult;
+use App\Contracts\Repositories\SerpResultRepositoryInterface;
 use App\Services\ClassificationService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -22,11 +24,9 @@ class ClassifyDomainsJob implements ShouldQueue
         $this->onQueue('classification');
     }
 
-    public function handle(ClassificationService $service): void
+    public function handle(ClassificationService $service, SerpResultRepositoryInterface $resultRepository): void
     {
-        $results = SerpResult::where('snapshot_id', $this->snapshotId)
-            ->where('collected_at', $this->collectedAt)
-            ->get();
+        $results = $resultRepository->getBySnapshotIdAndDate($this->snapshotId, $this->collectedAt);
 
         foreach ($results as $result) {
             $service->classify(

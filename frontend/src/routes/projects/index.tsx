@@ -1,14 +1,29 @@
 import { createFileRoute, redirect, Link } from '@tanstack/react-router'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AppLayout } from '@/components/AppLayout'
+import { EmptyState } from '@/components/EmptyState'
+import { CardGridSkeleton } from '@/components/PageSkeleton'
 import { useProjects, useCreateProject } from '@/hooks/useProjects'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import type { Project } from '@/types/api'
 
 export const Route = createFileRoute('/projects/')({
   beforeLoad: () => {
@@ -20,36 +35,45 @@ export const Route = createFileRoute('/projects/')({
 })
 
 function ProjectsPage() {
+  const { t } = useTranslation()
   const { data: projects, isLoading } = useProjects()
   const createProject = useCreateProject()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
 
-  const projectList = Array.isArray(projects) ? projects : projects?.data ?? []
+  const projectList: Project[] = Array.isArray(projects)
+    ? projects
+    : (projects?.data ?? [])
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    await createProject.mutateAsync({ name, description: description || undefined })
-    setName('')
-    setDescription('')
-    setOpen(false)
-  }
+  const handleCreate = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      await createProject.mutateAsync({
+        name,
+        description: description || undefined,
+      })
+      setName('')
+      setDescription('')
+      setOpen(false)
+    },
+    [name, description, createProject],
+  )
 
   return (
     <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Projects</h1>
+          <h1 className="text-2xl font-bold">{t('projects.title')}</h1>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger render={<Button />}>New Project</DialogTrigger>
+            <DialogTrigger render={<Button />}>{t('projects.newProject')}</DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>Create Project</DialogTitle>
+                <DialogTitle>{t('projects.createProject')}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleCreate} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="project-name">Name</Label>
+                  <Label htmlFor="project-name">{t('projects.name')}</Label>
                   <Input
                     id="project-name"
                     value={name}
@@ -58,7 +82,7 @@ function ProjectsPage() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="project-desc">Description</Label>
+                  <Label htmlFor="project-desc">{t('projects.description')}</Label>
                   <Input
                     id="project-desc"
                     value={description}
@@ -67,7 +91,7 @@ function ProjectsPage() {
                 </div>
                 <DialogFooter>
                   <Button type="submit" disabled={createProject.isPending}>
-                    {createProject.isPending ? 'Creating...' : 'Create'}
+                    {createProject.isPending ? t('projects.creating') : t('projects.create')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -76,13 +100,19 @@ function ProjectsPage() {
         </div>
 
         {isLoading ? (
-          <p className="text-muted-foreground">Loading...</p>
+          <CardGridSkeleton count={6} />
         ) : projectList.length === 0 ? (
-          <p className="text-muted-foreground">No projects yet. Create one to get started.</p>
+          <EmptyState
+            title={t('projects.noProjects')}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {projectList.map((project: { id: number; name: string; description?: string; domains_count?: number; keywords_count?: number }) => (
-              <Link key={project.id} to="/projects/$projectId" params={{ projectId: String(project.id) }}>
+            {projectList.map((project) => (
+              <Link
+                key={project.id}
+                to="/projects/$projectId"
+                params={{ projectId: String(project.id) }}
+              >
                 <Card className="hover:ring-2 hover:ring-primary/20 transition-all cursor-pointer">
                   <CardHeader>
                     <CardTitle>{project.name}</CardTitle>
@@ -92,8 +122,8 @@ function ProjectsPage() {
                   </CardHeader>
                   <CardContent>
                     <div className="flex gap-4 text-sm text-muted-foreground">
-                      <span>{project.domains_count ?? 0} domains</span>
-                      <span>{project.keywords_count ?? 0} keywords</span>
+                      <span>{project.domains_count ?? 0} {t('projects.domains')}</span>
+                      <span>{project.keywords_count ?? 0} {t('projects.keywords')}</span>
                     </div>
                   </CardContent>
                 </Card>

@@ -1,10 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $keyword_id
+ * @property int $region_id
+ * @property int $frequency_exact
+ * @property int $frequency_broad
+ * @property int $frequency_phrase
+ * @property Carbon $collected_at
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ */
 class WordstatFrequency extends Model
 {
     protected $fillable = [

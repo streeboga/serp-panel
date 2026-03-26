@@ -1,11 +1,27 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $organization_id
+ * @property string $type
+ * @property string $name
+ * @property string $base_url
+ * @property array<string, mixed>|null $credentials
+ * @property array<int, string> $supported_engines
+ * @property int $rate_limit
+ * @property bool $is_active
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ */
 class Scraper extends Model
 {
     protected $fillable = [

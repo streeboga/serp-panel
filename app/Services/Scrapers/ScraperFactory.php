@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Scrapers;
 
 use App\Models\Scraper;
 use App\Services\Scrapers\Adapters\XmlRiverAdapter;
 use App\Services\Scrapers\Contracts\SerpScraperAdapter;
 
-class ScraperFactory
+final class ScraperFactory
 {
     public function make(Scraper $scraper): SerpScraperAdapter
     {

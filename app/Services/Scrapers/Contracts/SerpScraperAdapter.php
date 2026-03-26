@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Scrapers\Contracts;
 
 use App\Services\Scrapers\DTO\ScrapeRequest;

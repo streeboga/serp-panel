@@ -4,6 +4,8 @@ use App\Services\Scrapers\Adapters\XmlRiverAdapter;
 use App\Services\Scrapers\DTO\ScrapeRequest;
 use Illuminate\Support\Facades\Http;
 
+covers(XmlRiverAdapter::class);
+
 test('xmlriver adapter parses response correctly', function () {
     Http::fake([
         '*/search*' => Http::response(json_encode([

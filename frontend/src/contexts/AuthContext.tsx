@@ -1,24 +1,26 @@
-import { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  type ReactNode,
+} from 'react'
 import api from '@/lib/api'
-
-interface User {
-  id: number
-  name: string
-  email: string
-  organizations: Array<{
-    id: number
-    name: string
-    slug: string
-    pivot: { role: string }
-  }>
-}
+import type { User } from '@/types/api'
 
 interface AuthContextType {
   user: User | null
   token: string | null
   organizationId: number | null
   login: (email: string, password: string) => Promise<void>
-  register: (data: { name: string; email: string; password: string; password_confirmation: string; organization_name: string }) => Promise<void>
+  register: (data: {
+    name: string
+    email: string
+    password: string
+    password_confirmation: string
+    organization_name: string
+  }) => Promise<void>
   logout: () => void
   setOrganization: (id: number) => void
   isLoading: boolean
@@ -28,29 +30,41 @@ const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'))
+  const [token, setToken] = useState<string | null>(
+    localStorage.getItem('token'),
+  )
   const [organizationId, setOrganizationId] = useState<number | null>(
-    Number(localStorage.getItem('organization_id')) || null
+    Number(localStorage.getItem('organization_id')) || null,
   )
   const [isLoading, setIsLoading] = useState(true)
 
+  const setOrganization = useCallback((id: number) => {
+    setOrganizationId(id)
+    localStorage.setItem('organization_id', String(id))
+  }, [])
+
   useEffect(() => {
     if (token) {
-      api.get('/auth/me').then(res => {
-        setUser(res.data.user)
-        if (!organizationId && res.data.user.organizations.length > 0) {
-          setOrganization(res.data.user.organizations[0].id)
-        }
-      }).catch(() => {
-        setToken(null)
-        localStorage.removeItem('token')
-      }).finally(() => setIsLoading(false))
+      api
+        .get('/auth/me')
+        .then((res) => {
+          setUser(res.data.user)
+          if (!organizationId && res.data.user.organizations.length > 0) {
+            setOrganization(res.data.user.organizations[0].id)
+          }
+        })
+        .catch(() => {
+          setToken(null)
+          localStorage.removeItem('token')
+        })
+        .finally(() => setIsLoading(false))
     } else {
       setIsLoading(false)
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token])
 
-  const login = async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     const res = await api.post('/auth/login', { email, password })
     const { user: u, token: t } = res.data
     setUser(u)
@@ -59,33 +73,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (u.organizations.length > 0) {
       setOrganization(u.organizations[0].id)
     }
-  }
+  }, [setOrganization])
 
-  const register = async (data: { name: string; email: string; password: string; password_confirmation: string; organization_name: string }) => {
-    const res = await api.post('/auth/register', data)
-    const { user: u, token: t, organization } = res.data
-    setUser({ ...u, organizations: [organization] })
-    setToken(t)
-    localStorage.setItem('token', t)
-    setOrganization(organization.id)
-  }
+  const register = useCallback(
+    async (data: {
+      name: string
+      email: string
+      password: string
+      password_confirmation: string
+      organization_name: string
+    }) => {
+      const res = await api.post('/auth/register', data)
+      const { user: u, token: t, organization } = res.data
+      setUser({ ...u, organizations: [organization] })
+      setToken(t)
+      localStorage.setItem('token', t)
+      setOrganization(organization.id)
+    },
+    [setOrganization],
+  )
 
-  const logout = () => {
+  const logout = useCallback(() => {
     api.post('/auth/logout').catch(() => {})
     setUser(null)
     setToken(null)
     setOrganizationId(null)
     localStorage.removeItem('token')
     localStorage.removeItem('organization_id')
-  }
-
-  const setOrganization = (id: number) => {
-    setOrganizationId(id)
-    localStorage.setItem('organization_id', String(id))
-  }
+  }, [])
 
   return (
-    <AuthContext.Provider value={{ user, token, organizationId, login, register, logout, setOrganization, isLoading }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        organizationId,
+        login,
+        register,
+        logout,
+        setOrganization,
+        isLoading,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   )

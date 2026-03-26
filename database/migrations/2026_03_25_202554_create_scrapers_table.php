@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('type');
             $table->string('name');
             $table->string('base_url');
-            $table->jsonb('credentials')->nullable();
+            $table->text('credentials')->nullable();
             $table->jsonb('supported_engines')->default('["google","yandex"]');
             $table->integer('rate_limit')->default(60);
             $table->boolean('is_active')->default(true);

@@ -1,8 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Scrapers\DTO;
 
-readonly class SerpResultItem
+final readonly class SerpResultItem
 {
     public function __construct(
         public int $position,

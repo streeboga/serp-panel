@@ -1,25 +1,32 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
-use App\Models\Region;
+use App\Contracts\Repositories\RegionRepositoryInterface;
+use App\Contracts\Repositories\ScrapeJobRepositoryInterface;
+use App\Contracts\Repositories\SerpResultRepositoryInterface;
+use App\Contracts\Repositories\SerpSnapshotRepositoryInterface;
 use App\Models\ScrapeJob;
-use App\Models\SerpResult;
-use App\Models\SerpSnapshot;
 use App\Services\Scrapers\DTO\ScrapeRequest;
 use App\Services\Scrapers\ScraperFactory;
 
-class SerpSnapshotService
+final readonly class SerpSnapshotService
 {
     public function __construct(
-        private readonly ScraperFactory $scraperFactory,
+        private ScraperFactory $scraperFactory,
+        private SerpSnapshotRepositoryInterface $snapshotRepository,
+        private SerpResultRepositoryInterface $resultRepository,
+        private RegionRepositoryInterface $regionRepository,
+        private ScrapeJobRepositoryInterface $scrapeJobRepository,
     ) {}
 
     public function scrape(ScrapeJob $job): void
     {
         $keyword = $job->keyword;
         $scraper = $job->scraper;
-        $region = Region::find($job->region_id);
+        $region = $this->regionRepository->findById($job->region_id);
 
         $adapter = $this->scraperFactory->make($scraper);
 
@@ -37,7 +44,7 @@ class SerpSnapshotService
 
         $collectedAt = now()->toDateString();
 
-        $snapshot = SerpSnapshot::create([
+        $snapshot = $this->snapshotRepository->create([
             'keyword_id' => $keyword->id,
             'collected_at' => $collectedAt,
             'search_engine' => $job->engine->value,
@@ -58,11 +65,9 @@ class SerpSnapshotService
             'is_ads' => $item->isAds,
         ], $response->results);
 
-        foreach (array_chunk($rows, 50) as $chunk) {
-            SerpResult::insert($chunk);
-        }
+        $this->resultRepository->insertBatch($rows);
 
-        $job->update([
+        $this->scrapeJobRepository->update($job, [
             'status' => 'completed',
             'completed_at' => now(),
             'raw_response' => $response->rawResponse,

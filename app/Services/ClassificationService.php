@@ -1,33 +1,35 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services;
 
+use App\Contracts\Repositories\ClassificationRuleRepositoryInterface;
+use App\Contracts\Repositories\DomainClassificationRepositoryInterface;
+use App\Enums\ClassificationRuleType;
 use App\Models\ClassificationRule;
 use App\Models\DomainClassification;
 
-class ClassificationService
+final readonly class ClassificationService
 {
+    public function __construct(
+        private DomainClassificationRepositoryInterface $classificationRepository,
+        private ClassificationRuleRepositoryInterface $ruleRepository,
+    ) {}
+
     public function classify(string $domain, int $organizationId, ?string $url = null, ?string $title = null): ?DomainClassification
     {
-        $existing = DomainClassification::where('domain', $domain)
-            ->where('organization_id', $organizationId)
-            ->where('classified_by', 'manual')
-            ->first();
+        $existing = $this->classificationRepository->findByDomainAndOrganization($domain, $organizationId, 'manual');
 
         if ($existing) {
             return $existing;
         }
 
-        $rules = ClassificationRule::where(function ($q) use ($organizationId) {
-            $q->where('organization_id', $organizationId)
-                ->orWhere('is_system', true);
-        })
-            ->orderByDesc('priority')
-            ->get();
+        $rules = $this->ruleRepository->allForOrganization($organizationId);
 
         foreach ($rules as $rule) {
             if ($this->matchesRule($rule, $domain, $url, $title)) {
-                return DomainClassification::updateOrCreate(
+                return $this->classificationRepository->updateOrCreate(
                     ['domain' => $domain, 'organization_id' => $organizationId],
                     ['site_type_id' => $rule->site_type_id, 'classified_by' => 'rule', 'rule_id' => $rule->id],
                 );
@@ -39,13 +41,12 @@ class ClassificationService
 
     private function matchesRule(ClassificationRule $rule, string $domain, ?string $url, ?string $title): bool
     {
-        return match ($rule->rule_type->value) {
-            'domain_exact' => $domain === $rule->pattern,
-            'domain_contains' => str_contains($domain, $rule->pattern),
-            'domain_regex' => (bool) @preg_match($rule->pattern, $domain),
-            'url_regex' => $url !== null && (bool) @preg_match($rule->pattern, $url),
-            'title_contains' => $title !== null && str_contains(mb_strtolower($title), mb_strtolower($rule->pattern)),
-            default => false,
+        return match ($rule->rule_type) {
+            ClassificationRuleType::DomainExact => $domain === $rule->pattern,
+            ClassificationRuleType::DomainContains => str_contains($domain, $rule->pattern),
+            ClassificationRuleType::DomainRegex => (bool) @preg_match($rule->pattern, $domain),
+            ClassificationRuleType::UrlRegex => $url !== null && (bool) @preg_match($rule->pattern, $url),
+            ClassificationRuleType::TitleContains => $title !== null && str_contains(mb_strtolower($title), mb_strtolower($rule->pattern)),
         };
     }
 }

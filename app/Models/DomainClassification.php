@@ -1,11 +1,25 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use App\Enums\ClassifiedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property string $domain
+ * @property int $site_type_id
+ * @property ClassifiedBy $classified_by
+ * @property int|null $rule_id
+ * @property int $organization_id
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read SiteType|null $siteType
+ */
 class DomainClassification extends Model
 {
     protected $fillable = [

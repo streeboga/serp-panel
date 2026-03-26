@@ -1,24 +1,44 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useState } from 'react'
+import { createFileRoute, redirect, Link } from '@tanstack/react-router'
+import { useState, useCallback, useMemo } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AppLayout } from '@/components/AppLayout'
+import { EmptyState } from '@/components/EmptyState'
+import { SiteTypeBadge } from '@/components/SiteTypeBadge'
+import { TableSkeleton } from '@/components/PageSkeleton'
 import {
-  useClassificationRules, useCreateClassificationRule,
-  useDeleteClassificationRule, useSiteTypes,
+  useClassificationRules,
+  useCreateClassificationRule,
+  useDeleteClassificationRule,
+  useSiteTypes,
 } from '@/hooks/useClassification'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Badge } from '@/components/ui/badge'
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from '@/components/ui/table'
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
 } from '@/components/ui/dialog'
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from '@/components/ui/select'
-import { Link } from '@tanstack/react-router'
+import type { ClassificationRule, SiteType } from '@/types/api'
 
 export const Route = createFileRoute('/classification/')({
   beforeLoad: () => {
@@ -30,13 +50,20 @@ export const Route = createFileRoute('/classification/')({
 })
 
 function ClassificationPage() {
+  const { t } = useTranslation()
   const { data: rulesData, isLoading } = useClassificationRules()
   const { data: siteTypesData } = useSiteTypes()
   const createRule = useCreateClassificationRule()
   const deleteRule = useDeleteClassificationRule()
 
-  const rules = rulesData?.data ?? rulesData ?? []
-  const siteTypes = siteTypesData?.data ?? siteTypesData ?? []
+  const rules: ClassificationRule[] = useMemo(
+    () => rulesData?.data ?? rulesData ?? [],
+    [rulesData],
+  )
+  const siteTypes: SiteType[] = useMemo(
+    () => siteTypesData?.data ?? siteTypesData ?? [],
+    [siteTypesData],
+  )
 
   const [open, setOpen] = useState(false)
   const [ruleType, setRuleType] = useState('domain')
@@ -44,73 +71,98 @@ function ClassificationPage() {
   const [siteTypeId, setSiteTypeId] = useState<string>('')
   const [priority, setPriority] = useState('0')
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault()
-    await createRule.mutateAsync({
-      rule_type: ruleType,
-      pattern,
-      site_type_id: Number(siteTypeId),
-      priority: Number(priority),
-    })
-    setPattern('')
-    setSiteTypeId('')
-    setPriority('0')
-    setOpen(false)
-  }
+  const handleCreate = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      await createRule.mutateAsync({
+        rule_type: ruleType,
+        pattern,
+        site_type_id: Number(siteTypeId),
+        priority: Number(priority),
+      })
+      setPattern('')
+      setSiteTypeId('')
+      setPriority('0')
+      setOpen(false)
+    },
+    [ruleType, pattern, siteTypeId, priority, createRule],
+  )
 
   return (
     <AppLayout>
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Classification Rules</h1>
+          <h1 className="text-2xl font-bold">{t('classification.title')}</h1>
           <div className="flex gap-2">
             <Link to="/classification/domains">
-              <Button variant="outline">Domains</Button>
+              <Button variant="outline">{t('classification.domains')}</Button>
             </Link>
             <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger render={<Button />}>Add Rule</DialogTrigger>
+              <DialogTrigger render={<Button />}>{t('classification.addRule')}</DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Add Classification Rule</DialogTitle>
+                  <DialogTitle>{t('classification.addClassificationRule')}</DialogTitle>
                 </DialogHeader>
                 <form onSubmit={handleCreate} className="space-y-4">
                   <div className="space-y-2">
-                    <Label>Rule Type</Label>
-                    <Select value={ruleType} onValueChange={(v: string | null) => setRuleType(v ?? 'domain')}>
+                    <Label>{t('classification.ruleType')}</Label>
+                    <Select
+                      value={ruleType}
+                      onValueChange={(v: string | null) =>
+                        setRuleType(v ?? 'domain')
+                      }
+                    >
                       <SelectTrigger>
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="domain">Domain</SelectItem>
-                        <SelectItem value="url_pattern">URL Pattern</SelectItem>
-                        <SelectItem value="regex">Regex</SelectItem>
+                        <SelectItem value="domain">{t('classification.domain')}</SelectItem>
+                        <SelectItem value="url_pattern">
+                          {t('classification.urlPattern')}
+                        </SelectItem>
+                        <SelectItem value="regex">{t('classification.regex')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Pattern</Label>
-                    <Input value={pattern} onChange={(e) => setPattern(e.target.value)} required />
+                    <Label>{t('classification.pattern')}</Label>
+                    <Input
+                      value={pattern}
+                      onChange={(e) => setPattern(e.target.value)}
+                      required
+                    />
                   </div>
                   <div className="space-y-2">
-                    <Label>Site Type</Label>
-                    <Select value={siteTypeId} onValueChange={(v: string | null) => setSiteTypeId(v ?? '')}>
+                    <Label>{t('classification.siteType')}</Label>
+                    <Select
+                      value={siteTypeId}
+                      onValueChange={(v: string | null) =>
+                        setSiteTypeId(v ?? '')
+                      }
+                    >
                       <SelectTrigger>
-                        <SelectValue placeholder="Select type" />
+                        <SelectValue placeholder={t('classification.selectType')} />
                       </SelectTrigger>
                       <SelectContent>
-                        {Array.isArray(siteTypes) && siteTypes.map((t: { id: number; name: string }) => (
-                          <SelectItem key={t.id} value={String(t.id)}>{t.name}</SelectItem>
+                        {siteTypes.map((st) => (
+                          <SelectItem key={st.id} value={String(st.id)}>
+                            {st.name}
+                          </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="space-y-2">
-                    <Label>Priority</Label>
-                    <Input type="number" value={priority} onChange={(e) => setPriority(e.target.value)} />
+                    <Label>{t('classification.priority')}</Label>
+                    <Input
+                      type="number"
+                      value={priority}
+                      onChange={(e) => setPriority(e.target.value)}
+                    />
                   </div>
                   <DialogFooter>
                     <Button type="submit" disabled={createRule.isPending}>
-                      {createRule.isPending ? 'Creating...' : 'Create'}
+                      {createRule.isPending ? t('classification.creating') : t('classification.create')}
                     </Button>
                   </DialogFooter>
                 </form>
@@ -120,43 +172,44 @@ function ClassificationPage() {
         </div>
 
         {isLoading ? (
-          <p className="text-muted-foreground">Loading...</p>
+          <TableSkeleton rows={6} />
+        ) : rules.length === 0 ? (
+          <EmptyState title={t('classification.noRules')} />
         ) : (
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Rule Type</TableHead>
-                <TableHead>Pattern</TableHead>
-                <TableHead>Site Type</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>System</TableHead>
-                <TableHead>Actions</TableHead>
+                <TableHead>{t('classification.ruleType')}</TableHead>
+                <TableHead>{t('classification.pattern')}</TableHead>
+                <TableHead>{t('classification.siteType')}</TableHead>
+                <TableHead>{t('classification.priority')}</TableHead>
+                <TableHead>{t('classification.system')}</TableHead>
+                <TableHead>{t('common.actions')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {Array.isArray(rules) && rules.length > 0 ? rules.map((rule: {
-                id: number
-                rule_type: string
-                pattern: string
-                site_type?: { name: string; color: string }
-                priority: number
-                is_system: boolean
-              }) => (
+              {rules.map((rule) => (
                 <TableRow key={rule.id}>
                   <TableCell>
                     <Badge variant="outline">{rule.rule_type}</Badge>
                   </TableCell>
-                  <TableCell className="font-mono text-sm">{rule.pattern}</TableCell>
+                  <TableCell className="font-mono text-sm">
+                    {rule.pattern}
+                  </TableCell>
                   <TableCell>
                     {rule.site_type ? (
-                      <Badge style={{ backgroundColor: rule.site_type.color, color: 'white' }}>
-                        {rule.site_type.name}
-                      </Badge>
-                    ) : '-'}
+                      <SiteTypeBadge type={rule.site_type} />
+                    ) : (
+                      '-'
+                    )}
                   </TableCell>
                   <TableCell>{rule.priority}</TableCell>
                   <TableCell>
-                    {rule.is_system ? <Badge variant="secondary">System</Badge> : '-'}
+                    {rule.is_system ? (
+                      <Badge variant="secondary">{t('classification.system')}</Badge>
+                    ) : (
+                      '-'
+                    )}
                   </TableCell>
                   <TableCell>
                     {!rule.is_system && (
@@ -166,18 +219,12 @@ function ClassificationPage() {
                         onClick={() => deleteRule.mutate(rule.id)}
                         disabled={deleteRule.isPending}
                       >
-                        Delete
+                        {t('classification.delete')}
                       </Button>
                     )}
                   </TableCell>
                 </TableRow>
-              )) : (
-                <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
-                    No classification rules
-                  </TableCell>
-                </TableRow>
-              )}
+              ))}
             </TableBody>
           </Table>
         )}

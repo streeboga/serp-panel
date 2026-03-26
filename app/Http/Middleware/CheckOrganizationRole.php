@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Http\Middleware;
 
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
-class CheckOrganizationRole
+final class CheckOrganizationRole
 {
     private const ROLE_HIERARCHY = [
         'admin' => 4,
@@ -22,7 +24,7 @@ class CheckOrganizationRole
         $requiredLevel = self::ROLE_HIERARCHY[$minimumRole] ?? 0;
 
         if ($userLevel < $requiredLevel) {
-            return response()->json(['error' => 'Insufficient permissions'], 403);
+            return response()->json(['error' => __('organization.insufficient_permissions')], 403);
         }
 
         return $next($request);

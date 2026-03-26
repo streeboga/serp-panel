@@ -1,11 +1,24 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $domain_id
+ * @property string $name
+ * @property int|null $parent_id
+ * @property int $sort_order
+ * @property Carbon $created_at
+ * @property Carbon $updated_at
+ * @property-read Domain $domain
+ */
 class Category extends Model
 {
     protected $fillable = ['domain_id', 'name', 'parent_id', 'sort_order'];

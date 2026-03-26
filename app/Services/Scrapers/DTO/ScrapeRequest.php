@@ -1,8 +1,10 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Services\Scrapers\DTO;
 
-readonly class ScrapeRequest
+final readonly class ScrapeRequest
 {
     public function __construct(
         public string $keyword,

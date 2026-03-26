@@ -1,5 +1,8 @@
 import { createFileRoute, redirect, Link, Outlet } from '@tanstack/react-router'
+import { Suspense } from 'react'
+import { useTranslation } from 'react-i18next'
 import { AppLayout } from '@/components/AppLayout'
+import { PageSkeleton } from '@/components/PageSkeleton'
 import { useProject } from '@/hooks/useProjects'
 
 export const Route = createFileRoute('/projects/$projectId')({
@@ -12,6 +15,7 @@ export const Route = createFileRoute('/projects/$projectId')({
 })
 
 function ProjectDetailPage() {
+  const { t } = useTranslation()
   const { projectId } = Route.useParams()
   const { data: project, isLoading } = useProject(projectId)
 
@@ -21,18 +25,22 @@ function ProjectDetailPage() {
     <AppLayout>
       <div className="space-y-6">
         {isLoading ? (
-          <p className="text-muted-foreground">Loading...</p>
+          <PageSkeleton />
         ) : projectData ? (
           <>
             <div>
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <Link to="/projects" className="hover:underline">Projects</Link>
+                <Link to="/projects" className="hover:underline">
+                  {t('projects.title')}
+                </Link>
                 <span>/</span>
                 <span>{projectData.name}</span>
               </div>
               <h1 className="text-2xl font-bold">{projectData.name}</h1>
               {projectData.description && (
-                <p className="text-muted-foreground mt-1">{projectData.description}</p>
+                <p className="text-muted-foreground mt-1">
+                  {projectData.description}
+                </p>
               )}
             </div>
 
@@ -43,35 +51,37 @@ function ProjectDetailPage() {
                 className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
                 activeOptions={{ exact: true }}
               >
-                Overview
+                {t('projects.overview')}
               </Link>
               <Link
                 to="/projects/$projectId/domains"
                 params={{ projectId }}
                 className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
               >
-                Domains
+                {t('projects.domainsTab')}
               </Link>
               <Link
                 to="/projects/$projectId/keywords"
                 params={{ projectId }}
                 className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
               >
-                Keywords
+                {t('projects.keywordsTab')}
               </Link>
               <Link
                 to="/projects/$projectId/competitors"
                 params={{ projectId }}
                 className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
               >
-                Competitors
+                {t('projects.competitorsTab')}
               </Link>
             </nav>
 
-            <Outlet />
+            <Suspense fallback={<PageSkeleton />}>
+              <Outlet />
+            </Suspense>
           </>
         ) : (
-          <p className="text-muted-foreground">Project not found.</p>
+          <p className="text-muted-foreground">{t('projects.notFound')}</p>
         )}
       </div>
     </AppLayout>

@@ -1,12 +1,14 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Jobs;
 
-use App\Models\Keyword;
-use App\Models\WordstatFrequency;
-use App\Models\WordstatSchedule;
-use App\Models\WordstatSuggestion;
-use App\Models\WordstatTrend;
+use App\Contracts\Repositories\KeywordRepositoryInterface;
+use App\Contracts\Repositories\WordstatFrequencyRepositoryInterface;
+use App\Contracts\Repositories\WordstatScheduleRepositoryInterface;
+use App\Contracts\Repositories\WordstatSuggestionRepositoryInterface;
+use App\Contracts\Repositories\WordstatTrendRepositoryInterface;
 use App\Services\Wordstat\Contracts\WordstatAdapter;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -22,6 +24,7 @@ class CollectWordstatJob implements ShouldQueue
 
     public int $timeout = 300;
 
+    /** @param array<int, int> $regionIds */
     public function __construct(
         public readonly int $keywordId,
         public readonly int $scheduleId,
@@ -32,15 +35,21 @@ class CollectWordstatJob implements ShouldQueue
         $this->onQueue('wordstat');
     }
 
-    public function handle(WordstatAdapter $adapter): void
-    {
-        $keyword = Keyword::findOrFail($this->keywordId);
+    public function handle(
+        WordstatAdapter $adapter,
+        KeywordRepositoryInterface $keywordRepository,
+        WordstatFrequencyRepositoryInterface $frequencyRepository,
+        WordstatTrendRepositoryInterface $trendRepository,
+        WordstatSuggestionRepositoryInterface $suggestionRepository,
+        WordstatScheduleRepositoryInterface $scheduleRepository,
+    ): void {
+        $keyword = $keywordRepository->findById($this->keywordId);
         $collectedAt = now()->toDateString();
 
         foreach ($this->regionIds as $regionId) {
             $result = $adapter->collect($keyword->keyword, $regionId);
 
-            WordstatFrequency::create([
+            $frequencyRepository->create([
                 'keyword_id' => $keyword->id,
                 'region_id' => $regionId,
                 'frequency_exact' => $result->frequencies['exact'] ?? 0,
@@ -51,7 +60,7 @@ class CollectWordstatJob implements ShouldQueue
 
             if ($this->collectTrends) {
                 foreach ($result->trends as $timestamp => $value) {
-                    WordstatTrend::updateOrCreate(
+                    $trendRepository->updateOrCreate(
                         [
                             'keyword_id' => $keyword->id,
                             'region_id' => $regionId,
@@ -70,7 +79,7 @@ class CollectWordstatJob implements ShouldQueue
             $result = $adapter->collect($keyword->keyword, $this->regionIds[0] ?? $keyword->region_id);
 
             foreach ($result->suggestions as $suggestion) {
-                WordstatSuggestion::updateOrCreate(
+                $suggestionRepository->updateOrCreate(
                     [
                         'keyword_id' => $keyword->id,
                         'suggestion' => $suggestion['suggestion'],
@@ -84,11 +93,10 @@ class CollectWordstatJob implements ShouldQueue
             }
         }
 
-        WordstatSchedule::find($this->scheduleId)?->update([
+        $schedule = $scheduleRepository->findById($this->scheduleId);
+        $scheduleRepository->update($schedule, [
             'last_run_at' => now(),
-            'next_run_at' => now()->addDays(
-                WordstatSchedule::find($this->scheduleId)?->frequency_days ?? 30
-            ),
+            'next_run_at' => now()->addDays($schedule->frequency_days),
         ]);
     }
 }
