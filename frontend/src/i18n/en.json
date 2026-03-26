@@ -8,6 +8,8 @@
     "classification": "Classification",
     "scrapers": "Scrapers",
     "schedules": "Schedules",
+    "alerts": "Alerts",
+    "wordstatSchedules": "Wordstat Schedules",
     "settings": "Settings"
   },
   "auth": {
@@ -51,6 +53,7 @@
     "domainsTab": "Domains",
     "keywordsTab": "Keywords",
     "competitorsTab": "Competitors",
+    "categoriesTab": "Categories",
     "created": "Created"
   },
   "domains": {
@@ -230,8 +233,74 @@
     "themeDark": "Dark",
     "themeSystem": "System"
   },
+  "alerts": {
+    "title": "Position Alerts",
+    "addAlert": "Add Alert",
+    "keyword": "Keyword",
+    "threshold": "Threshold Position",
+    "direction": "Direction",
+    "dropsBelow": "Drops below",
+    "risesAbove": "Rises above",
+    "channel": "Channel",
+    "recipient": "Recipient",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "lastTriggered": "Last Triggered",
+    "never": "Never",
+    "actions": "Actions",
+    "edit": "Edit",
+    "delete": "Delete",
+    "create": "Create",
+    "creating": "Creating...",
+    "save": "Save",
+    "saving": "Saving...",
+    "noAlerts": "No alerts configured",
+    "deleteConfirm": "Delete this alert?"
+  },
+  "wordstatSchedules": {
+    "title": "Wordstat Schedules",
+    "addSchedule": "Add Schedule",
+    "project": "Project",
+    "cluster": "Cluster",
+    "keyword": "Keyword",
+    "frequencyDays": "Frequency (days)",
+    "collectTrends": "Collect Trends",
+    "collectSuggestions": "Collect Suggestions",
+    "regions": "Regions",
+    "lastRun": "Last Run",
+    "nextRun": "Next Run",
+    "status": "Status",
+    "active": "Active",
+    "inactive": "Inactive",
+    "actions": "Actions",
+    "runNow": "Run Now",
+    "delete": "Delete",
+    "create": "Create",
+    "creating": "Creating...",
+    "noSchedules": "No Wordstat schedules configured"
+  },
+  "billing": {
+    "title": "Billing & Usage",
+    "currentTier": "Current Tier",
+    "keywords": "Keywords",
+    "projects": "Projects",
+    "scrapers": "Scrapers",
+    "used": "used",
+    "of": "of",
+    "upgrade": "Upgrade",
+    "changeTier": "Change Tier"
+  },
   "common": {
     "loading": "Loading...",
-    "actions": "Actions"
+    "actions": "Actions",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "edit": "Edit",
+    "save": "Save",
+    "saving": "Saving...",
+    "delete": "Delete",
+    "yes": "Yes",
+    "no": "No"
   }
 }

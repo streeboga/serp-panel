@@ -13,7 +13,7 @@ test.describe('Dashboard', () => {
   test('dashboard page loads with title', async ({ page }) => {
     await page.goto('/')
     // Should see the dashboard heading (in whatever language is configured)
-    const heading = page.locator('h1')
+    const heading = page.getByRole('heading', { name: 'Dashboard' })
     await expect(heading).toBeVisible({ timeout: 10000 })
   })
 

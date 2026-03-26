@@ -40,7 +40,7 @@ export function useUpdateProject() {
       id: string
       name: string
       description?: string
-    }) => api.put(`/projects/${id}`, data).then((r) => r.data),
+    }) => api.patch(`/projects/${id}`, data).then((r) => r.data),
     onMutate: async ({ id, name, description }) => {
       await qc.cancelQueries({ queryKey: queryKeys.projects.detail(id) })
       const previous = qc.getQueryData(queryKeys.projects.detail(id))

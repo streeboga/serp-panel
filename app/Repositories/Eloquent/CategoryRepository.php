@@ -15,7 +15,7 @@ final class CategoryRepository implements CategoryRepositoryInterface
     {
         return Category::where('domain_id', $domainId)
             ->whereNull('parent_id')
-            ->with('children.children')
+            ->with(['children.children', 'clusters'])
             ->get();
     }
 

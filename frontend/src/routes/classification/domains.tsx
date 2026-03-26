@@ -31,7 +31,10 @@ function DomainsClassificationPage() {
   const { t } = useTranslation()
   const { data, isLoading } = useDomainClassifications()
   const domains: DomainClassification[] = useMemo(
-    () => data?.data ?? data ?? [],
+    () => {
+      const d = data?.data ?? data
+      return Array.isArray(d) ? d : []
+    },
     [data],
   )
 

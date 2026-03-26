@@ -2,11 +2,29 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
 import { queryKeys } from '@/lib/query-keys'
 
+export function useOrganizations() {
+  return useQuery({
+    queryKey: queryKeys.organizations.all,
+    queryFn: () => api.get('/organizations').then((r) => r.data),
+    staleTime: 60_000,
+  })
+}
+
 export function useOrganization() {
   return useQuery({
     queryKey: queryKeys.organization.all,
     queryFn: () => api.get('/organization').then((r) => r.data),
     staleTime: 60_000,
+  })
+}
+
+export function useUpdateOrganization() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name?: string }) =>
+      api.patch('/organization', data).then((r) => r.data),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: queryKeys.organization.all }),
   })
 }
 
@@ -43,7 +61,7 @@ export function useUpdateMemberRole() {
   return useMutation({
     mutationFn: ({ userId, role }: { userId: number; role: string }) =>
       api
-        .put(`/organization/members/${userId}/role`, { role })
+        .patch(`/organization/members/${userId}/role`, { role })
         .then((r) => r.data),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: queryKeys.organization.members }),

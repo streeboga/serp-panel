@@ -11,7 +11,7 @@ test.describe('Settings Page', () => {
 
   test('settings page loads', async ({ page }) => {
     await page.goto('/settings')
-    const heading = page.locator('h1')
+    const heading = page.getByRole('heading', { name: /settings/i })
     await expect(heading).toBeVisible({ timeout: 10000 })
   })
 

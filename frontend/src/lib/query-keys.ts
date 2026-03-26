@@ -33,6 +33,24 @@ export const queryKeys = {
       [...queryKeys.domains.all, projectId] as const,
   },
 
+  categories: {
+    all: ['categories'] as const,
+    byDomain: (domainId: string) =>
+      [...queryKeys.categories.all, 'domain', domainId] as const,
+    detail: (id: string) =>
+      [...queryKeys.categories.all, id] as const,
+  },
+
+  clusters: {
+    all: ['clusters'] as const,
+    byProject: (projectId: string) =>
+      ['project-clusters', projectId] as const,
+    byCategory: (categoryId: string) =>
+      [...queryKeys.clusters.all, 'category', categoryId] as const,
+    detail: (id: string) =>
+      [...queryKeys.clusters.all, id] as const,
+  },
+
   competitors: {
     all: ['competitors'] as const,
     list: (projectId: string) =>
@@ -55,16 +73,24 @@ export const queryKeys = {
 
   regions: ['regions'] as const,
 
-  clusters: {
-    byProject: (projectId: string) =>
-      ['project-clusters', projectId] as const,
-  },
-
   wordstat: {
     data: (keywordId: string) => ['wordstat', keywordId] as const,
     trends: (keywordId: string) => ['wordstat-trends', keywordId] as const,
     suggestions: (keywordId: string) =>
       ['wordstat-suggestions', keywordId] as const,
+  },
+
+  wordstatSchedules: {
+    all: ['wordstat-schedules'] as const,
+  },
+
+  alerts: {
+    all: ['alerts'] as const,
+    detail: (id: string) => ['alerts', id] as const,
+  },
+
+  billing: {
+    usage: ['billing', 'usage'] as const,
   },
 
   dashboard: {
@@ -75,5 +101,9 @@ export const queryKeys = {
   organization: {
     all: ['organization'] as const,
     members: ['organization', 'members'] as const,
+  },
+
+  organizations: {
+    all: ['organizations'] as const,
   },
 } as const

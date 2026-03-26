@@ -26,6 +26,30 @@ interface AuthContextType {
   isLoading: boolean
 }
 
+// Parse JSON:API user response into flat User object
+function parseUserFromApi(raw: Record<string, unknown>): User {
+  const attrs = (raw.attributes ?? raw) as Record<string, unknown>
+  const rels = (raw.relationships ?? {}) as Record<string, unknown>
+  const orgs = Array.isArray(rels.organizations)
+    ? rels.organizations.map((o: Record<string, unknown>) => ({
+        id: Number(o.id),
+        name: ((o.attributes as Record<string, unknown>)?.name as string) ?? '',
+        slug: ((o.attributes as Record<string, unknown>)?.slug as string) ?? '',
+        ...(o.attributes as Record<string, unknown>),
+      }))
+    : Array.isArray(attrs.organizations)
+      ? attrs.organizations
+      : []
+  return {
+    id: Number(raw.id ?? attrs.id),
+    name: (attrs.name as string) ?? '',
+    email: (attrs.email as string) ?? '',
+    locale: (attrs.locale as string) ?? 'ru',
+    theme: (attrs.theme as string) ?? null,
+    organizations: orgs,
+  } as User
+}
+
 const AuthContext = createContext<AuthContextType | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -48,9 +72,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       api
         .get('/auth/me')
         .then((res) => {
-          setUser(res.data.user)
-          if (!organizationId && res.data.user.organizations.length > 0) {
-            setOrganization(res.data.user.organizations[0].id)
+          const u = parseUserFromApi(res.data.user)
+          setUser(u)
+          if (!organizationId && u.organizations && u.organizations.length > 0) {
+            setOrganization(Number(u.organizations[0].id))
           }
         })
         .catch(() => {
@@ -66,12 +91,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     const res = await api.post('/auth/login', { email, password })
-    const { user: u, token: t } = res.data
+    const { token: t } = res.data
+    const u = parseUserFromApi(res.data.user)
     setUser(u)
     setToken(t)
     localStorage.setItem('token', t)
-    if (u.organizations.length > 0) {
-      setOrganization(u.organizations[0].id)
+    if (u.organizations && u.organizations.length > 0) {
+      setOrganization(Number(u.organizations[0].id))
     }
   }, [setOrganization])
 
@@ -84,11 +110,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       organization_name: string
     }) => {
       const res = await api.post('/auth/register', data)
-      const { user: u, token: t, organization } = res.data
-      setUser({ ...u, organizations: [organization] })
+      const { token: t, organization } = res.data
+      const u = parseUserFromApi(res.data.user)
+      const org = organization?.attributes ? { id: Number(organization.id), ...organization.attributes } : organization
+      setUser({ ...u, organizations: [org] } as User)
       setToken(t)
       localStorage.setItem('token', t)
-      setOrganization(organization.id)
+      if (org?.id) setOrganization(Number(org.id))
     },
     [setOrganization],
   )

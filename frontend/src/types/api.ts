@@ -87,6 +87,7 @@ export interface ClassificationRule {
   rule_type: string
   pattern: string
   site_type?: SiteType
+  siteType?: SiteType
   priority: number
   is_system: boolean
 }
@@ -129,7 +130,7 @@ export interface Organization {
   id: number
   name: string
   slug: string
-  pivot: { role: string }
+  role?: string
 }
 
 export interface User {
@@ -166,15 +167,28 @@ export interface WordstatSuggestion {
   type?: string
 }
 
+export interface Category {
+  id: number
+  domain_id: number
+  name: string
+  parent_id: number | null
+  sort_order: number
+  children?: Category[]
+  clusters?: Cluster[]
+}
+
 export interface Cluster {
   id: number
+  category_id: number
   name: string
+  sort_order: number
   category?: { name: string }
 }
 
 export interface Region {
   id: number
   name: string
+  engine?: string
 }
 
 export type RegionsByEngine = Record<string, Region[]>
@@ -188,4 +202,43 @@ export interface KeywordDetail {
   position_change: number | null
   frequency: number | null
   our_url: string | null
+  cluster?: Cluster
+  region?: Region
+}
+
+export interface PositionAlert {
+  id: number
+  organization_id: number
+  keyword_id: number
+  threshold_position: number
+  direction: 'drops_below' | 'rises_above'
+  channel: 'email' | 'telegram'
+  recipient: string
+  is_active: boolean
+  last_triggered_at: string | null
+  keyword?: Keyword
+}
+
+export interface WordstatSchedule {
+  id: number
+  project_id: number
+  cluster_id?: number | null
+  keyword_id?: number | null
+  frequency_days: number
+  collect_trends: boolean
+  collect_suggestions: boolean
+  regions: number[]
+  last_run_at: string | null
+  next_run_at: string | null
+  is_active: boolean
+}
+
+export interface BillingUsage {
+  keywords_used: number
+  keywords_limit: number
+  projects_used: number
+  projects_limit: number
+  scrapers_used: number
+  scrapers_limit: number
+  tier: string
 }

@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\V1\DomainController;
 use App\Http\Controllers\Api\V1\ExportController;
 use App\Http\Controllers\Api\V1\KeywordController;
 use App\Http\Controllers\Api\V1\OrganizationController;
+use App\Http\Controllers\Api\V1\PositionMatrixController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\RegionController;
 use App\Http\Controllers\Api\V1\ScheduleController;
@@ -57,6 +58,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         // Projects — read
         Route::get('projects', [ProjectController::class, 'index']);
         Route::get('projects/{project}', [ProjectController::class, 'show'])->name('projects.show');
+        Route::get('projects/{project}/positions', PositionMatrixController::class);
 
         // Projects — write (manager+)
         Route::middleware('org.role:manager')->group(function () {
@@ -101,6 +103,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
 
         // Keywords — read
         Route::get('keywords', [KeywordController::class, 'index']);
+        Route::get('keywords/{keyword}', [KeywordController::class, 'show']);
 
         // Keywords — write (manager+)
         Route::middleware('org.role:manager')->group(function () {

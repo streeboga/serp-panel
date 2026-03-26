@@ -7,6 +7,7 @@ import { TableSkeleton } from '@/components/PageSkeleton'
 import {
   useScrapers,
   useCreateScraper,
+  useUpdateScraper,
   useDeleteScraper,
   useTestScraper,
 } from '@/hooks/useScrapers'
@@ -37,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { parseApiError } from '@/lib/api'
 import type { Scraper } from '@/types/api'
 
 export const Route = createFileRoute('/scrapers/')({
@@ -52,6 +54,7 @@ function ScrapersPage() {
   const { t } = useTranslation()
   const { data: scrapersData, isLoading } = useScrapers()
   const createScraper = useCreateScraper()
+  const updateScraper = useUpdateScraper()
   const deleteScraper = useDeleteScraper()
   const testScraper = useTestScraper()
 
@@ -67,6 +70,18 @@ function ScrapersPage() {
   const [engines, setEngines] = useState('google')
   const [rateLimit, setRateLimit] = useState('10')
 
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editScraper, setEditScraper] = useState<Scraper | null>(null)
+  const [editName, setEditName] = useState('')
+  const [editType, setEditType] = useState('xml_river')
+  const [editBaseUrl, setEditBaseUrl] = useState('')
+  const [editEngines, setEditEngines] = useState('google')
+  const [editRateLimit, setEditRateLimit] = useState('10')
+  const [editIsActive, setEditIsActive] = useState(true)
+
+  const [formError, setFormError] = useState<string | null>(null)
+  const [editFormError, setEditFormError] = useState<string | null>(null)
+
   const [testResults, setTestResults] = useState<
     Record<number, { status: string; message?: string }>
   >({})
@@ -74,17 +89,22 @@ function ScrapersPage() {
   const handleCreate = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
-      await createScraper.mutateAsync({
-        name,
-        type,
-        base_url: baseUrl,
-        engines: engines.split(',').map((e) => e.trim()),
-        rate_limit: Number(rateLimit),
-        is_active: true,
-      })
-      setName('')
-      setBaseUrl('')
-      setOpen(false)
+      setFormError(null)
+      try {
+        await createScraper.mutateAsync({
+          name,
+          type,
+          base_url: baseUrl,
+          engines: engines.split(',').map((e) => e.trim()),
+          rate_limit: Number(rateLimit),
+          is_active: true,
+        })
+        setName('')
+        setBaseUrl('')
+        setOpen(false)
+      } catch (err) {
+        setFormError(parseApiError(err))
+      }
     },
     [name, type, baseUrl, engines, rateLimit, createScraper],
   )
@@ -109,6 +129,51 @@ function ScrapersPage() {
     [testScraper],
   )
 
+  const openEditDialog = useCallback((scraper: Scraper) => {
+    setEditScraper(scraper)
+    setEditName(scraper.name)
+    setEditType(scraper.type)
+    setEditBaseUrl(scraper.base_url)
+    setEditEngines((scraper.engines ?? []).join(', '))
+    setEditRateLimit(String(scraper.rate_limit ?? 10))
+    setEditIsActive(scraper.is_active)
+    setEditDialogOpen(true)
+  }, [])
+
+  const handleEdit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      if (!editScraper) return
+      setEditFormError(null)
+      try {
+        await updateScraper.mutateAsync({
+          id: editScraper.id,
+          name: editName,
+          type: editType,
+          base_url: editBaseUrl,
+          engines: editEngines.split(',').map((e) => e.trim()),
+          rate_limit: Number(editRateLimit),
+          is_active: editIsActive,
+        })
+        setEditDialogOpen(false)
+        setEditScraper(null)
+      } catch (err) {
+        setEditFormError(parseApiError(err))
+      }
+    },
+    [editScraper, editName, editType, editBaseUrl, editEngines, editRateLimit, editIsActive, updateScraper],
+  )
+
+  const handleToggleActive = useCallback(
+    async (scraper: Scraper) => {
+      await updateScraper.mutateAsync({
+        id: scraper.id,
+        is_active: !scraper.is_active,
+      })
+    },
+    [updateScraper],
+  )
+
   return (
     <AppLayout>
       <div className="space-y-6">
@@ -120,6 +185,7 @@ function ScrapersPage() {
               <DialogHeader>
                 <DialogTitle>{t('scrapers.addScraper')}</DialogTitle>
               </DialogHeader>
+              {formError && <p className="text-sm text-destructive">{formError}</p>}
               <form onSubmit={handleCreate} className="space-y-4">
                 <div className="space-y-2">
                   <Label>{t('scrapers.name')}</Label>
@@ -137,7 +203,7 @@ function ScrapersPage() {
                       setType(v ?? 'xml_river')
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -152,6 +218,7 @@ function ScrapersPage() {
                   <Input
                     value={baseUrl}
                     onChange={(e) => setBaseUrl(e.target.value)}
+                    placeholder="https://xmlriver.com/api"
                     required
                   />
                 </div>
@@ -222,12 +289,21 @@ function ScrapersPage() {
                   <TableCell>
                     <Badge
                       variant={scraper.is_active ? 'default' : 'secondary'}
+                      className="cursor-pointer"
+                      onClick={() => handleToggleActive(scraper)}
                     >
                       {scraper.is_active ? t('scrapers.active') : t('scrapers.inactive')}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(scraper)}
+                      >
+                        {t('scrapers.edit', 'Edit')}
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -266,6 +342,71 @@ function ScrapersPage() {
             </TableBody>
           </Table>
         )}
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('scrapers.editScraper', 'Edit Scraper')}</DialogTitle>
+            </DialogHeader>
+            {editFormError && <p className="text-sm text-destructive">{editFormError}</p>}
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t('scrapers.name')}</Label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('scrapers.type')}</Label>
+                <Select
+                  value={editType}
+                  onValueChange={(v: string | null) =>
+                    setEditType(v ?? 'xml_river')
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="xml_river">XML River</SelectItem>
+                    <SelectItem value="serp_api">SERP API</SelectItem>
+                    <SelectItem value="custom">Custom</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('scrapers.baseUrl')}</Label>
+                <Input
+                  value={editBaseUrl}
+                  onChange={(e) => setEditBaseUrl(e.target.value)}
+                  placeholder="https://xmlriver.com/api"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('scrapers.enginesComma')}</Label>
+                <Input
+                  value={editEngines}
+                  onChange={(e) => setEditEngines(e.target.value)}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('scrapers.rateLimit')} ({t('scrapers.rateLimitUnit')})</Label>
+                <Input
+                  type="number"
+                  value={editRateLimit}
+                  onChange={(e) => setEditRateLimit(e.target.value)}
+                />
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={updateScraper.isPending}>
+                  {updateScraper.isPending ? t('scrapers.saving', 'Saving...') : t('scrapers.save', 'Save')}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   )

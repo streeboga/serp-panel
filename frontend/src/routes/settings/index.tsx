@@ -38,7 +38,10 @@ import {
   useInviteMember,
   useRemoveMember,
   useUpdateMemberRole,
+  useUpdateOrganization,
 } from '@/hooks/useOrganization'
+import { useBillingUsage } from '@/hooks/useBilling'
+import { parseApiError } from '@/lib/api'
 import type { Member } from '@/types/api'
 
 export const Route = createFileRoute('/settings/')({
@@ -50,7 +53,7 @@ export const Route = createFileRoute('/settings/')({
   component: SettingsPage,
 })
 
-const ROLES = ['owner', 'admin', 'member', 'viewer']
+const ROLES = ['admin', 'manager', 'analyst', 'viewer']
 
 function roleBadgeVariant(role: string) {
   switch (role) {
@@ -71,6 +74,10 @@ function SettingsPage() {
   const inviteMember = useInviteMember()
   const removeMember = useRemoveMember()
   const updateRole = useUpdateMemberRole()
+  const updateOrganization = useUpdateOrganization()
+
+  const { data: billingData } = useBillingUsage()
+  const billing = billingData?.data ?? billingData
 
   const org = user?.organizations?.[0]
   const members: Member[] = useMemo(
@@ -78,8 +85,14 @@ function SettingsPage() {
     [membersData],
   )
 
+  const [inviteFormError, setInviteFormError] = useState<string | null>(null)
+  const [roleFormError, setRoleFormError] = useState<string | null>(null)
+
   const [inviteEmail, setInviteEmail] = useState('')
-  const [inviteRole, setInviteRole] = useState('member')
+  const [inviteRole, setInviteRole] = useState('viewer')
+
+  const [editOrgOpen, setEditOrgOpen] = useState(false)
+  const [editOrgName, setEditOrgName] = useState('')
 
   const [roleDialogOpen, setRoleDialogOpen] = useState(false)
   const [roleUserId, setRoleUserId] = useState<number | null>(null)
@@ -89,12 +102,17 @@ function SettingsPage() {
     async (e: React.FormEvent) => {
       e.preventDefault()
       if (!inviteEmail.trim()) return
-      await inviteMember.mutateAsync({
-        email: inviteEmail.trim(),
-        role: inviteRole,
-      })
-      setInviteEmail('')
-      setInviteRole('member')
+      setInviteFormError(null)
+      try {
+        await inviteMember.mutateAsync({
+          email: inviteEmail.trim(),
+          role: inviteRole,
+        })
+        setInviteEmail('')
+        setInviteRole('viewer')
+      } catch (err) {
+        setInviteFormError(parseApiError(err))
+      }
     },
     [inviteEmail, inviteRole, inviteMember],
   )
@@ -103,10 +121,25 @@ function SettingsPage() {
     async (e: React.FormEvent) => {
       e.preventDefault()
       if (roleUserId == null) return
-      await updateRole.mutateAsync({ userId: roleUserId, role: roleValue })
-      setRoleDialogOpen(false)
+      setRoleFormError(null)
+      try {
+        await updateRole.mutateAsync({ userId: roleUserId, role: roleValue })
+        setRoleDialogOpen(false)
+      } catch (err) {
+        setRoleFormError(parseApiError(err))
+      }
     },
     [roleUserId, roleValue, updateRole],
+  )
+
+  const handleEditOrg = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      if (!editOrgName.trim()) return
+      await updateOrganization.mutateAsync({ name: editOrgName.trim() })
+      setEditOrgOpen(false)
+    },
+    [editOrgName, updateOrganization],
   )
 
   const handleLanguageChange = useCallback(
@@ -134,8 +167,20 @@ function SettingsPage() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>{t('settings.organization')}</CardTitle>
+              {org && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditOrgName(org.name)
+                    setEditOrgOpen(true)
+                  }}
+                >
+                  {t('common.edit')}
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="space-y-3">
               {org ? (
@@ -170,10 +215,10 @@ function SettingsPage() {
                     <p className="text-sm text-muted-foreground">{t('settings.email')}</p>
                     <p>{user.email}</p>
                   </div>
-                  {org && (
+                  {org?.role && (
                     <div>
                       <p className="text-sm text-muted-foreground">{t('settings.role')}</p>
-                      <Badge variant="outline">{org.pivot.role}</Badge>
+                      <Badge variant="outline">{org.role}</Badge>
                     </div>
                   )}
                 </>
@@ -196,7 +241,7 @@ function SettingsPage() {
                   value={i18n.language?.startsWith('ru') ? 'ru' : 'en'}
                   onValueChange={handleLanguageChange}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -211,7 +256,7 @@ function SettingsPage() {
                   value={theme}
                   onValueChange={handleThemeChange}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -222,6 +267,40 @@ function SettingsPage() {
                 </Select>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>{t('billing.title')}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {billing && (
+              <>
+                <div>
+                  <p className="text-sm text-muted-foreground">{t('billing.currentTier')}</p>
+                  <Badge variant="default" className="mt-1">{billing.tier}</Badge>
+                </div>
+                {[
+                  { label: t('billing.keywords'), used: billing.keywords_used, limit: billing.keywords_limit },
+                  { label: t('billing.projects'), used: billing.projects_used, limit: billing.projects_limit },
+                  { label: t('billing.scrapers'), used: billing.scrapers_used, limit: billing.scrapers_limit },
+                ].map(({ label, used, limit }) => (
+                  <div key={label} className="space-y-1">
+                    <div className="flex justify-between text-sm">
+                      <span>{label}</span>
+                      <span className="text-muted-foreground">{used} / {limit}</span>
+                    </div>
+                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-primary rounded-full transition-all"
+                        style={{ width: `${limit > 0 ? Math.min((used / limit) * 100, 100) : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -247,10 +326,10 @@ function SettingsPage() {
                 <Select
                   value={inviteRole}
                   onValueChange={(v: string | null) =>
-                    setInviteRole(v ?? 'member')
+                    setInviteRole(v ?? 'viewer')
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -266,6 +345,7 @@ function SettingsPage() {
                 {inviteMember.isPending ? t('settings.inviting') : t('settings.invite')}
               </Button>
             </form>
+            {inviteFormError && <p className="text-sm text-destructive">{inviteFormError}</p>}
 
             {membersLoading ? (
               <TableSkeleton rows={3} />
@@ -334,16 +414,17 @@ function SettingsPage() {
           <DialogHeader>
             <DialogTitle>{t('settings.changeRole')}</DialogTitle>
           </DialogHeader>
+          {roleFormError && <p className="text-sm text-destructive">{roleFormError}</p>}
           <form onSubmit={handleRoleChange} className="space-y-4">
             <div className="space-y-2">
               <Label>{t('settings.role')}</Label>
               <Select
                 value={roleValue}
                 onValueChange={(v: string | null) =>
-                  setRoleValue(v ?? 'member')
+                  setRoleValue(v ?? 'viewer')
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="w-full">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -358,6 +439,36 @@ function SettingsPage() {
             <DialogFooter>
               <Button type="submit" disabled={updateRole.isPending}>
                 {updateRole.isPending ? t('settings.saving') : t('settings.save')}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editOrgOpen} onOpenChange={setEditOrgOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('settings.editOrganization')}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleEditOrg} className="space-y-4">
+            <div className="space-y-2">
+              <Label>{t('settings.name')}</Label>
+              <Input
+                value={editOrgName}
+                onChange={(e) => setEditOrgName(e.target.value)}
+                required
+              />
+              {updateOrganization.isError && (
+                <p className="text-sm text-destructive">
+                  {(updateOrganization.error as any)?.response?.data?.message ??
+                    (updateOrganization.error as Error)?.message ??
+                    t('common.error')}
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button type="submit" disabled={updateOrganization.isPending}>
+                {updateOrganization.isPending ? t('settings.saving') : t('settings.save')}
               </Button>
             </DialogFooter>
           </form>

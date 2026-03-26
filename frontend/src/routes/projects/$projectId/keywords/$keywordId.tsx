@@ -35,6 +35,8 @@ import { SummaryCard } from '@/components/SummaryCard'
 import { EmptyState } from '@/components/EmptyState'
 import { DataExportButton } from '@/components/DataExportButton'
 import { TableSkeleton } from '@/components/PageSkeleton'
+import { PositionChart } from '@/components/charts/PositionChart'
+import { TrendChart } from '@/components/charts/TrendChart'
 import type { SerpResult, SerpHistoryItem, WordstatTrend, WordstatSuggestion } from '@/types/api'
 
 export const Route = createFileRoute(
@@ -230,12 +232,26 @@ function HistoryTab({ keywordId }: { keywordId: string }) {
   const { t } = useTranslation()
   const { data, isLoading } = useSerpHistory(keywordId)
   const history: SerpHistoryItem[] = useMemo(
-    () => data?.data ?? data ?? [],
+    () => {
+      const raw = data?.data ?? data ?? []
+      if (!Array.isArray(raw)) return []
+      return raw.map((item: any) => ({
+        date: item.date ?? item.collected_at ?? '',
+        position: item.position ?? null,
+        url: item.url,
+      }))
+    },
     [data],
   )
 
   return (
-    <div className="mt-4">
+    <div className="mt-4 space-y-6">
+      {!isLoading && history.length > 0 && (
+        <div className="rounded-lg border p-4">
+          <PositionChart data={history} />
+        </div>
+      )}
+
       {isLoading ? (
         <TableSkeleton rows={8} />
       ) : history.length === 0 ? (
@@ -299,6 +315,11 @@ function WordstatTab({ keywordId }: { keywordId: string }) {
 
       <div>
         <h3 className="text-lg font-semibold mb-3">{t('keywordDetail.trends')}</h3>
+        {!tLoading && trendList.length > 0 && (
+          <div className="rounded-lg border p-4 mb-4">
+            <TrendChart data={trendList} />
+          </div>
+        )}
         {tLoading ? (
           <TableSkeleton rows={6} />
         ) : trendList.length === 0 ? (

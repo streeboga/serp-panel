@@ -44,6 +44,7 @@ final class KeywordRepository implements KeywordRepositoryInterface
     public function queryForOrganization(int $organizationId): Builder
     {
         return Keyword::query()
+            ->with(['cluster.category.domain', 'region'])
             ->whereHas('cluster.category.domain.project', function ($query) use ($organizationId) {
                 $query->where('organization_id', $organizationId);
             });

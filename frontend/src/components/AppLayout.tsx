@@ -7,22 +7,27 @@ import { useTheme } from '@/contexts/ThemeContext'
 import { Button } from '@/components/ui/button'
 import { queryKeys } from '@/lib/query-keys'
 import api from '@/lib/api'
+import { OrgSwitcher } from '@/components/OrgSwitcher'
 
 const navItems = [
   { labelKey: 'nav.dashboard', to: '/' as const, prefetchKey: undefined },
   { labelKey: 'nav.projects', to: '/projects' as const, prefetchKey: queryKeys.projects.list() },
   { labelKey: 'nav.classification', to: '/classification' as const, prefetchKey: queryKeys.classification.rules },
+  { labelKey: 'nav.alerts', to: '/alerts' as const, prefetchKey: queryKeys.alerts.all },
   { labelKey: 'nav.scrapers', to: '/scrapers' as const, prefetchKey: queryKeys.scrapers.all },
   { labelKey: 'nav.schedules', to: '/schedules' as const, prefetchKey: queryKeys.schedules.all },
+  { labelKey: 'nav.wordstatSchedules', to: '/wordstat-schedules' as const, prefetchKey: queryKeys.wordstatSchedules.all },
   { labelKey: 'nav.settings', to: '/settings' as const, prefetchKey: queryKeys.organization.members },
 ]
 
 // API paths matching nav prefetch keys
 const prefetchApis: Record<string, string> = {
   projects: '/projects',
-  'classification-rules': '/classification-rules',
+  'classification-rules': '/classification/rules',
+  alerts: '/alerts',
   scrapers: '/scrapers',
   schedules: '/schedules',
+  'wordstat-schedules': '/wordstat-schedules',
   organization: '/organization/members',
 }
 
@@ -70,6 +75,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="p-4 border-b border-sidebar-border">
           <h1 className="text-xl font-bold">{t('app.name')}</h1>
           <p className="text-sm text-muted-foreground mt-1">{user?.name}</p>
+          <OrgSwitcher />
         </div>
         <nav className="flex-1 p-4 space-y-1">
           {navItems.map((item) => (

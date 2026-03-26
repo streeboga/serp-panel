@@ -40,7 +40,7 @@ export function useKeyword(projectId: string, keywordId: string) {
     queryKey: queryKeys.keywords.detail(projectId, keywordId),
     queryFn: () =>
       api
-        .get(`/projects/${projectId}/keywords/${keywordId}`)
+        .get(`/keywords/${keywordId}`)
         .then((r) => r.data),
     enabled: !!projectId && !!keywordId,
     staleTime: 30_000,
@@ -81,12 +81,47 @@ export function useProjectClusters(projectId: string) {
   })
 }
 
-export function useDeleteKeyword(projectId: string) {
+export function useBulkCreateKeywords() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: (keywordId: string) =>
+    mutationFn: (data: {
+      keywords: Array<{
+        keyword: string
+        cluster_id: number
+        engine: string
+        device: string
+        region_id: number
+      }>
+    }) => api.post('/keywords/bulk', data).then((r) => r.data),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: queryKeys.keywords.all }),
+  })
+}
+
+export function useUpdateKeyword() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      ...data
+    }: {
+      id: number
+      cluster_id?: number
+      engine?: string
+      device?: string
+      region_id?: number
+    }) => api.patch(`/keywords/${id}`, data).then((r) => r.data),
+    onSuccess: () =>
+      qc.invalidateQueries({ queryKey: queryKeys.keywords.all }),
+  })
+}
+
+export function useDeleteKeywords() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (ids: number[]) =>
       api
-        .delete(`/projects/${projectId}/keywords/${keywordId}`)
+        .delete('/keywords/bulk', { data: { ids } })
         .then((r) => r.data),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: queryKeys.keywords.all }),

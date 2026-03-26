@@ -33,7 +33,7 @@ export function useUpdateDomain() {
       id: number
       name?: string
       is_own?: boolean
-    }) => api.put(`/domains/${id}`, data).then((r) => r.data),
+    }) => api.patch(`/domains/${id}`, data).then((r) => r.data),
     onMutate: async (variables) => {
       // Optimistic update: we don't know which project, so just cancel all domain queries
       await qc.cancelQueries({ queryKey: queryKeys.domains.all })

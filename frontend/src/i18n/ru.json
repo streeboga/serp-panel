@@ -8,6 +8,8 @@
     "classification": "Классификация",
     "scrapers": "Парсеры",
     "schedules": "Расписания",
+    "alerts": "Оповещения",
+    "wordstatSchedules": "Расписания Вордстат",
     "settings": "Настройки"
   },
   "auth": {
@@ -51,6 +53,7 @@
     "domainsTab": "Домены",
     "keywordsTab": "Ключевые слова",
     "competitorsTab": "Конкуренты",
+    "categoriesTab": "Категории",
     "created": "Создан"
   },
   "domains": {
@@ -230,8 +233,74 @@
     "themeDark": "Темная",
     "themeSystem": "Системная"
   },
+  "alerts": {
+    "title": "Оповещения о позициях",
+    "addAlert": "Добавить оповещение",
+    "keyword": "Ключевое слово",
+    "threshold": "Пороговая позиция",
+    "direction": "Направление",
+    "dropsBelow": "Упала ниже",
+    "risesAbove": "Поднялась выше",
+    "channel": "Канал",
+    "recipient": "Получатель",
+    "status": "Статус",
+    "active": "Активно",
+    "inactive": "Неактивно",
+    "lastTriggered": "Последнее срабатывание",
+    "never": "Никогда",
+    "actions": "Действия",
+    "edit": "Редактировать",
+    "delete": "Удалить",
+    "create": "Создать",
+    "creating": "Создание...",
+    "save": "Сохранить",
+    "saving": "Сохранение...",
+    "noAlerts": "Оповещения не настроены",
+    "deleteConfirm": "Удалить это оповещение?"
+  },
+  "wordstatSchedules": {
+    "title": "Расписания Вордстат",
+    "addSchedule": "Добавить расписание",
+    "project": "Проект",
+    "cluster": "Кластер",
+    "keyword": "Ключевое слово",
+    "frequencyDays": "Частота (дни)",
+    "collectTrends": "Собирать тренды",
+    "collectSuggestions": "Собирать подсказки",
+    "regions": "Регионы",
+    "lastRun": "Последний запуск",
+    "nextRun": "Следующий запуск",
+    "status": "Статус",
+    "active": "Активно",
+    "inactive": "Неактивно",
+    "actions": "Действия",
+    "runNow": "Запустить",
+    "delete": "Удалить",
+    "create": "Создать",
+    "creating": "Создание...",
+    "noSchedules": "Расписания Вордстат не настроены"
+  },
+  "billing": {
+    "title": "Биллинг и использование",
+    "currentTier": "Текущий тариф",
+    "keywords": "Ключевые слова",
+    "projects": "Проекты",
+    "scrapers": "Парсеры",
+    "used": "использовано",
+    "of": "из",
+    "upgrade": "Повысить",
+    "changeTier": "Изменить тариф"
+  },
   "common": {
     "loading": "Загрузка...",
-    "actions": "Действия"
+    "actions": "Действия",
+    "cancel": "Отмена",
+    "confirm": "Подтвердить",
+    "edit": "Ред.",
+    "save": "Сохранить",
+    "saving": "Сохранение...",
+    "delete": "Удалить",
+    "yes": "Да",
+    "no": "Нет"
   }
 }

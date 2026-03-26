@@ -28,6 +28,10 @@ final class KeywordResource extends JsonApiResource
             'keyword' => $this->keyword,
             'engine' => $this->engine,
             'device' => $this->device,
+            'latest_position' => $this->latest_position,
+            'position_change' => $this->position_change,
+            'frequency' => $this->frequency,
+            'our_url' => $this->our_url,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

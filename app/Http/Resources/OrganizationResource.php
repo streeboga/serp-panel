@@ -27,6 +27,7 @@ final class OrganizationResource extends JsonApiResource
         return [
             'name' => $this->name,
             'slug' => $this->slug,
+            'role' => $this->whenPivotLoaded('organization_user', fn () => $this->pivot->getAttribute('role')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

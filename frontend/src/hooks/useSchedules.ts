@@ -34,7 +34,7 @@ export function useUpdateSchedule() {
       id: number
       frequency?: string
       is_active?: boolean
-    }) => api.put(`/schedules/${id}`, data).then((r) => r.data),
+    }) => api.patch(`/schedules/${id}`, data).then((r) => r.data),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: queryKeys.schedules.all }),
   })
@@ -54,7 +54,7 @@ export function useRunSchedule() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (id: number) =>
-      api.post(`/schedules/${id}/run`).then((r) => r.data),
+      api.post(`/schedules/${id}/run-now`).then((r) => r.data),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: queryKeys.schedules.all }),
   })

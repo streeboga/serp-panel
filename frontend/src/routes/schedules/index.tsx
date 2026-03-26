@@ -7,6 +7,7 @@ import { TableSkeleton } from '@/components/PageSkeleton'
 import {
   useSchedules,
   useCreateSchedule,
+  useUpdateSchedule,
   useDeleteSchedule,
   useRunSchedule,
 } from '@/hooks/useSchedules'
@@ -37,6 +38,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { parseApiError } from '@/lib/api'
 import type { Schedule } from '@/types/api'
 
 export const Route = createFileRoute('/schedules/')({
@@ -52,6 +54,7 @@ function SchedulesPage() {
   const { t } = useTranslation()
   const { data: schedulesData, isLoading } = useSchedules()
   const createSchedule = useCreateSchedule()
+  const updateSchedule = useUpdateSchedule()
   const deleteSchedule = useDeleteSchedule()
   const runSchedule = useRunSchedule()
 
@@ -60,22 +63,72 @@ function SchedulesPage() {
     [schedulesData],
   )
 
+  const [formError, setFormError] = useState<string | null>(null)
+  const [editFormError, setEditFormError] = useState<string | null>(null)
+
   const [open, setOpen] = useState(false)
   const [schedulableType, setSchedulableType] = useState('project')
   const [schedulableId, setSchedulableId] = useState('')
   const [frequency, setFrequency] = useState('daily')
 
+  const [editOpen, setEditOpen] = useState(false)
+  const [editSchedule, setEditSchedule] = useState<Schedule | null>(null)
+  const [editFrequency, setEditFrequency] = useState('daily')
+  const [editIsActive, setEditIsActive] = useState(true)
+
+  const openEditDialog = useCallback((schedule: Schedule) => {
+    setEditSchedule(schedule)
+    setEditFrequency(schedule.frequency)
+    setEditIsActive(schedule.is_active)
+    setEditOpen(true)
+  }, [])
+
+  const handleEdit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      if (!editSchedule) return
+      setEditFormError(null)
+      try {
+        await updateSchedule.mutateAsync({
+          id: editSchedule.id,
+          frequency: editFrequency,
+          is_active: editIsActive,
+        })
+        setEditOpen(false)
+        setEditSchedule(null)
+      } catch (err) {
+        setEditFormError(parseApiError(err))
+      }
+    },
+    [editSchedule, editFrequency, editIsActive, updateSchedule],
+  )
+
+  const toggleActive = useCallback(
+    async (schedule: Schedule) => {
+      await updateSchedule.mutateAsync({
+        id: schedule.id,
+        is_active: !schedule.is_active,
+      })
+    },
+    [updateSchedule],
+  )
+
   const handleCreate = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
-      await createSchedule.mutateAsync({
-        schedulable_type: schedulableType,
-        schedulable_id: Number(schedulableId),
-        frequency,
-        is_active: true,
-      })
-      setSchedulableId('')
-      setOpen(false)
+      setFormError(null)
+      try {
+        await createSchedule.mutateAsync({
+          schedulable_type: schedulableType,
+          schedulable_id: Number(schedulableId),
+          frequency,
+          is_active: true,
+        })
+        setSchedulableId('')
+        setOpen(false)
+      } catch (err) {
+        setFormError(parseApiError(err))
+      }
     },
     [schedulableType, schedulableId, frequency, createSchedule],
   )
@@ -91,6 +144,7 @@ function SchedulesPage() {
               <DialogHeader>
                 <DialogTitle>{t('schedules.addSchedule')}</DialogTitle>
               </DialogHeader>
+              {formError && <p className="text-sm text-destructive">{formError}</p>}
               <form onSubmit={handleCreate} className="space-y-4">
                 <div className="space-y-2">
                   <Label>{t('schedules.scope')}</Label>
@@ -100,7 +154,7 @@ function SchedulesPage() {
                       setSchedulableType(v ?? 'project')
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -128,7 +182,7 @@ function SchedulesPage() {
                       setFrequency(v ?? 'daily')
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -196,12 +250,21 @@ function SchedulesPage() {
                   <TableCell>
                     <Badge
                       variant={schedule.is_active ? 'default' : 'secondary'}
+                      className="cursor-pointer"
+                      onClick={() => toggleActive(schedule)}
                     >
                       {schedule.is_active ? t('schedules.active') : t('schedules.inactive')}
                     </Badge>
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(schedule)}
+                      >
+                        {t('schedules.edit', 'Edit')}
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -224,6 +287,50 @@ function SchedulesPage() {
             </TableBody>
           </Table>
         )}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('schedules.editSchedule', 'Edit Schedule')}</DialogTitle>
+            </DialogHeader>
+            {editFormError && <p className="text-sm text-destructive">{editFormError}</p>}
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t('schedules.frequency')}</Label>
+                <Select
+                  value={editFrequency}
+                  onValueChange={(v: string | null) =>
+                    setEditFrequency(v ?? 'daily')
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="hourly">{t('schedules.hourly')}</SelectItem>
+                    <SelectItem value="daily">{t('schedules.daily')}</SelectItem>
+                    <SelectItem value="weekly">{t('schedules.weekly')}</SelectItem>
+                    <SelectItem value="monthly">{t('schedules.monthly')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center justify-between">
+                <Label>{t('schedules.status')}</Label>
+                <Badge
+                  variant={editIsActive ? 'default' : 'secondary'}
+                  className="cursor-pointer"
+                  onClick={() => setEditIsActive(!editIsActive)}
+                >
+                  {editIsActive ? t('schedules.active') : t('schedules.inactive')}
+                </Badge>
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={updateSchedule.isPending}>
+                  {updateSchedule.isPending ? t('schedules.saving', 'Saving...') : t('schedules.save', 'Save')}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   )

@@ -22,6 +22,10 @@ use Illuminate\Support\Carbon;
  * @property Carbon $updated_at
  * @property-read Cluster $cluster
  * @property-read Region $region
+ * @property-read int|null $latest_position
+ * @property-read int|null $position_change
+ * @property-read int|null $frequency
+ * @property-read string|null $our_url
  */
 class Keyword extends Model
 {
@@ -31,6 +35,81 @@ class Keyword extends Model
         'engine' => Engine::class,
         'device' => Device::class,
     ];
+
+    public function getLatestPositionAttribute(): ?int
+    {
+        $latestSnapshot = $this->serpSnapshots()
+            ->latest('collected_at')
+            ->first();
+
+        if (!$latestSnapshot) {
+            return null;
+        }
+
+        $ownDomain = $this->cluster?->category?->domain;
+        if (!$ownDomain || !$ownDomain->is_own) {
+            return null;
+        }
+
+        $result = $latestSnapshot->results()
+            ->where('domain', $ownDomain->name)
+            ->orderBy('position')
+            ->first();
+
+        return $result?->position;
+    }
+
+    public function getPositionChangeAttribute(): ?int
+    {
+        $snapshots = $this->serpSnapshots()
+            ->latest('collected_at')
+            ->limit(2)
+            ->get();
+
+        if ($snapshots->count() < 2) {
+            return null;
+        }
+
+        $ownDomain = $this->cluster?->category?->domain;
+        if (!$ownDomain || !$ownDomain->is_own) {
+            return null;
+        }
+
+        $latestPos = $snapshots[0]->results()->where('domain', $ownDomain->name)->orderBy('position')->first()?->position;
+        $prevPos = $snapshots[1]->results()->where('domain', $ownDomain->name)->orderBy('position')->first()?->position;
+
+        if ($latestPos === null || $prevPos === null) {
+            return null;
+        }
+
+        return $prevPos - $latestPos; // positive = improved (moved up)
+    }
+
+    public function getFrequencyAttribute(): ?int
+    {
+        return $this->wordstatFrequencies()->latest('id')->value('frequency_exact');
+    }
+
+    public function getOurUrlAttribute(): ?string
+    {
+        $latestSnapshot = $this->serpSnapshots()
+            ->latest('collected_at')
+            ->first();
+
+        if (!$latestSnapshot) {
+            return null;
+        }
+
+        $ownDomain = $this->cluster?->category?->domain;
+        if (!$ownDomain || !$ownDomain->is_own) {
+            return null;
+        }
+
+        return $latestSnapshot->results()
+            ->where('domain', $ownDomain->name)
+            ->orderBy('position')
+            ->first()?->url;
+    }
 
     /** @return BelongsTo<Cluster, $this> */
     public function cluster(): BelongsTo

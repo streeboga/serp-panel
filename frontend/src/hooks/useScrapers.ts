@@ -40,7 +40,7 @@ export function useUpdateScraper() {
       engines?: string[]
       rate_limit?: number
       is_active?: boolean
-    }) => api.put(`/scrapers/${id}`, data).then((r) => r.data),
+    }) => api.patch(`/scrapers/${id}`, data).then((r) => r.data),
     onSuccess: () =>
       qc.invalidateQueries({ queryKey: queryKeys.scrapers.all }),
   })

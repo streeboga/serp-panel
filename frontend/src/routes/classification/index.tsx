@@ -8,9 +8,11 @@ import { TableSkeleton } from '@/components/PageSkeleton'
 import {
   useClassificationRules,
   useCreateClassificationRule,
+  useUpdateClassificationRule,
   useDeleteClassificationRule,
   useSiteTypes,
 } from '@/hooks/useClassification'
+import { parseApiError } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -54,6 +56,7 @@ function ClassificationPage() {
   const { data: rulesData, isLoading } = useClassificationRules()
   const { data: siteTypesData } = useSiteTypes()
   const createRule = useCreateClassificationRule()
+  const updateRule = useUpdateClassificationRule()
   const deleteRule = useDeleteClassificationRule()
 
   const rules: ClassificationRule[] = useMemo(
@@ -71,21 +74,69 @@ function ClassificationPage() {
   const [siteTypeId, setSiteTypeId] = useState<string>('')
   const [priority, setPriority] = useState('0')
 
+  const [formError, setFormError] = useState<string | null>(null)
+  const [editFormError, setEditFormError] = useState<string | null>(null)
+
+  const [editDialogOpen, setEditDialogOpen] = useState(false)
+  const [editRule, setEditRule] = useState<{
+    id: number
+    rule_type: string
+    pattern: string
+    site_type_id: string
+    priority: string
+  }>({ id: 0, rule_type: 'domain', pattern: '', site_type_id: '', priority: '0' })
+
   const handleCreate = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
-      await createRule.mutateAsync({
-        rule_type: ruleType,
-        pattern,
-        site_type_id: Number(siteTypeId),
-        priority: Number(priority),
-      })
-      setPattern('')
-      setSiteTypeId('')
-      setPriority('0')
-      setOpen(false)
+      setFormError(null)
+      try {
+        await createRule.mutateAsync({
+          rule_type: ruleType,
+          pattern,
+          site_type_id: Number(siteTypeId),
+          priority: Number(priority),
+        })
+        setPattern('')
+        setSiteTypeId('')
+        setPriority('0')
+        setOpen(false)
+      } catch (err) {
+        setFormError(parseApiError(err))
+      }
     },
     [ruleType, pattern, siteTypeId, priority, createRule],
+  )
+
+  const handleOpenEdit = useCallback((rule: ClassificationRule) => {
+    setEditRule({
+      id: rule.id,
+      rule_type: rule.rule_type,
+      pattern: rule.pattern,
+      site_type_id: String(rule.siteType?.id ?? rule.site_type?.id ?? ''),
+      priority: String(rule.priority),
+    })
+    setEditDialogOpen(true)
+  }, [])
+
+  const handleEdit = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      setEditFormError(null)
+      try {
+        await updateRule.mutateAsync({
+          id: editRule.id,
+          rule_type: editRule.rule_type,
+          pattern: editRule.pattern,
+          site_type_id: Number(editRule.site_type_id),
+          priority: Number(editRule.priority),
+        })
+        setEditDialogOpen(false)
+      } catch (err) {
+        setEditFormError(parseApiError(err))
+      }
+    },
+    [editRule, updateRule],
   )
 
   return (
@@ -103,6 +154,7 @@ function ClassificationPage() {
                 <DialogHeader>
                   <DialogTitle>{t('classification.addClassificationRule')}</DialogTitle>
                 </DialogHeader>
+                {formError && <p className="text-sm text-destructive">{formError}</p>}
                 <form onSubmit={handleCreate} className="space-y-4">
                   <div className="space-y-2">
                     <Label>{t('classification.ruleType')}</Label>
@@ -112,7 +164,7 @@ function ClassificationPage() {
                         setRuleType(v ?? 'domain')
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
@@ -129,6 +181,7 @@ function ClassificationPage() {
                     <Input
                       value={pattern}
                       onChange={(e) => setPattern(e.target.value)}
+                      placeholder="ozon.ru"
                       required
                     />
                   </div>
@@ -140,7 +193,7 @@ function ClassificationPage() {
                         setSiteTypeId(v ?? '')
                       }
                     >
-                      <SelectTrigger>
+                      <SelectTrigger className="w-full">
                         <SelectValue placeholder={t('classification.selectType')} />
                       </SelectTrigger>
                       <SelectContent>
@@ -197,8 +250,8 @@ function ClassificationPage() {
                     {rule.pattern}
                   </TableCell>
                   <TableCell>
-                    {rule.site_type ? (
-                      <SiteTypeBadge type={rule.site_type} />
+                    {(rule.siteType ?? rule.site_type) ? (
+                      <SiteTypeBadge type={rule.siteType ?? rule.site_type ?? null} />
                     ) : (
                       '-'
                     )}
@@ -213,14 +266,23 @@ function ClassificationPage() {
                   </TableCell>
                   <TableCell>
                     {!rule.is_system && (
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => deleteRule.mutate(rule.id)}
-                        disabled={deleteRule.isPending}
-                      >
-                        {t('classification.delete')}
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleOpenEdit(rule)}
+                        >
+                          {t('common.edit')}
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          size="sm"
+                          onClick={() => deleteRule.mutate(rule.id)}
+                          disabled={deleteRule.isPending}
+                        >
+                          {t('classification.delete')}
+                        </Button>
+                      </div>
                     )}
                   </TableCell>
                 </TableRow>
@@ -228,6 +290,83 @@ function ClassificationPage() {
             </TableBody>
           </Table>
         )}
+
+        <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('classification.editClassificationRule')}</DialogTitle>
+            </DialogHeader>
+            {editFormError && <p className="text-sm text-destructive">{editFormError}</p>}
+            <form onSubmit={handleEdit} className="space-y-4">
+              <div className="space-y-2">
+                <Label>{t('classification.ruleType')}</Label>
+                <Select
+                  value={editRule.rule_type}
+                  onValueChange={(v: string | null) =>
+                    setEditRule((prev) => ({ ...prev, rule_type: v ?? 'domain' }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="domain">{t('classification.domain')}</SelectItem>
+                    <SelectItem value="url_pattern">
+                      {t('classification.urlPattern')}
+                    </SelectItem>
+                    <SelectItem value="regex">{t('classification.regex')}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('classification.pattern')}</Label>
+                <Input
+                  value={editRule.pattern}
+                  onChange={(e) =>
+                    setEditRule((prev) => ({ ...prev, pattern: e.target.value }))
+                  }
+                  placeholder="ozon.ru"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>{t('classification.siteType')}</Label>
+                <Select
+                  value={editRule.site_type_id}
+                  onValueChange={(v: string | null) =>
+                    setEditRule((prev) => ({ ...prev, site_type_id: v ?? '' }))
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder={t('classification.selectType')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {siteTypes.map((st) => (
+                      <SelectItem key={st.id} value={String(st.id)}>
+                        {st.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>{t('classification.priority')}</Label>
+                <Input
+                  type="number"
+                  value={editRule.priority}
+                  onChange={(e) =>
+                    setEditRule((prev) => ({ ...prev, priority: e.target.value }))
+                  }
+                />
+              </div>
+              <DialogFooter>
+                <Button type="submit" disabled={updateRule.isPending}>
+                  {updateRule.isPending ? t('common.saving') : t('common.save')}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppLayout>
   )

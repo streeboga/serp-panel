@@ -31,6 +31,11 @@ final class KeywordController extends Controller
         return KeywordResource::collection($keywords);
     }
 
+    public function show(Keyword $keyword): KeywordResource
+    {
+        return KeywordResource::make($keyword->load(['cluster.category', 'region']));
+    }
+
     public function bulkStore(StoreKeywordBulkRequest $request): JsonResponse
     {
         $keywords = $this->service->bulkStore($request->validated()['keywords']);

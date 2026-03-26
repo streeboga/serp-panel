@@ -12,17 +12,20 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as WordstatSchedulesIndexRouteImport } from './routes/wordstat-schedules/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
 import { Route as ScrapersIndexRouteImport } from './routes/scrapers/index'
 import { Route as SchedulesIndexRouteImport } from './routes/schedules/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as ClassificationIndexRouteImport } from './routes/classification/index'
+import { Route as AlertsIndexRouteImport } from './routes/alerts/index'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as ClassificationDomainsRouteImport } from './routes/classification/domains'
 import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
 import { Route as ProjectsProjectIdKeywordsRouteImport } from './routes/projects/$projectId/keywords'
 import { Route as ProjectsProjectIdDomainsRouteImport } from './routes/projects/$projectId/domains'
 import { Route as ProjectsProjectIdCompetitorsRouteImport } from './routes/projects/$projectId/competitors'
+import { Route as ProjectsProjectIdCategoriesRouteImport } from './routes/projects/$projectId/categories'
 import { Route as ProjectsProjectIdKeywordsKeywordIdRouteImport } from './routes/projects/$projectId/keywords/$keywordId'
 
 const RegisterRoute = RegisterRouteImport.update({
@@ -38,6 +41,11 @@ const LoginRoute = LoginRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WordstatSchedulesIndexRoute = WordstatSchedulesIndexRouteImport.update({
+  id: '/wordstat-schedules/',
+  path: '/wordstat-schedules/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SettingsIndexRoute = SettingsIndexRouteImport.update({
@@ -63,6 +71,11 @@ const ProjectsIndexRoute = ProjectsIndexRouteImport.update({
 const ClassificationIndexRoute = ClassificationIndexRouteImport.update({
   id: '/classification/',
   path: '/classification/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AlertsIndexRoute = AlertsIndexRouteImport.update({
+  id: '/alerts/',
+  path: '/alerts/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
@@ -98,6 +111,12 @@ const ProjectsProjectIdCompetitorsRoute =
     path: '/competitors',
     getParentRoute: () => ProjectsProjectIdRoute,
   } as any)
+const ProjectsProjectIdCategoriesRoute =
+  ProjectsProjectIdCategoriesRouteImport.update({
+    id: '/categories',
+    path: '/categories',
+    getParentRoute: () => ProjectsProjectIdRoute,
+  } as any)
 const ProjectsProjectIdKeywordsKeywordIdRoute =
   ProjectsProjectIdKeywordsKeywordIdRouteImport.update({
     id: '/$keywordId',
@@ -111,11 +130,14 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/classification/domains': typeof ClassificationDomainsRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/alerts/': typeof AlertsIndexRoute
   '/classification/': typeof ClassificationIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/schedules/': typeof SchedulesIndexRoute
   '/scrapers/': typeof ScrapersIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/wordstat-schedules/': typeof WordstatSchedulesIndexRoute
+  '/projects/$projectId/categories': typeof ProjectsProjectIdCategoriesRoute
   '/projects/$projectId/competitors': typeof ProjectsProjectIdCompetitorsRoute
   '/projects/$projectId/domains': typeof ProjectsProjectIdDomainsRoute
   '/projects/$projectId/keywords': typeof ProjectsProjectIdKeywordsRouteWithChildren
@@ -127,11 +149,14 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/classification/domains': typeof ClassificationDomainsRoute
+  '/alerts': typeof AlertsIndexRoute
   '/classification': typeof ClassificationIndexRoute
   '/projects': typeof ProjectsIndexRoute
   '/schedules': typeof SchedulesIndexRoute
   '/scrapers': typeof ScrapersIndexRoute
   '/settings': typeof SettingsIndexRoute
+  '/wordstat-schedules': typeof WordstatSchedulesIndexRoute
+  '/projects/$projectId/categories': typeof ProjectsProjectIdCategoriesRoute
   '/projects/$projectId/competitors': typeof ProjectsProjectIdCompetitorsRoute
   '/projects/$projectId/domains': typeof ProjectsProjectIdDomainsRoute
   '/projects/$projectId/keywords': typeof ProjectsProjectIdKeywordsRouteWithChildren
@@ -145,11 +170,14 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/classification/domains': typeof ClassificationDomainsRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/alerts/': typeof AlertsIndexRoute
   '/classification/': typeof ClassificationIndexRoute
   '/projects/': typeof ProjectsIndexRoute
   '/schedules/': typeof SchedulesIndexRoute
   '/scrapers/': typeof ScrapersIndexRoute
   '/settings/': typeof SettingsIndexRoute
+  '/wordstat-schedules/': typeof WordstatSchedulesIndexRoute
+  '/projects/$projectId/categories': typeof ProjectsProjectIdCategoriesRoute
   '/projects/$projectId/competitors': typeof ProjectsProjectIdCompetitorsRoute
   '/projects/$projectId/domains': typeof ProjectsProjectIdDomainsRoute
   '/projects/$projectId/keywords': typeof ProjectsProjectIdKeywordsRouteWithChildren
@@ -164,11 +192,14 @@ export interface FileRouteTypes {
     | '/register'
     | '/classification/domains'
     | '/projects/$projectId'
+    | '/alerts/'
     | '/classification/'
     | '/projects/'
     | '/schedules/'
     | '/scrapers/'
     | '/settings/'
+    | '/wordstat-schedules/'
+    | '/projects/$projectId/categories'
     | '/projects/$projectId/competitors'
     | '/projects/$projectId/domains'
     | '/projects/$projectId/keywords'
@@ -180,11 +211,14 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/classification/domains'
+    | '/alerts'
     | '/classification'
     | '/projects'
     | '/schedules'
     | '/scrapers'
     | '/settings'
+    | '/wordstat-schedules'
+    | '/projects/$projectId/categories'
     | '/projects/$projectId/competitors'
     | '/projects/$projectId/domains'
     | '/projects/$projectId/keywords'
@@ -197,11 +231,14 @@ export interface FileRouteTypes {
     | '/register'
     | '/classification/domains'
     | '/projects/$projectId'
+    | '/alerts/'
     | '/classification/'
     | '/projects/'
     | '/schedules/'
     | '/scrapers/'
     | '/settings/'
+    | '/wordstat-schedules/'
+    | '/projects/$projectId/categories'
     | '/projects/$projectId/competitors'
     | '/projects/$projectId/domains'
     | '/projects/$projectId/keywords'
@@ -215,11 +252,13 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ClassificationDomainsRoute: typeof ClassificationDomainsRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRouteWithChildren
+  AlertsIndexRoute: typeof AlertsIndexRoute
   ClassificationIndexRoute: typeof ClassificationIndexRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
   SchedulesIndexRoute: typeof SchedulesIndexRoute
   ScrapersIndexRoute: typeof ScrapersIndexRoute
   SettingsIndexRoute: typeof SettingsIndexRoute
+  WordstatSchedulesIndexRoute: typeof WordstatSchedulesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -243,6 +282,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/wordstat-schedules/': {
+      id: '/wordstat-schedules/'
+      path: '/wordstat-schedules'
+      fullPath: '/wordstat-schedules/'
+      preLoaderRoute: typeof WordstatSchedulesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/settings/': {
@@ -278,6 +324,13 @@ declare module '@tanstack/react-router' {
       path: '/classification'
       fullPath: '/classification/'
       preLoaderRoute: typeof ClassificationIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/alerts/': {
+      id: '/alerts/'
+      path: '/alerts'
+      fullPath: '/alerts/'
+      preLoaderRoute: typeof AlertsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects/$projectId': {
@@ -322,6 +375,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdCompetitorsRouteImport
       parentRoute: typeof ProjectsProjectIdRoute
     }
+    '/projects/$projectId/categories': {
+      id: '/projects/$projectId/categories'
+      path: '/categories'
+      fullPath: '/projects/$projectId/categories'
+      preLoaderRoute: typeof ProjectsProjectIdCategoriesRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
     '/projects/$projectId/keywords/$keywordId': {
       id: '/projects/$projectId/keywords/$keywordId'
       path: '/$keywordId'
@@ -348,6 +408,7 @@ const ProjectsProjectIdKeywordsRouteWithChildren =
   )
 
 interface ProjectsProjectIdRouteChildren {
+  ProjectsProjectIdCategoriesRoute: typeof ProjectsProjectIdCategoriesRoute
   ProjectsProjectIdCompetitorsRoute: typeof ProjectsProjectIdCompetitorsRoute
   ProjectsProjectIdDomainsRoute: typeof ProjectsProjectIdDomainsRoute
   ProjectsProjectIdKeywordsRoute: typeof ProjectsProjectIdKeywordsRouteWithChildren
@@ -355,6 +416,7 @@ interface ProjectsProjectIdRouteChildren {
 }
 
 const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
+  ProjectsProjectIdCategoriesRoute: ProjectsProjectIdCategoriesRoute,
   ProjectsProjectIdCompetitorsRoute: ProjectsProjectIdCompetitorsRoute,
   ProjectsProjectIdDomainsRoute: ProjectsProjectIdDomainsRoute,
   ProjectsProjectIdKeywordsRoute: ProjectsProjectIdKeywordsRouteWithChildren,
@@ -370,11 +432,13 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ClassificationDomainsRoute: ClassificationDomainsRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRouteWithChildren,
+  AlertsIndexRoute: AlertsIndexRoute,
   ClassificationIndexRoute: ClassificationIndexRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,
   SchedulesIndexRoute: SchedulesIndexRoute,
   ScrapersIndexRoute: ScrapersIndexRoute,
   SettingsIndexRoute: SettingsIndexRoute,
+  WordstatSchedulesIndexRoute: WordstatSchedulesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

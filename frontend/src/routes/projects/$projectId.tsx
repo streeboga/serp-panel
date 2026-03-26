@@ -74,6 +74,13 @@ function ProjectDetailPage() {
               >
                 {t('projects.competitorsTab')}
               </Link>
+              <Link
+                to="/projects/$projectId/categories"
+                params={{ projectId }}
+                className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
+              >
+                {t('projects.categoriesTab')}
+              </Link>
             </nav>
 
             <Suspense fallback={<PageSkeleton />}>

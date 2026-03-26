@@ -18,10 +18,13 @@ final class DashboardController extends Controller
     public function summary(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'project_id' => 'required|exists:projects,id',
+            'project_id' => 'nullable|exists:projects,id',
         ]);
 
-        $summary = $this->service->summary((int) $validated['project_id']);
+        $projectId = isset($validated['project_id']) ? (int) $validated['project_id'] : null;
+        $orgId = $request->get('organization')->id;
+
+        $summary = $this->service->summary($projectId, $orgId);
 
         return response()->json($summary);
     }
