@@ -16,6 +16,9 @@ export interface KeywordRow {
   region: string | null
   region_id: number | null
   frequency: number | null
+  frequency_exact: number | null
+  frequency_broad: number | null
+  frequency_phrase: number | null
   our_url: string | null
   positions: Record<string, PositionCell>
 }

@@ -16,6 +16,7 @@ use App\Models\Organization;
 use App\Models\PositionAlert;
 use App\Models\Project;
 use App\Models\Scraper;
+use App\Models\WordstatFrequency;
 use App\Models\ScrapeSchedule;
 use App\Models\SerpResult;
 use App\Models\SerpSnapshot;
@@ -133,6 +134,16 @@ class DatabaseSeeder extends Seeder
                 'engine' => $engine,
                 'device' => Device::Desktop,
                 'region_id' => $regionMoscow,
+            ]);
+
+            // Wordstat frequency data (exact, broad, phrase)
+            WordstatFrequency::create([
+                'keyword_id' => $kw->id,
+                'region_id' => $regionMoscow,
+                'frequency_exact' => $frequency,
+                'frequency_broad' => (int) ($frequency * 1.8),
+                'frequency_phrase' => (int) ($frequency * 0.6),
+                'collected_at' => Carbon::now(),
             ]);
 
             // Generate 14 days of SERP snapshots

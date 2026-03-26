@@ -1,4 +1,4 @@
-import { createFileRoute, Link, Outlet, useMatch } from '@tanstack/react-router'
+import { createFileRoute, Link, Outlet, useMatches } from '@tanstack/react-router'
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useImportKeywords, useDeleteKeywords, useRegions, useProjectClusters } from '@/hooks/useKeywords'
@@ -105,8 +105,9 @@ function savePresets(presets: FilterPreset[]) {
 // ─── Main ───
 function KeywordsPage() {
   // If a child route (keyword detail) is active, render it instead
-  const childMatch = useMatch({ from: '/projects/$projectId/keywords/$keywordId', shouldThrow: false })
-  if (childMatch) return <Outlet />
+  const matches = useMatches()
+  const hasChildRoute = matches.some((m) => m.id.includes('keywordId'))
+  if (hasChildRoute) return <Outlet />
 
   return <KeywordsTable />
 }
@@ -154,14 +155,14 @@ function KeywordsTable() {
   }, [allKeywords, search, filterEngines, filterDevices, filterCategories, filterClusters, filterRegions])
 
   // ── Group + merge engines ──
-  type MergedRow = { keyword: string; keyword_id: number; frequency: number | null; our_url: string | null; cluster: string | null; category: string | null; region: string | null; engines: Record<string, Record<string, { position: number | null; delta: number | null }>> }
+  type MergedRow = { keyword: string; keyword_id: number; frequency: number | null; frequency_exact: number | null; frequency_broad: number | null; frequency_phrase: number | null; our_url: string | null; cluster: string | null; category: string | null; region: string | null; engines: Record<string, Record<string, { position: number | null; delta: number | null }>> }
 
   const mergedRows = useMemo(() => {
     const map = new Map<string, MergedRow>()
     for (const kw of filtered) {
       const key = kw.keyword
       if (!map.has(key)) {
-        map.set(key, { keyword: kw.keyword, keyword_id: kw.keyword_id, frequency: kw.frequency, our_url: kw.our_url, cluster: kw.cluster, category: kw.category, region: kw.region, engines: {} })
+        map.set(key, { keyword: kw.keyword, keyword_id: kw.keyword_id, frequency: kw.frequency, frequency_exact: kw.frequency_exact, frequency_broad: kw.frequency_broad, frequency_phrase: kw.frequency_phrase, our_url: kw.our_url, cluster: kw.cluster, category: kw.category, region: kw.region, engines: {} })
       }
       const e = map.get(key)!
       if (!e.our_url && kw.our_url) e.our_url = kw.our_url
@@ -245,7 +246,7 @@ function KeywordsTable() {
   const [importEngines, setImportEngines] = useState<Set<string>>(new Set(['google', 'yandex']))
   const [importDevices, setImportDevices] = useState<Set<string>>(new Set(['desktop']))
   const [importClusterId, setImportClusterId] = useState('')
-  const [importRegionId, setImportRegionId] = useState('')
+  const [importRegionIds, setImportRegionIds] = useState<Set<number>>(new Set())
   const [importFormError, setImportFormError] = useState<string | null>(null)
 
   const { data: clustersRaw } = useProjectClusters(projectId)
@@ -255,16 +256,41 @@ function KeywordsTable() {
 
   const handleSearch = useCallback((e: React.FormEvent) => { e.preventDefault(); setSearch(searchInput) }, [searchInput])
 
+  const toggleImportRegion = useCallback((id: number) => {
+    setImportRegionIds((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n })
+  }, [])
+
   const handleImport = useCallback(async (e: React.FormEvent) => {
     e.preventDefault(); setImportFormError(null)
-    const lines = importText.split('\n').map((l) => l.trim()).filter(Boolean)
-    if (!lines.length) return
+    const rawLines = importText.split('\n').map((l) => l.trim()).filter(Boolean)
+    if (!rawLines.length) return
+
+    // Parse CSV format: keyword;cluster
+    const parsedLines = rawLines.map((line) => {
+      if (line.includes(';')) {
+        const [kw, clusterName] = line.split(';').map((s) => s.trim())
+        const matchedCluster = clusters.find((c) => c.name === clusterName)
+        return { keyword: kw, cluster_id: matchedCluster ? matchedCluster.id : Number(importClusterId) }
+      }
+      return { keyword: line, cluster_id: Number(importClusterId) }
+    })
+
+    // Group by cluster_id
+    const byCluster = new Map<number, string[]>()
+    for (const p of parsedLines) {
+      if (!byCluster.has(p.cluster_id)) byCluster.set(p.cluster_id, [])
+      byCluster.get(p.cluster_id)!.push(p.keyword)
+    }
+
     try {
-      for (const eng of importEngines) for (const dev of importDevices)
-        await importKeywords.mutateAsync({ keywords: lines, engine: eng, device: dev, cluster_id: Number(importClusterId), region_id: Number(importRegionId) })
+      for (const eng of importEngines)
+        for (const dev of importDevices)
+          for (const regionId of importRegionIds)
+            for (const [clusterId, keywords] of byCluster)
+              await importKeywords.mutateAsync({ keywords, engine: eng, device: dev, cluster_id: clusterId, region_id: regionId })
       setImportText(''); setImportOpen(false)
     } catch (err) { setImportFormError(parseApiError(err)) }
-  }, [importText, importEngines, importDevices, importClusterId, importRegionId, importKeywords])
+  }, [importText, importEngines, importDevices, importClusterId, importRegionIds, importKeywords, clusters])
 
   const handleBulkDelete = useCallback(async () => {
     if (!selectedIds.size || !confirm(`Delete ${selectedIds.size} keywords?`)) return
@@ -272,7 +298,7 @@ function KeywordsTable() {
   }, [selectedIds, deleteKeywords])
 
   // ── Render ──
-  const totalCols = 3 + dates.length * visibleEngines.length // checkbox + keyword + freq + date*engine cells
+  const totalCols = 5 + dates.length * visibleEngines.length // checkbox + keyword + 3 freq cols + date*engine cells
 
   return (
     <div className="space-y-3">
@@ -342,7 +368,8 @@ function KeywordsTable() {
               <form onSubmit={handleImport} className="space-y-3">
                 <div className="space-y-1">
                   <Label className="text-xs">{t('keywords.keywordsPerLine')}</Label>
-                  <textarea className="w-full min-h-24 rounded-lg border border-input bg-transparent px-3 py-2 text-sm" value={importText} onChange={(e) => setImportText(e.target.value)} required placeholder={"купить смартфон\nноутбук для работы"} />
+                  <p className="text-[11px] text-muted-foreground whitespace-pre-line">{'Формат: один ключ на строку ИЛИ CSV: ключ;кластер\nПример CSV:\nкупить смартфон;Смартфоны\nноутбук для работы;Ноутбуки'}</p>
+                  <textarea className="w-full min-h-24 rounded-lg border border-input bg-transparent px-3 py-2 text-sm" value={importText} onChange={(e) => setImportText(e.target.value)} required placeholder={"купить смартфон\nноутбук для работы\nили CSV:\nкупить смартфон;Смартфоны"} />
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">{t('keywords.cluster')}</Label>
@@ -350,13 +377,20 @@ function KeywordsTable() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">{t('keywords.region')}</Label>
-                  <Select value={importRegionId} onValueChange={(v) => setImportRegionId(v ?? '')}><SelectTrigger className="w-full"><SelectValue placeholder={t('keywords.selectRegion')} /></SelectTrigger><SelectContent>{regionsList.map((r) => (<SelectItem key={r.id} value={String(r.id)}>{r.name}</SelectItem>))}</SelectContent></Select>
+                  <div className="max-h-32 overflow-auto border rounded-md p-2 space-y-1">
+                    {regionsList.map((r) => (
+                      <label key={r.id} className="flex items-center gap-2 text-xs cursor-pointer">
+                        <input type="checkbox" checked={importRegionIds.has(r.id)} onChange={() => toggleImportRegion(r.id)} className="rounded" />
+                        {r.name}
+                      </label>
+                    ))}
+                  </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div><Label className="text-xs">{t('keywords.engine')}</Label><div className="flex gap-3 mt-1">{['google', 'yandex'].map((e) => (<label key={e} className="flex items-center gap-1 text-xs cursor-pointer"><input type="checkbox" checked={importEngines.has(e)} onChange={() => { const n = new Set(importEngines); if (n.has(e)) { if (n.size > 1) n.delete(e) } else n.add(e); setImportEngines(n) }} className="rounded" />{e === 'google' ? 'G' : 'Я'}</label>))}</div></div>
                   <div><Label className="text-xs">{t('keywords.device')}</Label><div className="flex gap-3 mt-1">{['desktop', 'mobile'].map((d) => (<label key={d} className="flex items-center gap-1 text-xs cursor-pointer"><input type="checkbox" checked={importDevices.has(d)} onChange={() => { const n = new Set(importDevices); if (n.has(d)) { if (n.size > 1) n.delete(d) } else n.add(d); setImportDevices(n) }} className="rounded" />{d === 'desktop' ? 'D' : 'M'}</label>))}</div></div>
                 </div>
-                <DialogFooter><Button type="submit" disabled={importKeywords.isPending || !importClusterId || !importRegionId}>{importKeywords.isPending ? '...' : t('keywords.import')}</Button></DialogFooter>
+                <DialogFooter><Button type="submit" disabled={importKeywords.isPending || !importClusterId || importRegionIds.size === 0}>{importKeywords.isPending ? '...' : t('keywords.import')}</Button></DialogFooter>
               </form>
             </DialogContent>
           </Dialog>
@@ -395,7 +429,13 @@ function KeywordsTable() {
                   <input type="checkbox" checked={mergedRows.length > 0 && selectedIds.size === mergedRows.length} onChange={() => selectedIds.size === mergedRows.length ? setSelectedIds(new Set()) : setSelectedIds(new Set(mergedRows.map((k) => k.keyword_id)))} className="rounded" />
                 </th>
                 <th className="sticky left-7 bg-muted/50 z-30 px-2 py-1.5 text-left font-medium text-xs min-w-[220px]">{t('keywords.keyword')}</th>
-                <th className="px-1.5 py-1.5 text-right font-medium text-xs w-14">Freq</th>
+                <th className="px-0.5 py-1.5 text-center font-medium text-xs w-24" colSpan={3}>
+                  <div className="flex text-[10px]">
+                    <div className="flex-1" title="Exact">!</div>
+                    <div className="flex-1" title="Phrase">&laquo;&raquo;</div>
+                    <div className="flex-1" title="Broad">~</div>
+                  </div>
+                </th>
                 {dates.map((date) => (
                   <th key={date} className="px-0.5 py-1 text-center font-medium border-l" colSpan={visibleEngines.length}>
                     <div className="text-[10px] leading-tight">{formatDate(date)}</div>
@@ -452,7 +492,9 @@ function GroupSection({ label, rows, dates, engines, totalCols, projectId, selec
             </div>
             {kw.cluster && <div className="text-[9px] text-muted-foreground truncate">{kw.category ? `${kw.category} / ` : ''}{kw.cluster}</div>}
           </td>
-          <td className="px-1.5 py-1 text-right tabular-nums text-muted-foreground text-xs">{kw.frequency ? kw.frequency.toLocaleString() : '—'}</td>
+          <td className="px-1 py-1 text-right tabular-nums text-muted-foreground text-[10px]">{kw.frequency_exact?.toLocaleString() ?? '—'}</td>
+          <td className="px-1 py-1 text-right tabular-nums text-muted-foreground text-[10px]">{kw.frequency_phrase?.toLocaleString() ?? '—'}</td>
+          <td className="px-1 py-1 text-right tabular-nums text-muted-foreground text-[10px]">{kw.frequency_broad?.toLocaleString() ?? '—'}</td>
           {dates.map((date) => engines.map((eng) => (
             <td key={`${date}-${eng}`} className="px-0.5 py-1 border-l w-10">
               <PositionCell position={kw.engines[eng]?.[date]?.position ?? null} delta={kw.engines[eng]?.[date]?.delta ?? null} />
