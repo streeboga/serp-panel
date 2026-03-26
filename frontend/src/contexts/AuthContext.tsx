@@ -4,6 +4,7 @@ import {
   useState,
   useEffect,
   useCallback,
+  useMemo,
   type ReactNode,
 } from 'react'
 import api from '@/lib/api'
@@ -130,19 +131,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem('organization_id')
   }, [])
 
+  const value = useMemo(
+    () => ({
+      user,
+      token,
+      organizationId,
+      login,
+      register,
+      logout,
+      setOrganization,
+      isLoading,
+    }),
+    [user, token, organizationId, login, register, logout, setOrganization, isLoading],
+  )
+
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        token,
-        organizationId,
-        login,
-        register,
-        logout,
-        setOrganization,
-        isLoading,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   )

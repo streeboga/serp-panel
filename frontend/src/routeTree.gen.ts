@@ -52,7 +52,9 @@ const SettingsIndexRoute = SettingsIndexRouteImport.update({
   id: '/settings/',
   path: '/settings/',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/settings/index.lazy').then((d) => d.Route),
+)
 const ScrapersIndexRoute = ScrapersIndexRouteImport.update({
   id: '/scrapers/',
   path: '/scrapers/',
@@ -72,7 +74,9 @@ const ClassificationIndexRoute = ClassificationIndexRouteImport.update({
   id: '/classification/',
   path: '/classification/',
   getParentRoute: () => rootRouteImport,
-} as any)
+} as any).lazy(() =>
+  import('./routes/classification/index.lazy').then((d) => d.Route),
+)
 const AlertsIndexRoute = AlertsIndexRouteImport.update({
   id: '/alerts/',
   path: '/alerts/',
@@ -98,19 +102,27 @@ const ProjectsProjectIdKeywordsRoute =
     id: '/keywords',
     path: '/keywords',
     getParentRoute: () => ProjectsProjectIdRoute,
-  } as any)
+  } as any).lazy(() =>
+    import('./routes/projects/$projectId/keywords.lazy').then((d) => d.Route),
+  )
 const ProjectsProjectIdDomainsRoute =
   ProjectsProjectIdDomainsRouteImport.update({
     id: '/domains',
     path: '/domains',
     getParentRoute: () => ProjectsProjectIdRoute,
-  } as any)
+  } as any).lazy(() =>
+    import('./routes/projects/$projectId/domains.lazy').then((d) => d.Route),
+  )
 const ProjectsProjectIdCompetitorsRoute =
   ProjectsProjectIdCompetitorsRouteImport.update({
     id: '/competitors',
     path: '/competitors',
     getParentRoute: () => ProjectsProjectIdRoute,
-  } as any)
+  } as any).lazy(() =>
+    import('./routes/projects/$projectId/competitors.lazy').then(
+      (d) => d.Route,
+    ),
+  )
 const ProjectsProjectIdCategoriesRoute =
   ProjectsProjectIdCategoriesRouteImport.update({
     id: '/categories',
@@ -122,7 +134,11 @@ const ProjectsProjectIdKeywordsKeywordIdRoute =
     id: '/$keywordId',
     path: '/$keywordId',
     getParentRoute: () => ProjectsProjectIdKeywordsRoute,
-  } as any)
+  } as any).lazy(() =>
+    import('./routes/projects/$projectId/keywords/$keywordId.lazy').then(
+      (d) => d.Route,
+    ),
+  )
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute

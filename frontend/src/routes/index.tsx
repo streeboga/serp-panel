@@ -1,5 +1,5 @@
 import { createFileRoute, redirect } from '@tanstack/react-router'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AppLayout } from '@/components/AppLayout'
 import { SummaryCard } from '@/components/SummaryCard'
@@ -35,6 +35,11 @@ function DashboardPage() {
     ? projects
     : (projects?.data ?? [])
 
+  const projectLabels = useMemo(
+    () => Object.fromEntries(projectList.map((p) => [String(p.id), p.name])),
+    [projectList],
+  )
+
   const handleProjectChange = useCallback((v: string | null) => {
     setProjectId(v ? Number(v) : undefined)
   }, [])
@@ -50,7 +55,7 @@ function DashboardPage() {
               onValueChange={handleProjectChange}
             >
               <SelectTrigger>
-                <SelectValue placeholder={t('dashboard.allProjects')} labels={Object.fromEntries(projectList.map((p) => [String(p.id), p.name]))} />
+                <SelectValue placeholder={t('dashboard.allProjects')} labels={projectLabels} />
               </SelectTrigger>
               <SelectContent>
                 {projectList.map((p) => (

@@ -1,9 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { queryKeys } from '@/lib/query-keys'
 
 export function useYandexStatus() {
   return useQuery({
-    queryKey: ['yandex', 'status'],
+    queryKey: queryKeys.yandex.status(),
     queryFn: () => api.get('/organization/yandex/status').then((r) => r.data),
     staleTime: 60_000,
   })
@@ -20,7 +21,7 @@ export function useYandexSaveToken() {
   return useMutation({
     mutationFn: (token: string) =>
       api.post('/organization/yandex/save-token', { token }).then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['yandex'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.yandex.all }),
   })
 }
 
@@ -28,6 +29,6 @@ export function useYandexDisconnect() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: () => api.delete('/organization/yandex').then((r) => r.data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['yandex'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.yandex.all }),
   })
 }

@@ -29,6 +29,13 @@ import { useProjects } from '@/hooks/useProjects'
 import { parseApiError } from '@/lib/api'
 import type { WordstatSchedule, Project } from '@/types/api'
 
+const FREQ_DAYS_LABELS: Record<string, string> = {
+  '1': 'Ежедневно',
+  '7': 'Еженедельно',
+  '14': 'Раз в 2 недели',
+  '30': 'Ежемесячно',
+}
+
 export const Route = createFileRoute('/wordstat-schedules/')({
   beforeLoad: () => {
     if (!localStorage.getItem('token')) throw redirect({ to: '/login' })
@@ -54,6 +61,11 @@ function WordstatSchedulesPage() {
     const d = projectsData?.data ?? projectsData
     return Array.isArray(d) ? d : []
   }, [projectsData])
+
+  const projectLabels = useMemo(
+    () => Object.fromEntries(projects.map((p) => [String(p.id), p.name])),
+    [projects],
+  )
 
   const [createOpen, setCreateOpen] = useState(false)
   const [projectId, setProjectId] = useState('')
@@ -167,7 +179,7 @@ function WordstatSchedulesPage() {
             <div className="space-y-1">
               <Label className="text-xs">Проект</Label>
               <Select value={projectId} onValueChange={(v) => setProjectId(v ?? '')}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Выберите проект" labels={Object.fromEntries(projects.map((p) => [String(p.id), p.name]))} /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Выберите проект" labels={projectLabels} /></SelectTrigger>
                 <SelectContent>
                   {projects.map((p) => (
                     <SelectItem key={p.id} value={String(p.id)} label={p.name}>{p.name}</SelectItem>
@@ -178,7 +190,7 @@ function WordstatSchedulesPage() {
             <div className="space-y-1">
               <Label className="text-xs">{t('wordstatSchedules.frequencyDays')}</Label>
               <Select value={freqDays} onValueChange={(v) => setFreqDays(v ?? '7')}>
-                <SelectTrigger className="w-full"><SelectValue labels={{ '1': 'Ежедневно', '7': 'Еженедельно', '14': 'Раз в 2 недели', '30': 'Ежемесячно' }} /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue labels={FREQ_DAYS_LABELS} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="1" label="Ежедневно">Ежедневно</SelectItem>
                   <SelectItem value="7" label="Еженедельно">Еженедельно</SelectItem>

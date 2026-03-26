@@ -44,7 +44,7 @@ export const queryKeys = {
   clusters: {
     all: ['clusters'] as const,
     byProject: (projectId: string) =>
-      ['project-clusters', projectId] as const,
+      [...queryKeys.clusters.all, 'project', projectId] as const,
     byCategory: (categoryId: string) =>
       [...queryKeys.clusters.all, 'category', categoryId] as const,
     detail: (id: string) =>
@@ -105,5 +105,20 @@ export const queryKeys = {
 
   organizations: {
     all: ['organizations'] as const,
+  },
+
+  positionMatrix: {
+    all: ['position-matrix'] as const,
+    list: (projectId: string, days?: number) =>
+      [...queryKeys.positionMatrix.all, projectId, days] as const,
+  },
+
+  yandex: {
+    all: ['yandex'] as const,
+    status: () => [...queryKeys.yandex.all, 'status'] as const,
+  },
+
+  accounts: {
+    all: ['accounts'] as const,
   },
 } as const

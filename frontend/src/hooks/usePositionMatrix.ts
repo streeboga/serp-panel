@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
+import { queryKeys } from '@/lib/query-keys'
 
 export interface PositionCell {
   position: number | null
@@ -30,7 +31,7 @@ export interface PositionMatrixResponse {
 
 export function usePositionMatrix(projectId: string, days: number = 14) {
   return useQuery<PositionMatrixResponse>({
-    queryKey: ['position-matrix', projectId, days],
+    queryKey: queryKeys.positionMatrix.list(projectId, days),
     queryFn: () =>
       api
         .get(`/projects/${projectId}/positions`, { params: { days } })

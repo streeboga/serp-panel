@@ -16,6 +16,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { parseApiError } from '@/lib/api'
 import type { Schedule, Project, Scraper } from '@/types/api'
 
+const FREQ_DAYS_LABELS: Record<string, string> = {
+  '1': 'Ежедневно',
+  '3': 'Раз в 3 дня',
+  '7': 'Еженедельно',
+  '14': 'Раз в 2 недели',
+  '30': 'Ежемесячно',
+}
+
 export const Route = createFileRoute('/schedules/')({
   beforeLoad: () => { if (!localStorage.getItem('token')) throw redirect({ to: '/login' }) },
   component: SchedulesPage,
@@ -45,6 +53,15 @@ function SchedulesPage() {
     const d = scrapersData?.data ?? scrapersData
     return Array.isArray(d) ? d : []
   }, [scrapersData])
+
+  const projectLabels = useMemo(
+    () => Object.fromEntries(projects.map((p) => [String(p.id), p.name])),
+    [projects],
+  )
+  const scraperLabels = useMemo(
+    () => Object.fromEntries(scrapers.map((s) => [String(s.id), `${s.name} (${s.type})`])),
+    [scrapers],
+  )
 
   const [createOpen, setCreateOpen] = useState(false)
   const [projectId, setProjectId] = useState('')
@@ -154,7 +171,7 @@ function SchedulesPage() {
             <div className="space-y-1">
               <Label className="text-xs">Проект</Label>
               <Select value={projectId} onValueChange={(v) => setProjectId(v ?? '')}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Выберите проект" labels={Object.fromEntries(projects.map((p) => [String(p.id), p.name]))} /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Выберите проект" labels={projectLabels} /></SelectTrigger>
                 <SelectContent>
                   {projects.map((p) => (
                     <SelectItem key={p.id} value={String(p.id)} label={p.name}>{p.name}</SelectItem>
@@ -165,7 +182,7 @@ function SchedulesPage() {
             <div className="space-y-1">
               <Label className="text-xs">Парсер</Label>
               <Select value={scraperId} onValueChange={(v) => setScraperId(v ?? '')}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Выберите парсер" labels={Object.fromEntries(scrapers.map((s) => [String(s.id), `${s.name} (${s.type})`]))} /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Выберите парсер" labels={scraperLabels} /></SelectTrigger>
                 <SelectContent>
                   {scrapers.map((s) => (
                     <SelectItem key={s.id} value={String(s.id)} label={`${s.name} (${s.type})`}>{s.name} ({s.type})</SelectItem>
@@ -176,7 +193,7 @@ function SchedulesPage() {
             <div className="space-y-1">
               <Label className="text-xs">Частота</Label>
               <Select value={freqDays} onValueChange={(v) => setFreqDays(v ?? '1')}>
-                <SelectTrigger className="w-full"><SelectValue labels={{ '1': 'Ежедневно', '3': 'Раз в 3 дня', '7': 'Еженедельно', '14': 'Раз в 2 недели', '30': 'Ежемесячно' }} /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue labels={FREQ_DAYS_LABELS} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="1" label="Ежедневно">Ежедневно</SelectItem>
                   <SelectItem value="3" label="Раз в 3 дня">Раз в 3 дня</SelectItem>

@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import {
   ResponsiveContainer,
   BarChart,
@@ -9,6 +10,18 @@ import {
 } from 'recharts'
 import type { WordstatTrend } from '@/types/api'
 
+const CHART_MARGIN = { top: 5, right: 20, bottom: 5, left: 0 }
+
+const TOOLTIP_CONTENT_STYLE = {
+  borderRadius: '8px',
+  border: '1px solid hsl(var(--border))',
+  background: 'hsl(var(--card))',
+  color: 'hsl(var(--card-foreground))',
+}
+
+const TOOLTIP_FORMATTER = (value: unknown) =>
+  [Number(value).toLocaleString('ru-RU'), 'Searches'] as [string, string]
+
 interface TrendChartProps {
   data: WordstatTrend[]
   height?: number
@@ -17,14 +30,18 @@ interface TrendChartProps {
 export function TrendChart({ data, height = 300 }: TrendChartProps) {
   if (!data || data.length === 0) return null
 
-  const chartData = data.map((d) => ({
-    month: d.month,
-    value: d.value,
-  }))
+  const chartData = useMemo(
+    () =>
+      data.map((d) => ({
+        month: d.month,
+        value: d.value,
+      })),
+    [data],
+  )
 
   return (
     <ResponsiveContainer width="100%" height={height}>
-      <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+      <BarChart data={chartData} margin={CHART_MARGIN}>
         <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
         <XAxis
           dataKey="month"
@@ -42,13 +59,8 @@ export function TrendChart({ data, height = 300 }: TrendChartProps) {
           }
         />
         <Tooltip
-          contentStyle={{
-            borderRadius: '8px',
-            border: '1px solid hsl(var(--border))',
-            background: 'hsl(var(--card))',
-            color: 'hsl(var(--card-foreground))',
-          }}
-          formatter={(value) => [Number(value).toLocaleString('ru-RU'), 'Searches']}
+          contentStyle={TOOLTIP_CONTENT_STYLE}
+          formatter={TOOLTIP_FORMATTER}
         />
         <Bar
           dataKey="value"

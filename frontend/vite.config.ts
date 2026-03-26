@@ -45,6 +45,7 @@ export default defineConfig({
           if (id.includes('node_modules/@tanstack/react-query')) return 'vendor-query'
           if (id.includes('node_modules/@tanstack/react-table')) return 'vendor-table'
           if (id.includes('node_modules/axios')) return 'vendor-axios'
+          if (id.includes('node_modules/recharts')) return 'vendor-recharts'
         },
       },
     },
