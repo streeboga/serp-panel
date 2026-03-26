@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useMatches } from '@tanstack/react-router'
 import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useImportKeywords, useDeleteKeywords, useRegions, useProjectClusters } from '@/hooks/useKeywords'
+import { useImportKeywords, useDeleteKeywords, useUpdateKeyword, useRegions, useProjectClusters } from '@/hooks/useKeywords'
 import { usePositionMatrix } from '@/hooks/usePositionMatrix'
 import type { KeywordRow } from '@/hooks/usePositionMatrix'
 import { Button } from '@/components/ui/button'
@@ -371,6 +371,9 @@ function KeywordsTable() {
   // ── Import ──
   const importKeywords = useImportKeywords()
   const deleteKeywords = useDeleteKeywords()
+  const updateKeyword = useUpdateKeyword()
+  const [bulkMoveOpen, setBulkMoveOpen] = useState(false)
+  const [bulkMoveClusterId, setBulkMoveClusterId] = useState('')
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set())
   const [importOpen, setImportOpen] = useState(false)
   const [importText, setImportText] = useState('')
@@ -424,9 +427,19 @@ function KeywordsTable() {
   }, [importText, importEngines, importDevices, importClusterId, importRegionIds, importKeywords, clusters])
 
   const handleBulkDelete = useCallback(async () => {
-    if (!selectedIds.size || !confirm(`Delete ${selectedIds.size} keywords?`)) return
+    if (!selectedIds.size || !confirm(`Удалить ${selectedIds.size} ключевых слов?`)) return
     await deleteKeywords.mutateAsync([...selectedIds]); setSelectedIds(new Set())
   }, [selectedIds, deleteKeywords])
+
+  const handleBulkMove = useCallback(async () => {
+    if (!selectedIds.size || !bulkMoveClusterId) return
+    for (const id of selectedIds) {
+      await updateKeyword.mutateAsync({ id, cluster_id: Number(bulkMoveClusterId) })
+    }
+    setSelectedIds(new Set())
+    setBulkMoveOpen(false)
+    setBulkMoveClusterId('')
+  }, [selectedIds, bulkMoveClusterId, updateKeyword])
 
   // ── Render ──
   const totalCols = 5 + dates.length * visibleEngines.length // checkbox + keyword + 3 freq cols + date*engine cells
@@ -475,9 +488,15 @@ function KeywordsTable() {
         </Button>
 
         {selectedIds.size > 0 && (
-          <Button variant="outline" size="sm" className="h-8 text-xs text-destructive" onClick={handleBulkDelete} disabled={deleteKeywords.isPending}>
-            Delete ({selectedIds.size})
-          </Button>
+          <div className="flex items-center gap-1 border-l pl-2 ml-1">
+            <span className="text-xs text-muted-foreground">Выбрано: {selectedIds.size}</span>
+            <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => setBulkMoveOpen(true)}>
+              Переместить
+            </Button>
+            <Button variant="outline" size="sm" className="h-7 text-[11px] text-destructive" onClick={handleBulkDelete} disabled={deleteKeywords.isPending}>
+              Удалить
+            </Button>
+          </div>
         )}
 
         <div className="ml-auto">
@@ -536,7 +555,30 @@ function KeywordsTable() {
               </div>
             )}
           </div>
-          <DialogFooter><Button onClick={handleSavePreset} disabled={!presetName.trim()}>Save</Button></DialogFooter>
+          <DialogFooter><Button onClick={handleSavePreset} disabled={!presetName.trim()}>Сохранить</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ── Bulk move dialog ── */}
+      <Dialog open={bulkMoveOpen} onOpenChange={setBulkMoveOpen}>
+        <DialogContent className="sm:max-w-xs">
+          <DialogHeader><DialogTitle>Переместить в кластер</DialogTitle></DialogHeader>
+          <p className="text-xs text-muted-foreground">Выбрано ключевых слов: {selectedIds.size}</p>
+          <Select value={bulkMoveClusterId} onValueChange={(v) => setBulkMoveClusterId(v ?? '')}>
+            <SelectTrigger className="w-full"><SelectValue placeholder="Выберите кластер" /></SelectTrigger>
+            <SelectContent>
+              {clusters.map((c) => (
+                <SelectItem key={c.id} value={String(c.id)}>
+                  {c.category?.name ? `${c.category.name} / ${c.name}` : c.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <DialogFooter>
+            <Button onClick={handleBulkMove} disabled={!bulkMoveClusterId || updateKeyword.isPending}>
+              {updateKeyword.isPending ? 'Перемещение...' : 'Переместить'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
