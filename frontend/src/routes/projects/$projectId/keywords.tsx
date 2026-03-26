@@ -25,11 +25,12 @@ interface FilterPreset {
   categories: string[]
   clusters: string[]
   regions: string[]
-  groupBy: string
+  groupBy: string[]
   days: number
 }
 
-type GroupByField = '' | 'category' | 'cluster' | 'engine' | 'device' | 'region'
+type GroupByOption = 'category' | 'cluster' | 'engine' | 'device' | 'region'
+const GROUP_OPTIONS: GroupByOption[] = ['category', 'cluster', 'engine', 'device', 'region']
 
 // ─── Multi-select filter dropdown ───
 function MultiFilter({ label, options, selected, onChange }: {
@@ -125,7 +126,7 @@ function KeywordsTable() {
   const [filterCategories, setFilterCategories] = useState<Set<string>>(new Set())
   const [filterClusters, setFilterClusters] = useState<Set<string>>(new Set())
   const [filterRegions, setFilterRegions] = useState<Set<string>>(new Set())
-  const [groupBy, setGroupBy] = useState<GroupByField>('')
+  const [groupByFields, setGroupByFields] = useState<Set<GroupByOption>>(new Set())
   const [presets, setPresets] = useState<FilterPreset[]>(loadPresets)
   const [presetName, setPresetName] = useState('')
   const [presetDialogOpen, setPresetDialogOpen] = useState(false)
@@ -178,24 +179,26 @@ function KeywordsTable() {
     return Array.from(s).sort()
   }, [filtered])
 
-  // ── Grouping ──
+  // ── Grouping (multi-field) ──
   const groups = useMemo(() => {
-    if (!groupBy) return [{ label: '', rows: mergedRows }]
+    if (groupByFields.size === 0) return [{ label: '', rows: mergedRows }]
+    const fields = [...groupByFields]
+    const getFieldValue = (row: MergedRow, field: GroupByOption): string => {
+      if (field === 'category') return row.category ?? '—'
+      if (field === 'cluster') return row.cluster ?? '—'
+      if (field === 'region') return row.region ?? '—'
+      if (field === 'engine') return Object.keys(row.engines).join('+')
+      if (field === 'device') return 'all'
+      return '—'
+    }
     const map = new Map<string, MergedRow[]>()
     for (const row of mergedRows) {
-      let key = ''
-      if (groupBy === 'category') key = row.category ?? 'Без категории'
-      else if (groupBy === 'cluster') key = row.cluster ?? 'Без кластера'
-      else if (groupBy === 'region') key = row.region ?? 'Без региона'
-      else if (groupBy === 'engine' || groupBy === 'device') {
-        // For engine/device grouping, we need to use the raw data
-        key = groupBy === 'engine' ? Object.keys(row.engines).join(', ') : 'all'
-      }
+      const key = fields.map((f) => getFieldValue(row, f)).join(' › ')
       if (!map.has(key)) map.set(key, [])
       map.get(key)!.push(row)
     }
     return Array.from(map.entries()).map(([label, rows]) => ({ label, rows })).sort((a, b) => a.label.localeCompare(b.label))
-  }, [mergedRows, groupBy])
+  }, [mergedRows, groupByFields])
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
 
@@ -209,7 +212,7 @@ function KeywordsTable() {
       categories: [...filterCategories],
       clusters: [...filterClusters],
       regions: [...filterRegions],
-      groupBy,
+      groupBy: [...groupByFields],
       days,
     }
     const updated = [...presets.filter((x) => x.name !== p.name), p]
@@ -217,7 +220,7 @@ function KeywordsTable() {
     savePresets(updated)
     setPresetName('')
     setPresetDialogOpen(false)
-  }, [presetName, filterEngines, filterDevices, filterCategories, filterClusters, filterRegions, groupBy, days, presets])
+  }, [presetName, filterEngines, filterDevices, filterCategories, filterClusters, filterRegions, groupByFields, days, presets])
 
   const handleLoadPreset = useCallback((name: string) => {
     const p = presets.find((x) => x.name === name)
@@ -227,7 +230,7 @@ function KeywordsTable() {
     setFilterCategories(new Set(p.categories))
     setFilterClusters(new Set(p.clusters))
     setFilterRegions(new Set(p.regions))
-    setGroupBy(p.groupBy as GroupByField)
+    setGroupByFields(new Set(Array.isArray(p.groupBy) ? p.groupBy as GroupByOption[] : p.groupBy ? [p.groupBy as GroupByOption] : []))
     setDays(p.days)
   }, [presets])
 
@@ -324,17 +327,12 @@ function KeywordsTable() {
           </SelectContent>
         </Select>
 
-        <Select value={groupBy || '__none__'} onValueChange={(v) => setGroupBy((v === '__none__' ? '' : v) as GroupByField)}>
-          <SelectTrigger className="w-28 h-8 text-xs"><SelectValue placeholder="Group by" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="__none__">No grouping</SelectItem>
-            <SelectItem value="category">Category</SelectItem>
-            <SelectItem value="cluster">Cluster</SelectItem>
-            <SelectItem value="engine">Engine</SelectItem>
-            <SelectItem value="device">Device</SelectItem>
-            <SelectItem value="region">Region</SelectItem>
-          </SelectContent>
-        </Select>
+        <MultiFilter
+          label={groupByFields.size > 0 ? `Group: ${[...groupByFields].join('+')}` : 'Group by'}
+          options={GROUP_OPTIONS}
+          selected={groupByFields as unknown as Set<string>}
+          onChange={(s) => setGroupByFields(s as unknown as Set<GroupByOption>)}
+        />
 
         {/* Presets */}
         {presets.length > 0 && (
@@ -448,7 +446,7 @@ function KeywordsTable() {
             </thead>
             <tbody>
               {groups.map((group) => (
-                <GroupSection key={group.label || '__all__'} label={group.label} rows={group.rows} dates={dates} engines={visibleEngines} totalCols={totalCols} projectId={projectId} selectedIds={selectedIds} setSelectedIds={setSelectedIds} showGroupHeader={!!groupBy} />
+                <GroupSection key={group.label || '__all__'} label={group.label} rows={group.rows} dates={dates} engines={visibleEngines} totalCols={totalCols} projectId={projectId} selectedIds={selectedIds} setSelectedIds={setSelectedIds} showGroupHeader={groupByFields.size > 0} />
               ))}
             </tbody>
           </table>
