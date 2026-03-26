@@ -86,6 +86,7 @@ function GroupBySelect({ selected, onChange }: {
 }
 
 // ─── Multi-select filter dropdown ───
+// empty Set = no filter (show all). Non-empty = show only selected.
 function MultiFilter({ label, options, selected, onChange }: {
   label: string
   options: string[]
@@ -93,33 +94,52 @@ function MultiFilter({ label, options, selected, onChange }: {
   onChange: (s: Set<string>) => void
 }) {
   const [open, setOpen] = useState(false)
-  const allSelected = selected.size === 0 || selected.size === options.length
+  const isFiltering = selected.size > 0
+  const isChecked = (opt: string) => !isFiltering || selected.has(opt)
+
+  const toggle = (opt: string) => {
+    if (!isFiltering) {
+      // Currently showing all → uncheck one = select all EXCEPT this one
+      onChange(new Set(options.filter((o) => o !== opt)))
+    } else if (selected.has(opt)) {
+      // Uncheck: remove from selection
+      const next = new Set(selected)
+      next.delete(opt)
+      // If nothing left, reset to "all"
+      onChange(next.size === 0 ? new Set() : next)
+    } else {
+      // Check: add to selection
+      const next = new Set(selected)
+      next.add(opt)
+      // If all selected, reset to "all"
+      onChange(next.size === options.length ? new Set() : next)
+    }
+  }
+
   return (
     <div className="relative">
       <button onClick={() => setOpen(!open)} className="flex items-center gap-1 px-2 py-1 text-xs border rounded-md hover:bg-muted transition-colors">
         {label}
-        {!allSelected && <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">{selected.size}</Badge>}
+        {isFiltering && <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">{selected.size}</Badge>}
         <span className="text-[10px]">▾</span>
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute top-full left-0 mt-1 bg-popover border rounded-md shadow-lg z-50 min-w-[150px] max-h-60 overflow-auto">
-            <label className="flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-muted cursor-pointer border-b">
-              <input type="checkbox" checked={allSelected} onChange={() => onChange(new Set())} className="rounded" />
+            <button
+              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-muted cursor-pointer border-b"
+              onClick={() => onChange(new Set())}
+            >
+              <input type="checkbox" checked={!isFiltering} readOnly className="rounded" />
               Все
-            </label>
+            </button>
             {options.map((opt) => (
               <label key={opt} className="flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-muted cursor-pointer">
                 <input
                   type="checkbox"
-                  checked={selected.size === 0 || selected.has(opt)}
-                  onChange={() => {
-                    const next = new Set(selected.size === 0 ? options.filter((o) => o !== opt) : selected)
-                    if (next.has(opt)) next.delete(opt); else next.add(opt)
-                    if (next.size === options.length || next.size === 0) onChange(new Set())
-                    else onChange(next)
-                  }}
+                  checked={isChecked(opt)}
+                  onChange={() => toggle(opt)}
                   className="rounded"
                 />
                 {opt}
