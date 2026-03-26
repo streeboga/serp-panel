@@ -18,6 +18,9 @@ import type { Cluster, Region } from '@/types/api'
 export const Route = createFileRoute('/projects/$projectId/keywords')({ component: KeywordsPage })
 
 // ─── Types ───
+type SortField = 'keyword' | 'frequency_exact' | 'frequency_phrase' | 'frequency_broad' | 'position'
+type SortDir = 'asc' | 'desc'
+
 interface FilterPreset {
   name: string
   engines: string[]
@@ -27,6 +30,8 @@ interface FilterPreset {
   regions: string[]
   groupBy: string[]
   days: number
+  sortField?: string
+  sortDir?: string
 }
 
 type GroupByOption = 'category' | 'cluster' | 'engine' | 'device' | 'region'
@@ -207,6 +212,8 @@ function KeywordsTable() {
   const [filterClusters, setFilterClusters] = useState<Set<string>>(new Set())
   const [filterRegions, setFilterRegions] = useState<Set<string>>(new Set())
   const [groupByFields, setGroupByFields] = useState<Set<GroupByOption>>(new Set())
+  const [sortField, setSortField] = useState<SortField | ''>('')
+  const [sortDir, setSortDir] = useState<SortDir>('asc')
   const [presets, setPresets] = useState<FilterPreset[]>(loadPresets)
   const [presetName, setPresetName] = useState('')
   const [presetDialogOpen, setPresetDialogOpen] = useState(false)
@@ -259,9 +266,46 @@ function KeywordsTable() {
     return Array.from(s).sort()
   }, [filtered])
 
+  // ── Sorting ──
+  const toggleSort = useCallback((field: SortField) => {
+    if (sortField === field) setSortDir((d) => d === 'asc' ? 'desc' : 'asc')
+    else { setSortField(field); setSortDir(field === 'keyword' ? 'asc' : 'desc') }
+  }, [sortField])
+
+  const sortedRows = useMemo(() => {
+    if (!sortField) return mergedRows
+    const sorted = [...mergedRows]
+    const latestDate = dates[0]
+    sorted.sort((a, b) => {
+      let va: number | string | null = null
+      let vb: number | string | null = null
+      if (sortField === 'keyword') { va = a.keyword; vb = b.keyword }
+      else if (sortField === 'frequency_exact') { va = a.frequency_exact; vb = b.frequency_exact }
+      else if (sortField === 'frequency_phrase') { va = a.frequency_phrase; vb = b.frequency_phrase }
+      else if (sortField === 'frequency_broad') { va = a.frequency_broad; vb = b.frequency_broad }
+      else if (sortField === 'position' && latestDate) {
+        // Sort by best position on latest date across all engines
+        const posA = Math.min(...Object.values(a.engines).map((e) => e[latestDate]?.position ?? 999))
+        const posB = Math.min(...Object.values(b.engines).map((e) => e[latestDate]?.position ?? 999))
+        va = posA; vb = posB
+      }
+      if (va == null && vb == null) return 0
+      if (va == null) return 1
+      if (vb == null) return -1
+      if (typeof va === 'string' && typeof vb === 'string') return sortDir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va)
+      return sortDir === 'asc' ? (va as number) - (vb as number) : (vb as number) - (va as number)
+    })
+    return sorted
+  }, [mergedRows, sortField, sortDir, dates])
+
+  const sortIcon = (field: SortField) => {
+    if (sortField !== field) return <span className="text-[9px] opacity-30 ml-0.5">↕</span>
+    return <span className="text-[9px] ml-0.5">{sortDir === 'asc' ? '↑' : '↓'}</span>
+  }
+
   // ── Grouping (multi-field) ──
   const groups = useMemo(() => {
-    if (groupByFields.size === 0) return [{ label: '', rows: mergedRows }]
+    if (groupByFields.size === 0) return [{ label: '', rows: sortedRows }]
     const fields = [...groupByFields]
     const getFieldValue = (row: MergedRow, field: GroupByOption): string => {
       if (field === 'category') return row.category ?? '—'
@@ -272,13 +316,13 @@ function KeywordsTable() {
       return '—'
     }
     const map = new Map<string, MergedRow[]>()
-    for (const row of mergedRows) {
+    for (const row of sortedRows) {
       const key = fields.map((f) => getFieldValue(row, f)).join(' › ')
       if (!map.has(key)) map.set(key, [])
       map.get(key)!.push(row)
     }
     return Array.from(map.entries()).map(([label, rows]) => ({ label, rows })).sort((a, b) => a.label.localeCompare(b.label))
-  }, [mergedRows, groupByFields])
+  }, [sortedRows, groupByFields])
 
   const formatDate = (d: string) => new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
 
@@ -294,13 +338,15 @@ function KeywordsTable() {
       regions: [...filterRegions],
       groupBy: [...groupByFields],
       days,
+      sortField: sortField || undefined,
+      sortDir,
     }
     const updated = [...presets.filter((x) => x.name !== p.name), p]
     setPresets(updated)
     savePresets(updated)
     setPresetName('')
     setPresetDialogOpen(false)
-  }, [presetName, filterEngines, filterDevices, filterCategories, filterClusters, filterRegions, groupByFields, days, presets])
+  }, [presetName, filterEngines, filterDevices, filterCategories, filterClusters, filterRegions, groupByFields, days, sortField, sortDir, presets])
 
   const handleLoadPreset = useCallback((name: string) => {
     const p = presets.find((x) => x.name === name)
@@ -311,6 +357,8 @@ function KeywordsTable() {
     setFilterClusters(new Set(p.clusters))
     setFilterRegions(new Set(p.regions))
     setGroupByFields(new Set(Array.isArray(p.groupBy) ? p.groupBy as GroupByOption[] : p.groupBy ? [p.groupBy as GroupByOption] : []))
+    setSortField((p.sortField as SortField) || '')
+    setSortDir((p.sortDir as SortDir) || 'asc')
     setDays(p.days)
   }, [presets])
 
@@ -501,17 +549,21 @@ function KeywordsTable() {
                 <th className="sticky left-0 bg-muted/50 z-30 px-1.5 py-1.5 w-7">
                   <input type="checkbox" checked={mergedRows.length > 0 && selectedIds.size === mergedRows.length} onChange={() => selectedIds.size === mergedRows.length ? setSelectedIds(new Set()) : setSelectedIds(new Set(mergedRows.map((k) => k.keyword_id)))} className="rounded" />
                 </th>
-                <th className="sticky left-7 bg-muted/50 z-30 px-2 py-1.5 text-left font-medium text-xs min-w-[220px]">{t('keywords.keyword')}</th>
+                <th className="sticky left-7 bg-muted/50 z-30 px-2 py-1.5 text-left font-medium text-xs min-w-[220px] cursor-pointer select-none" onClick={() => toggleSort('keyword')}>
+                  {t('keywords.keyword')}{sortIcon('keyword')}
+                </th>
                 <th className="px-0.5 py-1.5 text-center font-medium text-xs w-24" colSpan={3}>
                   <div className="flex text-[10px]">
-                    <div className="flex-1" title="Exact">!</div>
-                    <div className="flex-1" title="Phrase">&laquo;&raquo;</div>
-                    <div className="flex-1" title="Broad">~</div>
+                    <div className="flex-1 cursor-pointer select-none" title="Exact (точное)" onClick={() => toggleSort('frequency_exact')}>!{sortIcon('frequency_exact')}</div>
+                    <div className="flex-1 cursor-pointer select-none" title="Phrase (фразовое)" onClick={() => toggleSort('frequency_phrase')}>&laquo;&raquo;{sortIcon('frequency_phrase')}</div>
+                    <div className="flex-1 cursor-pointer select-none" title="Broad (широкое)" onClick={() => toggleSort('frequency_broad')}>~{sortIcon('frequency_broad')}</div>
                   </div>
                 </th>
-                {dates.map((date) => (
+                {dates.map((date, idx) => (
                   <th key={date} className="px-0.5 py-1 text-center font-medium border-l" colSpan={visibleEngines.length}>
-                    <div className="text-[10px] leading-tight">{formatDate(date)}</div>
+                    <div className={`text-[10px] leading-tight ${idx === 0 ? 'cursor-pointer select-none' : ''}`} onClick={idx === 0 ? () => toggleSort('position') : undefined}>
+                      {formatDate(date)}{idx === 0 && sortIcon('position')}
+                    </div>
                     {visibleEngines.length > 1 && (
                       <div className="flex">{visibleEngines.map((e) => (<div key={e} className="flex-1 text-[9px] text-muted-foreground font-normal">{e === 'google' ? 'G' : 'Я'}</div>))}</div>
                     )}
