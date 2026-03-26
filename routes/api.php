@@ -23,10 +23,14 @@ use App\Http\Controllers\Api\V1\ScraperController;
 use App\Http\Controllers\Api\V1\SerpController;
 use App\Http\Controllers\Api\V1\WordstatController;
 use App\Http\Controllers\Api\V1\WordstatScheduleController;
+use App\Http\Controllers\Api\V1\WebhookController;
 use App\Http\Controllers\Api\V1\YandexOAuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->middleware('json-api')->group(function () {
+    // Webhook — no auth required (uses secret)
+    Route::post('/webhooks/serp', [WebhookController::class, 'serp'])->withoutMiddleware(['json-api']);
+
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
 
@@ -137,6 +141,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::get('regions', [RegionController::class, 'index']);
 
         // Scrapers — read
+        Route::get('scraper-types', [WebhookController::class, 'scraperTypes']);
         Route::get('scrapers', [ScraperController::class, 'index']);
         Route::get('scrapers/{scraper}', [ScraperController::class, 'show'])->name('scrapers.show');
 

@@ -207,9 +207,9 @@ function ScrapersPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="xml_river" label="XML River">XML River</SelectItem>
-                      <SelectItem value="serp_api" label="SERP API">SERP API</SelectItem>
-                      <SelectItem value="custom" label="Custom">Custom</SelectItem>
+                      <SelectItem value="xmlriver" label="XMLRiver (Яндекс + Google)">XMLRiver (Яндекс + Google)</SelectItem>
+                      <SelectItem value="yandex_xml" label="Яндекс XML (прямой)">Яндекс XML (прямой)</SelectItem>
+                      <SelectItem value="webhook" label="Webhook / API (входящий)">Webhook / API (входящий)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
