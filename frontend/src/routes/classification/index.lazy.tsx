@@ -62,6 +62,10 @@ function ClassificationPage() {
     () => siteTypesData?.data ?? siteTypesData ?? [],
     [siteTypesData],
   )
+  const siteTypeLabels = useMemo(
+    () => Object.fromEntries(siteTypes.map((st) => [String(st.id), st.name])),
+    [siteTypes],
+  )
 
   const [open, setOpen] = useState(false)
   const [ruleType, setRuleType] = useState('domain')
@@ -189,7 +193,7 @@ function ClassificationPage() {
                       }
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder={t('classification.selectType')} labels={Object.fromEntries(siteTypes.map((st) => [String(st.id), st.name]))} />
+                        <SelectValue placeholder={t('classification.selectType')} labels={siteTypeLabels} />
                       </SelectTrigger>
                       <SelectContent>
                         {siteTypes.map((st) => (
@@ -333,7 +337,7 @@ function ClassificationPage() {
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t('classification.selectType')} labels={Object.fromEntries(siteTypes.map((st) => [String(st.id), st.name]))} />
+                    <SelectValue placeholder={t('classification.selectType')} labels={siteTypeLabels} />
                   </SelectTrigger>
                   <SelectContent>
                     {siteTypes.map((st) => (

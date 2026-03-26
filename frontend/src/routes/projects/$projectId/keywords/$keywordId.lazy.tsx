@@ -39,6 +39,8 @@ import { PositionChart } from '@/components/charts/PositionChart'
 import { TrendChart } from '@/components/charts/TrendChart'
 import type { SerpResult, SerpHistoryItem, WordstatTrend, WordstatSuggestion } from '@/types/api'
 
+const TOP_N_LABELS = { '10': 'TOP-10', '20': 'TOP-20', '50': 'TOP-50', '100': 'TOP-100' } as const
+
 export const Route = createLazyFileRoute(
   '/projects/$projectId/keywords/$keywordId',
 )({
@@ -133,6 +135,11 @@ function SerpTab({ keywordId }: { keywordId: string }) {
     [serpData],
   )
 
+  const dateLabels = useMemo(
+    () => ({ '__latest__': t('keywordDetail.latestDate'), ...Object.fromEntries(dateList.map((d) => [d, d])) }),
+    [dateList, t],
+  )
+
   const handleDateChange = useCallback((v: string | null) => {
     setDate(!v || v === '__latest__' ? undefined : v)
   }, [])
@@ -162,7 +169,7 @@ function SerpTab({ keywordId }: { keywordId: string }) {
           onValueChange={handleDateChange}
         >
           <SelectTrigger>
-            <SelectValue placeholder={t('keywordDetail.latestDate')} labels={{ '__latest__': t('keywordDetail.latestDate'), ...Object.fromEntries(dateList.map((d) => [d, d])) }} />
+            <SelectValue placeholder={t('keywordDetail.latestDate')} labels={dateLabels} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="__latest__" label={t('keywordDetail.latestDate')}>{t('keywordDetail.latestDate')}</SelectItem>
@@ -179,7 +186,7 @@ function SerpTab({ keywordId }: { keywordId: string }) {
           onValueChange={handleTopNChange}
         >
           <SelectTrigger>
-            <SelectValue labels={{ '10': 'TOP-10', '20': 'TOP-20', '50': 'TOP-50', '100': 'TOP-100' }} />
+            <SelectValue labels={TOP_N_LABELS} />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="10" label="TOP-10">TOP-10</SelectItem>
@@ -211,9 +218,9 @@ function SerpTab({ keywordId }: { keywordId: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {results.map((item, idx) => (
+            {results.map((item) => (
               <TableRow
-                key={idx}
+                key={`${item.position}-${item.domain}`}
                 className={item.is_own ? 'bg-green-50 dark:bg-green-950/20' : ''}
               >
                 <TableCell className="font-medium tabular-nums">
@@ -283,8 +290,8 @@ function HistoryTab({ keywordId }: { keywordId: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {history.map((item, idx) => (
-              <TableRow key={idx}>
+            {history.map((item) => (
+              <TableRow key={item.date}>
                 <TableCell>{item.date}</TableCell>
                 <TableCell className="tabular-nums">
                   {item.position ?? '-'}
@@ -350,8 +357,8 @@ function WordstatTab({ keywordId }: { keywordId: string }) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {trendList.map((item, idx) => (
-                <TableRow key={idx}>
+              {trendList.map((item) => (
+                <TableRow key={item.month}>
                   <TableCell>{item.month}</TableCell>
                   <TableCell className="tabular-nums">{item.value}</TableCell>
                 </TableRow>
@@ -388,14 +395,14 @@ function SuggestionsTab({ keywordId }: { keywordId: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {suggestions.map((item, idx) => (
-              <TableRow key={idx}>
+            {suggestions.map((item) => (
+              <TableRow key={item.suggestion}>
                 <TableCell>{item.suggestion}</TableCell>
                 <TableCell className="tabular-nums">
                   {item.frequency}
                 </TableCell>
                 <TableCell>
-                  {item.type && <Badge variant="outline">{item.type}</Badge>}
+                  {item.type ? <Badge variant="outline">{item.type}</Badge> : null}
                 </TableCell>
               </TableRow>
             ))}

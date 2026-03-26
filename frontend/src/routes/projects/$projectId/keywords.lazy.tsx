@@ -387,6 +387,8 @@ function KeywordsTable() {
   const { data: regionsRaw } = useRegions()
   const clusters: Cluster[] = useMemo(() => { const d = clustersRaw?.data ?? clustersRaw; return Array.isArray(d) ? d : [] }, [clustersRaw])
   const regionsList: Region[] = useMemo(() => { const d = regionsRaw?.data ?? regionsRaw; if (Array.isArray(d)) return d; if (d && typeof d === 'object') return Object.values(d).flat() as Region[]; return [] }, [regionsRaw])
+  const clusterLabels = useMemo(() => Object.fromEntries(clusters.map((c) => [String(c.id), c.category?.name ? `${c.category.name} / ${c.name}` : c.name])), [clusters])
+  const presetLabels = useMemo(() => Object.fromEntries(presets.map((p) => [p.name, p.name])), [presets])
 
   const handleSearch = useCallback((e: React.FormEvent) => { e.preventDefault(); setSearch(searchInput) }, [searchInput])
 
@@ -473,7 +475,7 @@ function KeywordsTable() {
         {/* Presets */}
         {presets.length > 0 && (
           <Select value="__load__" onValueChange={(v) => { if (v && v !== '__load__') handleLoadPreset(v) }}>
-            <SelectTrigger className="w-28 h-8 text-xs"><SelectValue placeholder="Пресеты" labels={Object.fromEntries(presets.map((p) => [p.name, p.name]))} /></SelectTrigger>
+            <SelectTrigger className="w-28 h-8 text-xs"><SelectValue placeholder="Пресеты" labels={presetLabels} /></SelectTrigger>
             <SelectContent>
               {presets.map((p) => (
                 <SelectItem key={p.name} value={p.name} label={p.name}>
@@ -513,7 +515,7 @@ function KeywordsTable() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">{t('keywords.cluster')}</Label>
-                  <Select value={importClusterId} onValueChange={(v) => setImportClusterId(v ?? '')}><SelectTrigger className="w-full"><SelectValue placeholder={t('keywords.selectCluster')} labels={Object.fromEntries(clusters.map((c) => [String(c.id), c.category?.name ? `${c.category.name} / ${c.name}` : c.name]))} /></SelectTrigger><SelectContent>{clusters.map((c) => (<SelectItem key={c.id} value={String(c.id)} label={c.category?.name ? `${c.category.name} / ${c.name}` : c.name}>{c.category?.name ? `${c.category.name} / ${c.name}` : c.name}</SelectItem>))}</SelectContent></Select>
+                  <Select value={importClusterId} onValueChange={(v) => setImportClusterId(v ?? '')}><SelectTrigger className="w-full"><SelectValue placeholder={t('keywords.selectCluster')} labels={clusterLabels} /></SelectTrigger><SelectContent>{clusters.map((c) => (<SelectItem key={c.id} value={String(c.id)} label={c.category?.name ? `${c.category.name} / ${c.name}` : c.name}>{c.category?.name ? `${c.category.name} / ${c.name}` : c.name}</SelectItem>))}</SelectContent></Select>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">{t('keywords.region')}</Label>
@@ -565,7 +567,7 @@ function KeywordsTable() {
           <DialogHeader><DialogTitle>Переместить в кластер</DialogTitle></DialogHeader>
           <p className="text-xs text-muted-foreground">Выбрано ключевых слов: {selectedIds.size}</p>
           <Select value={bulkMoveClusterId} onValueChange={(v) => setBulkMoveClusterId(v ?? '')}>
-            <SelectTrigger className="w-full"><SelectValue placeholder="Выберите кластер" labels={Object.fromEntries(clusters.map((c) => [String(c.id), c.category?.name ? `${c.category.name} / ${c.name}` : c.name]))} /></SelectTrigger>
+            <SelectTrigger className="w-full"><SelectValue placeholder="Выберите кластер" labels={clusterLabels} /></SelectTrigger>
             <SelectContent>
               {clusters.map((c) => (
                 <SelectItem key={c.id} value={String(c.id)} label={c.category?.name ? `${c.category.name} / ${c.name}` : c.name}>
