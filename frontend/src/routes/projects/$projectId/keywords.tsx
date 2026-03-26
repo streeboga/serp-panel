@@ -30,7 +30,60 @@ interface FilterPreset {
 }
 
 type GroupByOption = 'category' | 'cluster' | 'engine' | 'device' | 'region'
-const GROUP_OPTIONS: GroupByOption[] = ['category', 'cluster', 'engine', 'device', 'region']
+const GROUP_OPTIONS: { value: GroupByOption; label: string }[] = [
+  { value: 'category', label: 'Категория' },
+  { value: 'cluster', label: 'Кластер' },
+  { value: 'engine', label: 'Поисковик' },
+  { value: 'device', label: 'Устройство' },
+  { value: 'region', label: 'Регион' },
+]
+
+// ─── Group-by multi-select (different from filter — empty = no grouping) ───
+function GroupBySelect({ selected, onChange }: {
+  selected: Set<GroupByOption>
+  onChange: (s: Set<GroupByOption>) => void
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="relative">
+      <button onClick={() => setOpen(!open)} className="flex items-center gap-1 px-2 py-1 text-xs border rounded-md hover:bg-muted transition-colors">
+        {selected.size > 0
+          ? GROUP_OPTIONS.filter((g) => selected.has(g.value)).map((g) => g.label).join(' + ')
+          : 'Группировка'}
+        {selected.size > 0 && <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">{selected.size}</Badge>}
+        <span className="text-[10px]">▾</span>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute top-full left-0 mt-1 bg-popover border rounded-md shadow-lg z-50 min-w-[160px]">
+            {selected.size > 0 && (
+              <button className="w-full text-left px-2 py-1.5 text-xs hover:bg-muted border-b text-muted-foreground" onClick={() => { onChange(new Set()); setOpen(false) }}>
+                Сбросить
+              </button>
+            )}
+            {GROUP_OPTIONS.map((g) => (
+              <label key={g.value} className="flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-muted cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={selected.has(g.value)}
+                  onChange={() => {
+                    const next = new Set(selected)
+                    if (next.has(g.value)) next.delete(g.value)
+                    else next.add(g.value)
+                    onChange(next)
+                  }}
+                  className="rounded"
+                />
+                {g.label}
+              </label>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 // ─── Multi-select filter dropdown ───
 function MultiFilter({ label, options, selected, onChange }: {
@@ -312,11 +365,11 @@ function KeywordsTable() {
           <Button type="submit" variant="outline" size="sm" className="h-8 text-xs">{t('keywords.search')}</Button>
         </form>
 
-        {uniqueEngines.length > 1 && <MultiFilter label="Engine" options={uniqueEngines} selected={filterEngines} onChange={setFilterEngines} />}
-        {uniqueDevices.length > 1 && <MultiFilter label="Device" options={uniqueDevices} selected={filterDevices} onChange={setFilterDevices} />}
-        {uniqueCategories.length > 1 && <MultiFilter label="Category" options={uniqueCategories} selected={filterCategories} onChange={setFilterCategories} />}
-        {uniqueClusters.length > 1 && <MultiFilter label="Cluster" options={uniqueClusters} selected={filterClusters} onChange={setFilterClusters} />}
-        {uniqueRegions.length > 1 && <MultiFilter label="Region" options={uniqueRegions} selected={filterRegions} onChange={setFilterRegions} />}
+        {uniqueEngines.length > 1 && <MultiFilter label="Поисковик" options={uniqueEngines} selected={filterEngines} onChange={setFilterEngines} />}
+        {uniqueDevices.length > 1 && <MultiFilter label="Устройство" options={uniqueDevices} selected={filterDevices} onChange={setFilterDevices} />}
+        {uniqueCategories.length > 1 && <MultiFilter label="Категория" options={uniqueCategories} selected={filterCategories} onChange={setFilterCategories} />}
+        {uniqueClusters.length > 1 && <MultiFilter label="Кластер" options={uniqueClusters} selected={filterClusters} onChange={setFilterClusters} />}
+        {uniqueRegions.length > 1 && <MultiFilter label="Регион" options={uniqueRegions} selected={filterRegions} onChange={setFilterRegions} />}
 
         <Select value={String(days)} onValueChange={(v) => setDays(Number(v ?? 14))}>
           <SelectTrigger className="w-20 h-8 text-xs"><SelectValue /></SelectTrigger>
@@ -327,17 +380,12 @@ function KeywordsTable() {
           </SelectContent>
         </Select>
 
-        <MultiFilter
-          label={groupByFields.size > 0 ? `Group: ${[...groupByFields].join('+')}` : 'Group by'}
-          options={GROUP_OPTIONS}
-          selected={groupByFields as unknown as Set<string>}
-          onChange={(s) => setGroupByFields(s as unknown as Set<GroupByOption>)}
-        />
+        <GroupBySelect selected={groupByFields} onChange={setGroupByFields} />
 
         {/* Presets */}
         {presets.length > 0 && (
           <Select value="__load__" onValueChange={(v) => { if (v && v !== '__load__') handleLoadPreset(v) }}>
-            <SelectTrigger className="w-28 h-8 text-xs"><SelectValue placeholder="Presets" /></SelectTrigger>
+            <SelectTrigger className="w-28 h-8 text-xs"><SelectValue placeholder="Пресеты" /></SelectTrigger>
             <SelectContent>
               {presets.map((p) => (
                 <SelectItem key={p.name} value={p.name}>
@@ -348,7 +396,7 @@ function KeywordsTable() {
           </Select>
         )}
         <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setPresetDialogOpen(true)}>
-          Save preset
+          Сохранить пресет
         </Button>
 
         {selectedIds.size > 0 && (
@@ -398,12 +446,12 @@ function KeywordsTable() {
       {/* ── Preset save dialog ── */}
       <Dialog open={presetDialogOpen} onOpenChange={setPresetDialogOpen}>
         <DialogContent className="sm:max-w-xs">
-          <DialogHeader><DialogTitle>Save Filter Preset</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Сохранить пресет фильтров</DialogTitle></DialogHeader>
           <div className="space-y-2">
-            <Input placeholder="Preset name" value={presetName} onChange={(e) => setPresetName(e.target.value)} />
+            <Input placeholder="Название пресета" value={presetName} onChange={(e) => setPresetName(e.target.value)} />
             {presets.length > 0 && (
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Existing presets:</p>
+                <p className="text-xs text-muted-foreground">Сохранённые:</p>
                 {presets.map((p) => (
                   <div key={p.name} className="flex items-center justify-between text-xs">
                     <span>{p.name}</span>
