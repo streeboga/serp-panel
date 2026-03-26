@@ -17,12 +17,20 @@ use Illuminate\Support\Carbon;
  * @property int $max_keywords
  * @property int $max_projects
  * @property int $max_scrapers
+ * @property string|null $yandex_token
  * @property Carbon $created_at
  * @property Carbon $updated_at
  */
 class Organization extends Model
 {
-    protected $fillable = ['name', 'slug', 'billing_tier', 'max_keywords', 'max_projects', 'max_scrapers'];
+    protected $fillable = ['name', 'slug', 'billing_tier', 'max_keywords', 'max_projects', 'max_scrapers', 'yandex_token'];
+
+    protected function casts(): array
+    {
+        return [
+            'yandex_token' => 'encrypted',
+        ];
+    }
 
     /** @return BelongsToMany<User, $this> */
     public function users(): BelongsToMany

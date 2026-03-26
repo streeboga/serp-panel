@@ -41,6 +41,7 @@ import {
   useUpdateOrganization,
 } from '@/hooks/useOrganization'
 import { useBillingUsage } from '@/hooks/useBilling'
+import { useYandexStatus, useYandexRedirect, useYandexDisconnect, useYandexSaveToken } from '@/hooks/useYandex'
 import { parseApiError } from '@/lib/api'
 import type { Member } from '@/types/api'
 
@@ -78,6 +79,19 @@ function SettingsPage() {
 
   const { data: billingData } = useBillingUsage()
   const billing = billingData?.data ?? billingData
+
+  const { data: yandexStatus } = useYandexStatus()
+  const yandexRedirect = useYandexRedirect()
+  const yandexDisconnect = useYandexDisconnect()
+  const yandexSaveToken = useYandexSaveToken()
+  const yandexConnected = yandexStatus?.connected ?? false
+
+  // Handle OAuth callback
+  const urlParams = new URLSearchParams(window.location.search)
+  if (urlParams.get('yandex') === 'connected') {
+    yandexSaveToken.mutate('')
+    window.history.replaceState({}, '', window.location.pathname)
+  }
 
   const org = user?.organizations?.[0]
   const members: Member[] = useMemo(
@@ -301,6 +315,47 @@ function SettingsPage() {
                 ))}
               </>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Подключения</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-medium">Яндекс</p>
+                <p className="text-xs text-muted-foreground">Wordstat, Вебмастер</p>
+              </div>
+              {yandexConnected ? (
+                <div className="flex items-center gap-2">
+                  <Badge variant="default">Подключён</Badge>
+                  <Button variant="outline" size="sm" className="text-destructive text-xs" onClick={() => yandexDisconnect.mutate()}>
+                    Отключить
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  className="text-xs"
+                  onClick={async () => {
+                    const data = await yandexRedirect.mutateAsync()
+                    if (data?.url) window.location.href = data.url
+                  }}
+                  disabled={yandexRedirect.isPending}
+                >
+                  {yandexRedirect.isPending ? 'Подключение...' : 'Подключить'}
+                </Button>
+              )}
+            </div>
+            <div className="flex items-center justify-between opacity-50">
+              <div>
+                <p className="text-sm font-medium">Google</p>
+                <p className="text-xs text-muted-foreground">Search Console</p>
+              </div>
+              <Badge variant="outline">Скоро</Badge>
+            </div>
           </CardContent>
         </Card>
 

@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\V1\ScraperController;
 use App\Http\Controllers\Api\V1\SerpController;
 use App\Http\Controllers\Api\V1\WordstatController;
 use App\Http\Controllers\Api\V1\WordstatScheduleController;
+use App\Http\Controllers\Api\V1\YandexOAuthController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->middleware('json-api')->group(function () {
@@ -34,12 +35,17 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::patch('/auth/profile', [AuthController::class, 'updateProfile']);
 
         Route::get('organizations', [OrganizationController::class, 'index']);
+
+        // Yandex OAuth
+        Route::get('auth/yandex/redirect', [YandexOAuthController::class, 'redirect']);
+        Route::get('auth/yandex/callback', [YandexOAuthController::class, 'callback'])->withoutMiddleware(['json-api']);
     });
 
     Route::middleware(['auth:sanctum', 'org'])->group(function () {
         // Organization — read
         Route::get('organization', [OrganizationController::class, 'show']);
         Route::get('organization/members', [OrganizationController::class, 'members']);
+        Route::get('organization/yandex/status', [YandexOAuthController::class, 'status']);
 
         // Organization — admin-only write
         Route::middleware('org.role:admin')->group(function () {
@@ -47,6 +53,10 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
             Route::post('organization/invite', [OrganizationController::class, 'invite']);
             Route::delete('organization/members/{userId}', [OrganizationController::class, 'removeMember']);
             Route::patch('organization/members/{userId}/role', [OrganizationController::class, 'updateMemberRole']);
+
+            // Yandex OAuth — admin
+            Route::post('organization/yandex/save-token', [YandexOAuthController::class, 'saveToken']);
+            Route::delete('organization/yandex', [YandexOAuthController::class, 'disconnect']);
 
             // Billing
             Route::patch('billing/tier', [BillingController::class, 'updateTier']);
