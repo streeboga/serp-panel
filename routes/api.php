@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\V1\ClusterController;
 use App\Http\Controllers\Api\V1\CompetitorController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DomainController;
+use App\Http\Controllers\Api\V1\ConnectedAccountController;
 use App\Http\Controllers\Api\V1\ExportController;
 use App\Http\Controllers\Api\V1\KeywordController;
 use App\Http\Controllers\Api\V1\OrganizationController;
@@ -47,12 +48,21 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::get('organization/members', [OrganizationController::class, 'members']);
         Route::get('organization/yandex/status', [YandexOAuthController::class, 'status']);
 
+        // Connected Accounts — read
+        Route::get('accounts', [ConnectedAccountController::class, 'index']);
+
         // Organization — admin-only write
         Route::middleware('org.role:admin')->group(function () {
             Route::patch('organization', [OrganizationController::class, 'update']);
             Route::post('organization/invite', [OrganizationController::class, 'invite']);
             Route::delete('organization/members/{userId}', [OrganizationController::class, 'removeMember']);
             Route::patch('organization/members/{userId}/role', [OrganizationController::class, 'updateMemberRole']);
+
+            // Connected Accounts — admin
+            Route::post('accounts', [ConnectedAccountController::class, 'store']);
+            Route::patch('accounts/{account}', [ConnectedAccountController::class, 'update']);
+            Route::delete('accounts/{account}', [ConnectedAccountController::class, 'destroy']);
+            Route::post('accounts/{account}/test', [ConnectedAccountController::class, 'test']);
 
             // Yandex OAuth — admin
             Route::post('organization/yandex/save-token', [YandexOAuthController::class, 'saveToken']);

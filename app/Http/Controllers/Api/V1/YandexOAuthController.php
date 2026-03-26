@@ -20,7 +20,10 @@ final class YandexOAuthController extends Controller
             'redirect_uri' => config('yandex.redirect_uri'),
         ]);
 
-        return response()->json(['url' => $url]);
+        return response()->json([
+            'url' => $url,
+            'manual_code' => config('yandex.manual_code', true),
+        ]);
     }
 
     public function callback(Request $request): RedirectResponse

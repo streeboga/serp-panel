@@ -41,7 +41,9 @@ import {
   useUpdateOrganization,
 } from '@/hooks/useOrganization'
 import { useBillingUsage } from '@/hooks/useBilling'
-import { useYandexStatus, useYandexRedirect, useYandexDisconnect, useYandexSaveToken } from '@/hooks/useYandex'
+import { useYandexRedirect } from '@/hooks/useYandex'
+import { useAccounts, useCreateAccount, useDeleteAccount, useTestAccount } from '@/hooks/useAccounts'
+import type { ConnectedAccount } from '@/hooks/useAccounts'
 import { parseApiError } from '@/lib/api'
 import type { Member } from '@/types/api'
 
@@ -80,18 +82,46 @@ function SettingsPage() {
   const { data: billingData } = useBillingUsage()
   const billing = billingData?.data ?? billingData
 
-  const { data: yandexStatus } = useYandexStatus()
+  const { data: accountsData } = useAccounts()
+  const accounts: ConnectedAccount[] = accountsData?.data ?? []
+  const createAccount = useCreateAccount()
+  const deleteAccount = useDeleteAccount()
+  const testAccount = useTestAccount()
   const yandexRedirect = useYandexRedirect()
-  const yandexDisconnect = useYandexDisconnect()
-  const yandexSaveToken = useYandexSaveToken()
-  const yandexConnected = yandexStatus?.connected ?? false
 
-  // Handle OAuth callback
-  const urlParams = new URLSearchParams(window.location.search)
-  if (urlParams.get('yandex') === 'connected') {
-    yandexSaveToken.mutate('')
-    window.history.replaceState({}, '', window.location.pathname)
-  }
+  const [addAccountOpen, setAddAccountOpen] = useState(false)
+  const [addAccountType, setAddAccountType] = useState('yandex')
+  const [addAccountLabel, setAddAccountLabel] = useState('')
+  const [addAccountCode, setAddAccountCode] = useState('')
+  const [addAccountUser, setAddAccountUser] = useState('')
+  const [addAccountKey, setAddAccountKey] = useState('')
+  const [addAccountUrl, setAddAccountUrl] = useState('http://xmlriver.com/search/xml')
+  const [testResults, setTestResults] = useState<Record<number, boolean | null>>({})
+
+  const handleAddAccount = useCallback(async (e: React.FormEvent) => {
+    e.preventDefault()
+    const creds: Record<string, string> = {}
+    if (addAccountType === 'yandex') creds.code = addAccountCode
+    if (addAccountType === 'xmlriver') {
+      creds.user = addAccountUser
+      creds.key = addAccountKey
+      creds.base_url = addAccountUrl
+    }
+    try {
+      await createAccount.mutateAsync({ type: addAccountType, label: addAccountLabel, credentials: creds })
+      setAddAccountOpen(false)
+      setAddAccountLabel('')
+      setAddAccountCode('')
+      setAddAccountUser('')
+      setAddAccountKey('')
+    } catch {}
+  }, [addAccountType, addAccountLabel, addAccountCode, addAccountUser, addAccountKey, addAccountUrl, createAccount])
+
+  const handleTest = useCallback(async (id: number) => {
+    setTestResults((p) => ({ ...p, [id]: null }))
+    const res = await testAccount.mutateAsync(id)
+    setTestResults((p) => ({ ...p, [id]: res?.ok ?? false }))
+  }, [testAccount])
 
   const org = user?.organizations?.[0]
   const members: Member[] = useMemo(
@@ -320,44 +350,110 @@ function SettingsPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Подключения</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Яндекс</p>
-                <p className="text-xs text-muted-foreground">Wordstat, Вебмастер</p>
-              </div>
-              {yandexConnected ? (
-                <div className="flex items-center gap-2">
-                  <Badge variant="default">Подключён</Badge>
-                  <Button variant="outline" size="sm" className="text-destructive text-xs" onClick={() => yandexDisconnect.mutate()}>
-                    Отключить
-                  </Button>
+              <CardTitle>Подключения</CardTitle>
+              <Button size="sm" className="text-xs" onClick={() => setAddAccountOpen(true)}>Добавить</Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {accounts.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Нет подключённых аккаунтов. Добавьте Яндекс или XMLRiver.</p>
+            ) : (
+              accounts.map((acc) => (
+                <div key={acc.id} className="flex items-center justify-between py-2 border-b last:border-0">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant="outline" className="text-[10px]">{acc.type}</Badge>
+                      <span className="text-sm font-medium">{acc.label}</span>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">
+                      {acc.has_credentials ? 'Настроен' : 'Нет данных'}
+                      {acc.expires_at && ` • истекает ${new Date(acc.expires_at).toLocaleDateString()}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Badge variant={acc.is_active ? 'default' : 'outline'} className="text-[10px]">
+                      {acc.is_active ? 'Вкл' : 'Выкл'}
+                    </Badge>
+                    <Button variant="ghost" size="sm" className="h-7 text-[11px]" onClick={() => handleTest(acc.id)}>
+                      {testResults[acc.id] === null ? '...' : testResults[acc.id] === true ? '✓' : testResults[acc.id] === false ? '✗' : 'Тест'}
+                    </Button>
+                    <Button variant="ghost" size="sm" className="h-7 text-[11px] text-destructive" onClick={() => { if (confirm('Удалить аккаунт?')) deleteAccount.mutate(acc.id) }}>
+                      ✕
+                    </Button>
+                  </div>
                 </div>
-              ) : (
-                <Button
-                  size="sm"
-                  className="text-xs"
-                  onClick={async () => {
-                    const data = await yandexRedirect.mutateAsync()
-                    if (data?.url) window.location.href = data.url
-                  }}
-                  disabled={yandexRedirect.isPending}
-                >
-                  {yandexRedirect.isPending ? 'Подключение...' : 'Подключить'}
-                </Button>
-              )}
-            </div>
-            <div className="flex items-center justify-between opacity-50">
-              <div>
-                <p className="text-sm font-medium">Google</p>
-                <p className="text-xs text-muted-foreground">Search Console</p>
-              </div>
-              <Badge variant="outline">Скоро</Badge>
-            </div>
+              ))
+            )}
           </CardContent>
         </Card>
+
+        {/* Add account dialog */}
+        <Dialog open={addAccountOpen} onOpenChange={setAddAccountOpen}>
+          <DialogContent className="sm:max-w-sm">
+            <DialogHeader><DialogTitle>Добавить аккаунт</DialogTitle></DialogHeader>
+            <form onSubmit={handleAddAccount} className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-xs">Тип</Label>
+                <Select value={addAccountType} onValueChange={(v) => setAddAccountType(v ?? 'yandex')}>
+                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="yandex">Яндекс (Wordstat)</SelectItem>
+                    <SelectItem value="xmlriver">XMLRiver (SERP)</SelectItem>
+                    <SelectItem value="google" disabled>Google (скоро)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <Label className="text-xs">Название</Label>
+                <Input value={addAccountLabel} onChange={(e) => setAddAccountLabel(e.target.value)} placeholder="Мой аккаунт Яндекс" required />
+              </div>
+
+              {addAccountType === 'yandex' && (
+                <div className="space-y-2">
+                  <div className="text-xs text-muted-foreground">
+                    1. Нажмите кнопку ниже для авторизации в Яндекс<br />
+                    2. Скопируйте код подтверждения<br />
+                    3. Вставьте код в поле ниже
+                  </div>
+                  <Button type="button" variant="outline" size="sm" className="w-full text-xs" onClick={async () => {
+                    const data = await yandexRedirect.mutateAsync()
+                    if (data?.url) window.open(data.url, '_blank')
+                  }}>
+                    Открыть Яндекс OAuth →
+                  </Button>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Код подтверждения</Label>
+                    <Input value={addAccountCode} onChange={(e) => setAddAccountCode(e.target.value)} placeholder="Вставьте код из Яндекса" required />
+                  </div>
+                </div>
+              )}
+
+              {addAccountType === 'xmlriver' && (
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <Label className="text-xs">User ID</Label>
+                    <Input value={addAccountUser} onChange={(e) => setAddAccountUser(e.target.value)} placeholder="20272" required />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">API Key</Label>
+                    <Input value={addAccountKey} onChange={(e) => setAddAccountKey(e.target.value)} placeholder="8857dd2a..." required />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Base URL</Label>
+                    <Input value={addAccountUrl} onChange={(e) => setAddAccountUrl(e.target.value)} placeholder="http://xmlriver.com/search/xml" />
+                  </div>
+                </div>
+              )}
+
+              <DialogFooter>
+                <Button type="submit" disabled={createAccount.isPending}>
+                  {createAccount.isPending ? 'Добавление...' : 'Добавить'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
 
         <Card>
           <CardHeader>
