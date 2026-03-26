@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Contracts\Repositories\KeywordRepositoryInterface;
 use App\Contracts\Repositories\WordstatFrequencyRepositoryInterface;
 use App\Contracts\Repositories\WordstatScheduleRepositoryInterface;
 use App\Contracts\Repositories\WordstatSuggestionRepositoryInterface;
 use App\Contracts\Repositories\WordstatTrendRepositoryInterface;
+use App\Jobs\CollectWordstatJob;
+use App\Models\Keyword;
 use App\Models\WordstatFrequency;
 use App\Models\WordstatSchedule;
 use App\Models\WordstatSuggestion;
@@ -71,6 +74,41 @@ final readonly class WordstatService
 
     public function runScheduleNow(WordstatSchedule $schedule): WordstatSchedule
     {
-        return $this->scheduleRepository->update($schedule, ['next_run_at' => now()]);
+        // Dispatch jobs for all keywords in the schedule scope
+        $keywords = $this->getKeywordsForSchedule($schedule);
+        $regionIds = !empty($schedule->regions) ? $schedule->regions : [2]; // default Moscow
+
+        foreach ($keywords as $kw) {
+            CollectWordstatJob::dispatch(
+                $kw->id,
+                $schedule->id,
+                $regionIds,
+                $schedule->collect_trends,
+                $schedule->collect_suggestions,
+            );
+        }
+
+        return $this->scheduleRepository->update($schedule, [
+            'last_run_at' => now(),
+            'next_run_at' => now()->addDays($schedule->frequency_days),
+        ]);
+    }
+
+    /** @return \Illuminate\Support\Collection<int, Keyword> */
+    private function getKeywordsForSchedule(WordstatSchedule $schedule): \Illuminate\Support\Collection
+    {
+        if ($schedule->keyword_id) {
+            $kw = Keyword::find($schedule->keyword_id);
+            return $kw ? collect([$kw]) : collect();
+        }
+
+        if ($schedule->cluster_id) {
+            return Keyword::where('cluster_id', $schedule->cluster_id)->get();
+        }
+
+        // All keywords in project
+        return Keyword::whereHas('cluster.category.domain', function ($q) use ($schedule) {
+            $q->where('project_id', $schedule->project_id);
+        })->get();
     }
 }
