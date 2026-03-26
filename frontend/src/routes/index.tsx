@@ -50,7 +50,7 @@ function DashboardPage() {
               onValueChange={handleProjectChange}
             >
               <SelectTrigger>
-                <SelectValue placeholder={t('dashboard.allProjects')} />
+                <SelectValue placeholder={t('dashboard.allProjects')} labels={Object.fromEntries(projectList.map((p) => [String(p.id), p.name]))} />
               </SelectTrigger>
               <SelectContent>
                 {projectList.map((p) => (

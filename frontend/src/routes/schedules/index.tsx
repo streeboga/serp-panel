@@ -154,7 +154,7 @@ function SchedulesPage() {
             <div className="space-y-1">
               <Label className="text-xs">Проект</Label>
               <Select value={projectId} onValueChange={(v) => setProjectId(v ?? '')}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Выберите проект" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Выберите проект" labels={Object.fromEntries(projects.map((p) => [String(p.id), p.name]))} /></SelectTrigger>
                 <SelectContent>
                   {projects.map((p) => (
                     <SelectItem key={p.id} value={String(p.id)} label={p.name}>{p.name}</SelectItem>
@@ -165,7 +165,7 @@ function SchedulesPage() {
             <div className="space-y-1">
               <Label className="text-xs">Парсер</Label>
               <Select value={scraperId} onValueChange={(v) => setScraperId(v ?? '')}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Выберите парсер" /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue placeholder="Выберите парсер" labels={Object.fromEntries(scrapers.map((s) => [String(s.id), `${s.name} (${s.type})`]))} /></SelectTrigger>
                 <SelectContent>
                   {scrapers.map((s) => (
                     <SelectItem key={s.id} value={String(s.id)} label={`${s.name} (${s.type})`}>{s.name} ({s.type})</SelectItem>
@@ -176,7 +176,7 @@ function SchedulesPage() {
             <div className="space-y-1">
               <Label className="text-xs">Частота</Label>
               <Select value={freqDays} onValueChange={(v) => setFreqDays(v ?? '1')}>
-                <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                <SelectTrigger className="w-full"><SelectValue labels={{ '1': 'Ежедневно', '3': 'Раз в 3 дня', '7': 'Еженедельно', '14': 'Раз в 2 недели', '30': 'Ежемесячно' }} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="1" label="Ежедневно">Ежедневно</SelectItem>
                   <SelectItem value="3" label="Раз в 3 дня">Раз в 3 дня</SelectItem>

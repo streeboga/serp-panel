@@ -165,7 +165,7 @@ function ClassificationPage() {
                       }
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue />
+                        <SelectValue labels={{ 'domain': t('classification.domain'), 'url_pattern': t('classification.urlPattern'), 'regex': t('classification.regex') }} />
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="domain" label={t('classification.domain')}>{t('classification.domain')}</SelectItem>
@@ -194,7 +194,7 @@ function ClassificationPage() {
                       }
                     >
                       <SelectTrigger className="w-full">
-                        <SelectValue placeholder={t('classification.selectType')} />
+                        <SelectValue placeholder={t('classification.selectType')} labels={Object.fromEntries(siteTypes.map((st) => [String(st.id), st.name]))} />
                       </SelectTrigger>
                       <SelectContent>
                         {siteTypes.map((st) => (
@@ -307,7 +307,7 @@ function ClassificationPage() {
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue />
+                    <SelectValue labels={{ 'domain': t('classification.domain'), 'url_pattern': t('classification.urlPattern'), 'regex': t('classification.regex') }} />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="domain" label={t('classification.domain')}>{t('classification.domain')}</SelectItem>
@@ -338,7 +338,7 @@ function ClassificationPage() {
                   }
                 >
                   <SelectTrigger className="w-full">
-                    <SelectValue placeholder={t('classification.selectType')} />
+                    <SelectValue placeholder={t('classification.selectType')} labels={Object.fromEntries(siteTypes.map((st) => [String(st.id), st.name]))} />
                   </SelectTrigger>
                   <SelectContent>
                     {siteTypes.map((st) => (
