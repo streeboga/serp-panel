@@ -9,7 +9,12 @@ export function useSerpResults(
   return useQuery({
     queryKey: queryKeys.serp.results(keywordId, params),
     queryFn: () =>
-      api.get(`/keywords/${keywordId}/serp`, { params }).then((r) => r.data),
+      api.get(`/keywords/${keywordId}/serp`, {
+        params: {
+          from: params?.date,
+          limit: params?.top_n,
+        },
+      }).then((r) => r.data),
     enabled: !!keywordId,
     staleTime: 60_000,
     gcTime: 5 * 60_000,

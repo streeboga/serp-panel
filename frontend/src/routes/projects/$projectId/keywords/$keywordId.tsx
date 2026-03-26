@@ -108,11 +108,28 @@ function SerpTab({ keywordId }: { keywordId: string }) {
   })
 
   const dateList: string[] = useMemo(
-    () => dates?.data ?? dates ?? [],
-    [dates],
+    () => {
+      // Try from dates endpoint, fallback to extracting from snapshots
+      const d = dates?.data ?? dates ?? []
+      if (Array.isArray(d) && d.length > 0) return d
+      // Extract dates from snapshots
+      const snapshots = serpData?.data ?? serpData ?? []
+      if (Array.isArray(snapshots)) {
+        return snapshots.map((s: any) => s.collected_at?.split('T')[0] ?? s.date).filter(Boolean)
+      }
+      return []
+    },
+    [dates, serpData],
   )
   const results: SerpResult[] = useMemo(
-    () => serpData?.data ?? serpData ?? [],
+    () => {
+      const snapshots = serpData?.data ?? serpData ?? []
+      if (!Array.isArray(snapshots) || snapshots.length === 0) return []
+      // Get the first (latest) snapshot's results
+      const snap = snapshots[0]
+      const res = snap?.results ?? snap?.data?.results ?? []
+      return Array.isArray(res) ? res : []
+    },
     [serpData],
   )
 
