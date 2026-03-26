@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useMatches } from '@tanstack/react-router'
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useImportKeywords, useDeleteKeywords, useRegions, useProjectClusters } from '@/hooks/useKeywords'
 import { usePositionMatrix } from '@/hooks/usePositionMatrix'
