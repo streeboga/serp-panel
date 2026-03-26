@@ -23,32 +23,24 @@ function ProjectDetailPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        {isLoading ? (
-          <PageSkeleton />
-        ) : projectData ? (
-          <>
-            <div>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <Link to="/projects" className="hover:underline">
-                  {t('projects.title')}
-                </Link>
-                <span>/</span>
-                <span>{projectData.name}</span>
-              </div>
-              <h1 className="text-2xl font-bold">{projectData.name}</h1>
-              {projectData.description && (
-                <p className="text-muted-foreground mt-1">
-                  {projectData.description}
-                </p>
-              )}
+      {isLoading ? (
+        <PageSkeleton />
+      ) : projectData ? (
+        <div className="h-full flex flex-col">
+          {/* Top bar: tabs on the right */}
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Link to="/projects" className="hover:underline">
+                {t('projects.title')}
+              </Link>
+              <span>/</span>
+              <span className="font-medium text-foreground">{projectData.name}</span>
             </div>
-
-            <nav className="flex gap-4 border-b pb-2">
+            <nav className="flex gap-1">
               <Link
                 to="/projects/$projectId"
                 params={{ projectId }}
-                className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
+                className="px-2.5 py-1 text-xs font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
                 activeOptions={{ exact: true }}
               >
                 {t('projects.overview')}
@@ -56,41 +48,41 @@ function ProjectDetailPage() {
               <Link
                 to="/projects/$projectId/domains"
                 params={{ projectId }}
-                className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
+                className="px-2.5 py-1 text-xs font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
               >
                 {t('projects.domainsTab')}
               </Link>
               <Link
                 to="/projects/$projectId/keywords"
                 params={{ projectId }}
-                className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
+                className="px-2.5 py-1 text-xs font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
               >
                 {t('projects.keywordsTab')}
               </Link>
               <Link
                 to="/projects/$projectId/competitors"
                 params={{ projectId }}
-                className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
+                className="px-2.5 py-1 text-xs font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
               >
                 {t('projects.competitorsTab')}
               </Link>
               <Link
                 to="/projects/$projectId/categories"
                 params={{ projectId }}
-                className="px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
+                className="px-2.5 py-1 text-xs font-medium rounded-md hover:bg-muted [&.active]:bg-muted"
               >
                 {t('projects.categoriesTab')}
               </Link>
             </nav>
+          </div>
 
-            <Suspense fallback={<PageSkeleton />}>
-              <Outlet />
-            </Suspense>
-          </>
-        ) : (
-          <p className="text-muted-foreground">{t('projects.notFound')}</p>
-        )}
-      </div>
+          <Suspense fallback={<PageSkeleton />}>
+            <Outlet />
+          </Suspense>
+        </div>
+      ) : (
+        <p className="text-muted-foreground">{t('projects.notFound')}</p>
+      )}
     </AppLayout>
   )
 }
