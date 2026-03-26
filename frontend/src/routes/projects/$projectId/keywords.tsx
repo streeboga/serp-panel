@@ -462,9 +462,9 @@ function KeywordsTable() {
         <Select value={String(days)} onValueChange={(v) => setDays(Number(v ?? 14))}>
           <SelectTrigger className="w-20 h-8 text-xs"><SelectValue /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="7">7d</SelectItem>
-            <SelectItem value="14">14d</SelectItem>
-            <SelectItem value="30">30d</SelectItem>
+            <SelectItem value="7" label="7d">7d</SelectItem>
+            <SelectItem value="14" label="14d">14d</SelectItem>
+            <SelectItem value="30" label="30d">30d</SelectItem>
           </SelectContent>
         </Select>
 
@@ -476,7 +476,7 @@ function KeywordsTable() {
             <SelectTrigger className="w-28 h-8 text-xs"><SelectValue placeholder="Пресеты" /></SelectTrigger>
             <SelectContent>
               {presets.map((p) => (
-                <SelectItem key={p.name} value={p.name}>
+                <SelectItem key={p.name} value={p.name} label={p.name}>
                   {p.name}
                 </SelectItem>
               ))}
@@ -513,7 +513,7 @@ function KeywordsTable() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">{t('keywords.cluster')}</Label>
-                  <Select value={importClusterId} onValueChange={(v) => setImportClusterId(v ?? '')}><SelectTrigger className="w-full"><SelectValue placeholder={t('keywords.selectCluster')} /></SelectTrigger><SelectContent>{clusters.map((c) => (<SelectItem key={c.id} value={String(c.id)}>{c.category?.name ? `${c.category.name} / ${c.name}` : c.name}</SelectItem>))}</SelectContent></Select>
+                  <Select value={importClusterId} onValueChange={(v) => setImportClusterId(v ?? '')}><SelectTrigger className="w-full"><SelectValue placeholder={t('keywords.selectCluster')} /></SelectTrigger><SelectContent>{clusters.map((c) => (<SelectItem key={c.id} value={String(c.id)} label={c.category?.name ? `${c.category.name} / ${c.name}` : c.name}>{c.category?.name ? `${c.category.name} / ${c.name}` : c.name}</SelectItem>))}</SelectContent></Select>
                 </div>
                 <div className="space-y-1">
                   <Label className="text-xs">{t('keywords.region')}</Label>
@@ -568,7 +568,7 @@ function KeywordsTable() {
             <SelectTrigger className="w-full"><SelectValue placeholder="Выберите кластер" /></SelectTrigger>
             <SelectContent>
               {clusters.map((c) => (
-                <SelectItem key={c.id} value={String(c.id)}>
+                <SelectItem key={c.id} value={String(c.id)} label={c.category?.name ? `${c.category.name} / ${c.name}` : c.name}>
                   {c.category?.name ? `${c.category.name} / ${c.name}` : c.name}
                 </SelectItem>
               ))}

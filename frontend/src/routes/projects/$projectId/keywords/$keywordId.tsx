@@ -165,9 +165,9 @@ function SerpTab({ keywordId }: { keywordId: string }) {
             <SelectValue placeholder={t('keywordDetail.latestDate')} />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="__latest__">{t('keywordDetail.latestDate')}</SelectItem>
+            <SelectItem value="__latest__" label={t('keywordDetail.latestDate')}>{t('keywordDetail.latestDate')}</SelectItem>
             {dateList.map((d) => (
-              <SelectItem key={d} value={d}>
+              <SelectItem key={d} value={d} label={d}>
                 {d}
               </SelectItem>
             ))}
@@ -182,10 +182,10 @@ function SerpTab({ keywordId }: { keywordId: string }) {
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="10">TOP-10</SelectItem>
-            <SelectItem value="20">TOP-20</SelectItem>
-            <SelectItem value="50">TOP-50</SelectItem>
-            <SelectItem value="100">TOP-100</SelectItem>
+            <SelectItem value="10" label="TOP-10">TOP-10</SelectItem>
+            <SelectItem value="20" label="TOP-20">TOP-20</SelectItem>
+            <SelectItem value="50" label="TOP-50">TOP-50</SelectItem>
+            <SelectItem value="100" label="TOP-100">TOP-100</SelectItem>
           </SelectContent>
         </Select>
 

@@ -168,11 +168,11 @@ function ClassificationPage() {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="domain">{t('classification.domain')}</SelectItem>
-                        <SelectItem value="url_pattern">
+                        <SelectItem value="domain" label={t('classification.domain')}>{t('classification.domain')}</SelectItem>
+                        <SelectItem value="url_pattern" label={t('classification.urlPattern')}>
                           {t('classification.urlPattern')}
                         </SelectItem>
-                        <SelectItem value="regex">{t('classification.regex')}</SelectItem>
+                        <SelectItem value="regex" label={t('classification.regex')}>{t('classification.regex')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -198,7 +198,7 @@ function ClassificationPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {siteTypes.map((st) => (
-                          <SelectItem key={st.id} value={String(st.id)}>
+                          <SelectItem key={st.id} value={String(st.id)} label={st.name}>
                             {st.name}
                           </SelectItem>
                         ))}
@@ -310,11 +310,11 @@ function ClassificationPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="domain">{t('classification.domain')}</SelectItem>
-                    <SelectItem value="url_pattern">
+                    <SelectItem value="domain" label={t('classification.domain')}>{t('classification.domain')}</SelectItem>
+                    <SelectItem value="url_pattern" label={t('classification.urlPattern')}>
                       {t('classification.urlPattern')}
                     </SelectItem>
-                    <SelectItem value="regex">{t('classification.regex')}</SelectItem>
+                    <SelectItem value="regex" label={t('classification.regex')}>{t('classification.regex')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -342,7 +342,7 @@ function ClassificationPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {siteTypes.map((st) => (
-                      <SelectItem key={st.id} value={String(st.id)}>
+                      <SelectItem key={st.id} value={String(st.id)} label={st.name}>
                         {st.name}
                       </SelectItem>
                     ))}

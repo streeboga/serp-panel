@@ -207,9 +207,9 @@ function ScrapersPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="xml_river">XML River</SelectItem>
-                      <SelectItem value="serp_api">SERP API</SelectItem>
-                      <SelectItem value="custom">Custom</SelectItem>
+                      <SelectItem value="xml_river" label="XML River">XML River</SelectItem>
+                      <SelectItem value="serp_api" label="SERP API">SERP API</SelectItem>
+                      <SelectItem value="custom" label="Custom">Custom</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -369,9 +369,9 @@ function ScrapersPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="xml_river">XML River</SelectItem>
-                    <SelectItem value="serp_api">SERP API</SelectItem>
-                    <SelectItem value="custom">Custom</SelectItem>
+                    <SelectItem value="xml_river" label="XML River">XML River</SelectItem>
+                    <SelectItem value="serp_api" label="SERP API">SERP API</SelectItem>
+                    <SelectItem value="custom" label="Custom">Custom</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

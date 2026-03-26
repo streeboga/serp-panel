@@ -54,7 +54,7 @@ function DashboardPage() {
               </SelectTrigger>
               <SelectContent>
                 {projectList.map((p) => (
-                  <SelectItem key={p.id} value={String(p.id)}>
+                  <SelectItem key={p.id} value={String(p.id)} label={p.name}>
                     {p.name}
                   </SelectItem>
                 ))}

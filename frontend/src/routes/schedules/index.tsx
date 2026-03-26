@@ -57,13 +57,14 @@ function SchedulesPage() {
     setFormError(null)
     try {
       await createSchedule.mutateAsync({
-        schedulable_type: 'project',
-        schedulable_id: Number(projectId),
-        frequency: freqDays,
+        scraper_id: Number(scraperId),
+        project_id: Number(projectId),
+        frequency_days: Number(freqDays),
         is_active: true,
       })
       setCreateOpen(false)
       setProjectId('')
+      setScraperId('')
     } catch (err) {
       setFormError(parseApiError(err))
     }
@@ -156,7 +157,7 @@ function SchedulesPage() {
                 <SelectTrigger className="w-full"><SelectValue placeholder="Выберите проект" /></SelectTrigger>
                 <SelectContent>
                   {projects.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                    <SelectItem key={p.id} value={String(p.id)} label={p.name}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -167,7 +168,7 @@ function SchedulesPage() {
                 <SelectTrigger className="w-full"><SelectValue placeholder="Выберите парсер" /></SelectTrigger>
                 <SelectContent>
                   {scrapers.map((s) => (
-                    <SelectItem key={s.id} value={String(s.id)}>{s.name} ({s.type})</SelectItem>
+                    <SelectItem key={s.id} value={String(s.id)} label={`${s.name} (${s.type})`}>{s.name} ({s.type})</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -177,11 +178,11 @@ function SchedulesPage() {
               <Select value={freqDays} onValueChange={(v) => setFreqDays(v ?? '1')}>
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">Ежедневно</SelectItem>
-                  <SelectItem value="3">Раз в 3 дня</SelectItem>
-                  <SelectItem value="7">Еженедельно</SelectItem>
-                  <SelectItem value="14">Раз в 2 недели</SelectItem>
-                  <SelectItem value="30">Ежемесячно</SelectItem>
+                  <SelectItem value="1" label="Ежедневно">Ежедневно</SelectItem>
+                  <SelectItem value="3" label="Раз в 3 дня">Раз в 3 дня</SelectItem>
+                  <SelectItem value="7" label="Еженедельно">Еженедельно</SelectItem>
+                  <SelectItem value="14" label="Раз в 2 недели">Раз в 2 недели</SelectItem>
+                  <SelectItem value="30" label="Ежемесячно">Ежемесячно</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -190,7 +191,7 @@ function SchedulesPage() {
               Если нужен сбор по другому поисковику — импортируйте ключи с нужными параметрами.
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={createSchedule.isPending || !projectId}>
+              <Button type="submit" disabled={createSchedule.isPending || !projectId || !scraperId}>
                 {createSchedule.isPending ? 'Создание...' : 'Создать'}
               </Button>
             </DialogFooter>

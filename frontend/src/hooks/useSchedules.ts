@@ -14,9 +14,12 @@ export function useCreateSchedule() {
   const qc = useQueryClient()
   return useMutation({
     mutationFn: (data: {
-      schedulable_type: string
-      schedulable_id: number
-      frequency: string
+      scraper_id: number
+      project_id?: number
+      category_id?: number
+      cluster_id?: number
+      keyword_id?: number
+      frequency_days: number
       is_active?: boolean
     }) => api.post('/schedules', data).then((r) => r.data),
     onSuccess: () =>

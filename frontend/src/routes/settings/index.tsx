@@ -289,8 +289,8 @@ function SettingsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ru">Русский</SelectItem>
-                    <SelectItem value="en">English</SelectItem>
+                    <SelectItem value="ru" label="Русский">Русский</SelectItem>
+                    <SelectItem value="en" label="English">English</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -304,9 +304,9 @@ function SettingsPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="system">{t('settings.themeSystem')}</SelectItem>
-                    <SelectItem value="light">{t('settings.themeLight')}</SelectItem>
-                    <SelectItem value="dark">{t('settings.themeDark')}</SelectItem>
+                    <SelectItem value="system" label={t('settings.themeSystem')}>{t('settings.themeSystem')}</SelectItem>
+                    <SelectItem value="light" label={t('settings.themeLight')}>{t('settings.themeLight')}</SelectItem>
+                    <SelectItem value="dark" label={t('settings.themeDark')}>{t('settings.themeDark')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -398,9 +398,9 @@ function SettingsPage() {
                 <Select value={addAccountType} onValueChange={(v) => setAddAccountType(v ?? 'yandex')}>
                   <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="yandex">Яндекс (Wordstat)</SelectItem>
-                    <SelectItem value="xmlriver">XMLRiver (SERP)</SelectItem>
-                    <SelectItem value="google" disabled>Google (скоро)</SelectItem>
+                    <SelectItem value="yandex" label="Яндекс (Wordstat)">Яндекс (Wordstat)</SelectItem>
+                    <SelectItem value="xmlriver" label="XMLRiver (SERP)">XMLRiver (SERP)</SelectItem>
+                    <SelectItem value="google" label="Google (скоро)" disabled>Google (скоро)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -485,7 +485,7 @@ function SettingsPage() {
                   </SelectTrigger>
                   <SelectContent>
                     {ROLES.map((r) => (
-                      <SelectItem key={r} value={r}>
+                      <SelectItem key={r} value={r} label={r.charAt(0).toUpperCase() + r.slice(1)}>
                         {r.charAt(0).toUpperCase() + r.slice(1)}
                       </SelectItem>
                     ))}
@@ -580,7 +580,7 @@ function SettingsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {ROLES.map((r) => (
-                    <SelectItem key={r} value={r}>
+                    <SelectItem key={r} value={r} label={r.charAt(0).toUpperCase() + r.slice(1)}>
                       {r.charAt(0).toUpperCase() + r.slice(1)}
                     </SelectItem>
                   ))}

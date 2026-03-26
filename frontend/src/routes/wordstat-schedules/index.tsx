@@ -170,7 +170,7 @@ function WordstatSchedulesPage() {
                 <SelectTrigger className="w-full"><SelectValue placeholder="Выберите проект" /></SelectTrigger>
                 <SelectContent>
                   {projects.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                    <SelectItem key={p.id} value={String(p.id)} label={p.name}>{p.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -180,10 +180,10 @@ function WordstatSchedulesPage() {
               <Select value={freqDays} onValueChange={(v) => setFreqDays(v ?? '7')}>
                 <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">Ежедневно</SelectItem>
-                  <SelectItem value="7">Еженедельно</SelectItem>
-                  <SelectItem value="14">Раз в 2 недели</SelectItem>
-                  <SelectItem value="30">Ежемесячно</SelectItem>
+                  <SelectItem value="1" label="Ежедневно">Ежедневно</SelectItem>
+                  <SelectItem value="7" label="Еженедельно">Еженедельно</SelectItem>
+                  <SelectItem value="14" label="Раз в 2 недели">Раз в 2 недели</SelectItem>
+                  <SelectItem value="30" label="Ежемесячно">Ежемесячно</SelectItem>
                 </SelectContent>
               </Select>
             </div>
