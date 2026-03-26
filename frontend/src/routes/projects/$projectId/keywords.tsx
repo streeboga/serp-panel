@@ -153,6 +153,13 @@ function MultiFilter({ label, options, selected, onChange }: {
 }
 
 // ─── Position cell ───
+function fmtFreq(n: number | null | undefined): string {
+  if (n == null) return '—'
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}кк`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1)}к`
+  return String(n)
+}
+
 function PositionCell({ position, delta }: { position: number | null; delta: number | null }) {
   if (position === null) return <span className="text-muted-foreground text-[11px]">—</span>
   return (
@@ -558,9 +565,9 @@ function GroupSection({ label, rows, dates, engines, totalCols, projectId, selec
             </div>
             {kw.cluster && <div className="text-[9px] text-muted-foreground truncate">{kw.category ? `${kw.category} / ` : ''}{kw.cluster}</div>}
           </td>
-          <td className="px-1 py-1 text-right tabular-nums text-muted-foreground text-[10px]">{kw.frequency_exact?.toLocaleString() ?? '—'}</td>
-          <td className="px-1 py-1 text-right tabular-nums text-muted-foreground text-[10px]">{kw.frequency_phrase?.toLocaleString() ?? '—'}</td>
-          <td className="px-1 py-1 text-right tabular-nums text-muted-foreground text-[10px]">{kw.frequency_broad?.toLocaleString() ?? '—'}</td>
+          <td className="px-1 py-1 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_exact?.toLocaleString()}>{fmtFreq(kw.frequency_exact)}</td>
+          <td className="px-1 py-1 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_phrase?.toLocaleString()}>{fmtFreq(kw.frequency_phrase)}</td>
+          <td className="px-1 py-1 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_broad?.toLocaleString()}>{fmtFreq(kw.frequency_broad)}</td>
           {dates.map((date) => engines.map((eng) => (
             <td key={`${date}-${eng}`} className="px-0.5 py-1 border-l w-10">
               <PositionCell position={kw.engines[eng]?.[date]?.position ?? null} delta={kw.engines[eng]?.[date]?.delta ?? null} />
