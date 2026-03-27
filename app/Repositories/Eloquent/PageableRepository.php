@@ -42,7 +42,11 @@ final class PageableRepository implements PageableRepositoryInterface
             $pageableIds,
         );
 
-        Pageable::insert($rows);
+        Pageable::upsert(
+            $rows,
+            ['page_id', 'pageable_type', 'pageable_id'],
+            array_merge(['updated_at'], array_keys($pivotData)),
+        );
     }
 
     /** @return Collection<int, Pageable> */
