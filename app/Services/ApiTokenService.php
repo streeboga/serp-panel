@@ -20,13 +20,6 @@ final readonly class ApiTokenService
         'manager' => ['read', 'export', 'write'],
     ];
 
-    private const ROLE_HIERARCHY = [
-        'admin' => 4,
-        'manager' => 3,
-        'analyst' => 2,
-        'viewer' => 1,
-    ];
-
     /** @return Collection<int, PersonalAccessToken> */
     public function listTokens(User $user, Organization $organization): Collection
     {
@@ -49,16 +42,15 @@ final readonly class ApiTokenService
         ?string $expiresAt = null,
     ): array {
         // Validate: token role cannot exceed user's org role
-        $userRole = $organization->users()
+        $userRoleValue = $organization->users()
             ->where('user_id', $user->id)
             ->first()
             ?->pivot
             ?->getAttribute('role');
 
-        $userLevel = self::ROLE_HIERARCHY[$userRole] ?? 0;
-        $tokenLevel = self::ROLE_HIERARCHY[$tokenRole->value] ?? 0;
+        $userRole = OrganizationRole::tryFrom($userRoleValue ?? '');
 
-        if ($tokenLevel > $userLevel) {
+        if (!$userRole || !$userRole->isAtLeast($tokenRole)) {
             throw new \InvalidArgumentException('Token role cannot exceed your role in the organization');
         }
 

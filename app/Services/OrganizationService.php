@@ -9,6 +9,7 @@ use App\Contracts\Repositories\UserRepositoryInterface;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 
 final readonly class OrganizationService
 {
@@ -25,13 +26,15 @@ final readonly class OrganizationService
 
     public function create(User $user, string $name): Organization
     {
-        $org = $this->organizationRepository->create([
-            'name' => $name,
-            'slug' => str($name)->slug()->toString(),
-        ]);
-        $org->users()->attach($user->id, ['role' => 'admin']);
+        return DB::transaction(function () use ($user, $name): Organization {
+            $org = $this->organizationRepository->create([
+                'name' => $name,
+                'slug' => str($name)->slug()->toString(),
+            ]);
+            $org->users()->attach($user->id, ['role' => 'admin']);
 
-        return $org;
+            return $org;
+        });
     }
 
     public function delete(Organization $organization): void
