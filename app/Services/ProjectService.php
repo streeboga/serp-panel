@@ -56,11 +56,11 @@ final readonly class ProjectService
     {
         $data = ['is_public' => $isPublic];
 
-        if ($isPublic && !$project->public_slug) {
+        if ($isPublic && ! $project->public_slug) {
             $data['public_slug'] = (string) Str::uuid();
         }
 
-        if (!$isPublic) {
+        if (! $isPublic) {
             $data['public_slug'] = null;
         }
 

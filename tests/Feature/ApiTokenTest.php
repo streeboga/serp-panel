@@ -4,8 +4,6 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\ApiTokenController;
 use App\Models\Organization;
-use App\Models\Project;
-use App\Models\User;
 use App\Services\ApiTokenService;
 
 covers(ApiTokenController::class, ApiTokenService::class);

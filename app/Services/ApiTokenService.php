@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace App\Services;
 
 use App\Enums\OrganizationRole;
-use App\Models\User;
 use App\Models\Organization;
+use App\Models\User;
 use Illuminate\Support\Collection;
 use Laravel\Sanctum\NewAccessToken;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -50,12 +50,12 @@ final readonly class ApiTokenService
 
         $userRole = OrganizationRole::tryFrom($userRoleValue ?? '');
 
-        if (!$userRole || !$userRole->isAtLeast($tokenRole)) {
+        if (! $userRole || ! $userRole->isAtLeast($tokenRole)) {
             throw new \InvalidArgumentException('Token role cannot exceed your role in the organization');
         }
 
         // Validate: project belongs to organization
-        if ($projectId !== null && !$organization->projects()->where('id', $projectId)->exists()) {
+        if ($projectId !== null && ! $organization->projects()->where('id', $projectId)->exists()) {
             throw new \InvalidArgumentException('Project does not belong to this organization');
         }
 

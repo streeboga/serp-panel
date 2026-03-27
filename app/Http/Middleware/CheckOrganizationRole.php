@@ -16,7 +16,7 @@ final class CheckOrganizationRole
         $userRole = OrganizationRole::tryFrom($request->get('organization_role') ?? '');
         $requiredRole = OrganizationRole::tryFrom($minimumRole);
 
-        if (!$userRole || !$requiredRole || !$userRole->isAtLeast($requiredRole)) {
+        if (! $userRole || ! $requiredRole || ! $userRole->isAtLeast($requiredRole)) {
             return response()->json(['error' => __('organization.insufficient_permissions')], 403);
         }
 
