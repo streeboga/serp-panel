@@ -4,17 +4,20 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Contracts\Repositories\DomainIndexResultRepositoryInterface;
 use App\Contracts\Repositories\DomainRepositoryInterface;
 use App\Enums\Engine;
 use App\Enums\IndexingStatus;
 use App\Jobs\IndexDomainJob;
 use App\Models\Domain;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Bus;
 
 final readonly class DomainIndexingService
 {
     public function __construct(
-        private DomainRepositoryInterface $repository,
+        private DomainRepositoryInterface $domainRepository,
+        private DomainIndexResultRepositoryInterface $indexResultRepository,
     ) {}
 
     public function startIndexing(Domain $domain, Engine $engine, int $limit = 100): void
@@ -59,10 +62,11 @@ final readonly class DomainIndexingService
         return [
             'status' => $status->value,
             'total_found' => $domain->indexed_pages_count,
-            'collected' => $domain->indexResults()
-                ->where('engine', $engine->value)
-                ->where('last_seen_at', now()->toDateString())
-                ->count(),
+            'collected' => $this->indexResultRepository->countForDomainOnDate(
+                $domain->id,
+                $engine->value,
+                now()->toDateString(),
+            ),
             'progress' => $batch->progress(),
             'batch_id' => $batch->id,
         ];
@@ -77,6 +81,14 @@ final readonly class DomainIndexingService
         $batch = Bus::findBatch($domain->index_batch_id);
         $batch?->cancel();
 
-        $this->repository->update($domain, ['index_batch_id' => null]);
+        $this->domainRepository->update($domain, ['index_batch_id' => null]);
+    }
+
+    /**
+     * @return Collection<int, \App\Models\DomainIndexResult>
+     */
+    public function getIndexResults(Domain $domain, string $engine, int $limit = 100): Collection
+    {
+        return $this->indexResultRepository->getForDomain($domain->id, $engine, $limit);
     }
 }

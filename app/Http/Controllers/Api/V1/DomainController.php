@@ -6,12 +6,12 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\Engine;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Domain\StartIndexingRequest;
 use App\Http\Requests\Domain\StoreDomainRequest;
 use App\Http\Requests\Domain\UpdateDomainRequest;
+use App\Http\Resources\DomainIndexResultResource;
 use App\Http\Resources\DomainResource;
 use App\Models\Domain;
-use App\Models\Keyword;
-use App\Models\Pageable;
 use App\Models\Project;
 use App\Services\DomainIndexingService;
 use App\Services\DomainService;
@@ -129,19 +129,15 @@ final class DomainController extends Controller
      * Запускает фоновый запрос site:{domain} через парсер для получения списка проиндексированных страниц.
      */
     #[PathParameter('domain', description: 'ID домена', example: '1')]
-    #[QueryParameter('engine', type: 'string', description: 'Поисковая система', enum: ['google', 'yandex'])]
-    #[QueryParameter('limit', type: 'integer', description: 'Максимум результатов', example: 100)]
     #[Response(200, description: 'Индексация запущена')]
-    public function indexDomain(Request $request, Domain $domain): JsonResponse
+    #[Response(422, description: 'Ошибка валидации')]
+    public function indexDomain(StartIndexingRequest $request, Domain $domain): JsonResponse
     {
         if ($domain->project->organization_id !== $request->get('organization')->id) {
             abort(404);
         }
 
-        $engine = Engine::from($request->input('engine', 'google'));
-        $limit = (int) $request->input('limit', 100);
-
-        $this->indexingService->startIndexing($domain, $engine, $limit);
+        $this->indexingService->startIndexing($domain, $request->engine(), $request->limit());
 
         return response()->json(['data' => ['message' => 'Индексация запущена']]);
     }
@@ -196,26 +192,7 @@ final class DomainController extends Controller
             abort(404);
         }
 
-        $pageIds = $domain->pages()->pluck('id');
-
-        $keywordIds = Pageable::whereIn('page_id', $pageIds)
-            ->where('pageable_type', 'App\\Models\\Keyword')
-            ->pluck('pageable_id')
-            ->unique();
-
-        $keywords = Keyword::whereIn('id', $keywordIds)
-            ->with(['cluster.category', 'region'])
-            ->get()
-            ->map(fn (Keyword $kw) => [
-                'id' => $kw->id,
-                'keyword' => $kw->keyword,
-                'engine' => $kw->engine->value,
-                'device' => $kw->device->value,
-                'cluster' => $kw->cluster?->name,
-                'category' => $kw->cluster?->category?->name,
-                'region' => $kw->region?->name,
-                'latest_position' => $kw->latest_position,
-            ]);
+        $keywords = $this->service->getKeywords($domain);
 
         return response()->json(['data' => $keywords]);
     }
@@ -226,19 +203,20 @@ final class DomainController extends Controller
      * Возвращает список страниц домена, найденных через site:{domain} запрос.
      */
     #[PathParameter('domain', description: 'ID домена', example: '1')]
+    #[QueryParameter('engine', type: 'string', description: 'Поисковая система', enum: ['google', 'yandex'])]
     #[QueryParameter('limit', type: 'integer', description: 'Максимум записей', example: 100)]
     #[Response(200, description: 'Список проиндексированных страниц')]
-    public function indexResults(Request $request, Domain $domain): JsonResponse
+    public function indexResults(Request $request, Domain $domain): AnonymousResourceCollection
     {
         if ($domain->project->organization_id !== $request->get('organization')->id) {
             abort(404);
         }
 
-        $results = $domain->indexResults()
-            ->orderBy('last_position')
-            ->limit((int) $request->input('limit', 100))
-            ->get();
+        $engine = $request->input('engine', 'google');
+        $limit = (int) $request->input('limit', 100);
 
-        return response()->json(['data' => $results]);
+        $results = $this->indexingService->getIndexResults($domain, $engine, $limit);
+
+        return DomainIndexResultResource::collection($results);
     }
 }

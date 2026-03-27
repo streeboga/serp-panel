@@ -40,4 +40,6 @@ interface DomainRepositoryInterface
      * @return Collection<int, Domain>
      */
     public function ownDomainsForProjects(array $projectIds): Collection;
+
+    public function findWithProject(int $id): Domain;
 }

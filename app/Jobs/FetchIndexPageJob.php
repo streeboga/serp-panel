@@ -4,10 +4,10 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Contracts\Repositories\DomainIndexResultRepositoryInterface;
+use App\Contracts\Repositories\DomainRepositoryInterface;
+use App\Contracts\Repositories\ScraperRepositoryInterface;
 use App\Enums\Device;
-use App\Models\Domain;
-use App\Models\DomainIndexResult;
-use App\Models\Scraper;
 use App\Services\Scrapers\DTO\ScrapeRequest;
 use App\Services\Scrapers\ScraperFactory;
 use Illuminate\Bus\Batchable;
@@ -45,19 +45,20 @@ final class FetchIndexPageJob implements ShouldQueue
         return [new RateLimitedWithRedis('xmlriver')];
     }
 
-    public function handle(ScraperFactory $scraperFactory): void
-    {
+    public function handle(
+        DomainRepositoryInterface $domainRepository,
+        ScraperRepositoryInterface $scraperRepository,
+        DomainIndexResultRepositoryInterface $indexResultRepository,
+        ScraperFactory $scraperFactory,
+    ): void {
         if ($this->batch()?->cancelled()) {
             return;
         }
 
-        $domain = Domain::with('project')->findOrFail($this->domainId);
+        $domain = $domainRepository->findWithProject($this->domainId);
         $organizationId = $domain->project->organization_id;
 
-        $scraper = Scraper::where('organization_id', $organizationId)
-            ->where('is_active', true)
-            ->get()
-            ->first(fn (Scraper $s) => in_array($this->engine, $s->supported_engines ?? [], true));
+        $scraper = $scraperRepository->findActiveForEngine($organizationId, $this->engine);
 
         if (! $scraper) {
             Log::warning("FetchIndexPageJob: no active scraper for engine [{$this->engine}]");
@@ -74,9 +75,8 @@ final class FetchIndexPageJob implements ShouldQueue
             regionId: 0,
         );
 
-        // Let exceptions propagate for retry via $tries/$backoff
         $response = $adapter->scrapePage($request, $this->page);
 
-        DomainIndexResult::upsertFromScrape($domain->id, $this->engine, $this->collectedAt, $response->results);
+        $indexResultRepository->upsertFromScrape($domain->id, $this->engine, $this->collectedAt, $response->results);
     }
 }

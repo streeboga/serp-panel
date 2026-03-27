@@ -9,6 +9,7 @@ use App\Contracts\Repositories\ClassificationRuleRepositoryInterface;
 use App\Contracts\Repositories\ClusterRepositoryInterface;
 use App\Contracts\Repositories\ConnectedAccountRepositoryInterface;
 use App\Contracts\Repositories\DomainClassificationRepositoryInterface;
+use App\Contracts\Repositories\DomainIndexResultRepositoryInterface;
 use App\Contracts\Repositories\DomainRepositoryInterface;
 use App\Contracts\Repositories\PageableRepositoryInterface;
 use App\Contracts\Repositories\PageRepositoryInterface;
@@ -34,6 +35,7 @@ use App\Repositories\Eloquent\ClassificationRuleRepository;
 use App\Repositories\Eloquent\ClusterRepository;
 use App\Repositories\Eloquent\ConnectedAccountRepository;
 use App\Repositories\Eloquent\DomainClassificationRepository;
+use App\Repositories\Eloquent\DomainIndexResultRepository;
 use App\Repositories\Eloquent\DomainRepository;
 use App\Repositories\Eloquent\PageableRepository;
 use App\Repositories\Eloquent\PageRepository;
@@ -85,5 +87,6 @@ final class RepositoryServiceProvider extends ServiceProvider
         PageRepositoryInterface::class => PageRepository::class,
         PageableRepositoryInterface::class => PageableRepository::class,
         PageSerpMatchRepositoryInterface::class => PageSerpMatchRepository::class,
+        DomainIndexResultRepositoryInterface::class => DomainIndexResultRepository::class,
     ];
 }

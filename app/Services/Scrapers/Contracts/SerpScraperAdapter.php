@@ -13,6 +13,8 @@ interface SerpScraperAdapter
 
     public function scrapePage(ScrapeRequest $request, int $page): ScrapeResponse;
 
+    public function supportsPageScraping(): bool;
+
     /** @return string[] */
     public function supportedEngines(): array;
 
