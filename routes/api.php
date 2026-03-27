@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AlertController;
+use App\Http\Controllers\Api\V1\ApiTokenController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BillingController;
 use App\Http\Controllers\Api\V1\CategoryController;
@@ -243,6 +244,11 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
             Route::patch('alerts/{alert}', [AlertController::class, 'update']);
             Route::delete('alerts/{alert}', [AlertController::class, 'destroy']);
         });
+
+        // API Tokens
+        Route::get('tokens', [ApiTokenController::class, 'index']);
+        Route::post('tokens', [ApiTokenController::class, 'store']);
+        Route::delete('tokens/{tokenId}', [ApiTokenController::class, 'destroy']);
 
         // Export
         Route::get('export/keywords', [ExportController::class, 'keywords']);
