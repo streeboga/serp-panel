@@ -9,6 +9,7 @@ use App\Services\Scrapers\DTO\ScrapeRequest;
 use App\Services\Scrapers\DTO\ScrapeResponse;
 use App\Services\Scrapers\DTO\SerpResultItem;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Direct Yandex XML API adapter.
@@ -16,6 +17,8 @@ use Illuminate\Support\Facades\Http;
  */
 final class YandexXmlAdapter implements SerpScraperAdapter
 {
+    private const RESULTS_PER_PAGE = 10;
+
     public function __construct(
         private readonly string $baseUrl,
         private readonly array $credentials,
@@ -24,40 +27,71 @@ final class YandexXmlAdapter implements SerpScraperAdapter
     public function scrape(ScrapeRequest $request): ScrapeResponse
     {
         $url = $this->baseUrl ?: 'https://yandex.ru/search/xml';
+        $resultsPerPage = self::RESULTS_PER_PAGE;
 
-        $params = [
+        $baseParams = [
             'user' => $this->credentials['user'] ?? '',
             'key' => $this->credentials['key'] ?? '',
             'query' => $request->keyword,
             'lr' => $request->yandexLr ?? 213,
             'sortby' => 'rlv',
             'filter' => 'none',
-            'groupby' => "attr=d.mode=deep.groups-on-page={$request->limit}.docs-in-group=1",
+            'groupby' => "attr=d.mode=deep.groups-on-page={$resultsPerPage}.docs-in-group=1",
         ];
 
-        $response = Http::timeout(60)->get($url, $params);
-        $body = $response->body();
+        $allResults = [];
+        $page = 0;
+        $maxResults = $request->limit;
+
+        while (count($allResults) < $maxResults) {
+            try {
+                $response = Http::timeout(60)->get($url, array_merge($baseParams, ['page' => $page]));
+                $pageResults = $this->parseXml($response->body(), count($allResults));
+
+                if (empty($pageResults)) {
+                    break;
+                }
+
+                $allResults = array_merge($allResults, $pageResults);
+
+                if (count($pageResults) < $resultsPerPage) {
+                    break;
+                }
+
+                $page++;
+            } catch (\Exception $e) {
+                Log::warning('YandexXml page fetch failed', [
+                    'page' => $page,
+                    'error' => $e->getMessage(),
+                ]);
+                break;
+            }
+        }
 
         return new ScrapeResponse(
-            results: $this->parseXml($body),
-            totalResults: 0,
-            rawResponse: mb_convert_encoding($body, 'UTF-8', 'UTF-8'),
+            results: $allResults,
+            totalResults: count($allResults),
+            rawResponse: '',
         );
     }
 
     /** @return SerpResultItem[] */
-    private function parseXml(string $xml): array
+    private function parseXml(string $xml, int $positionOffset = 0): array
     {
         $results = [];
         try {
             $doc = new \SimpleXMLElement($xml);
-            if (isset($doc->response->error)) return [];
+            if (isset($doc->response->error)) {
+                return [];
+            }
 
-            $position = 0;
+            $position = $positionOffset;
             foreach ($doc->response->results->grouping->group ?? [] as $group) {
                 $position++;
                 $d = $group->doc;
-                if (!$d) continue;
+                if (! $d) {
+                    continue;
+                }
 
                 $url = (string) ($d->url ?? '');
                 $results[] = new SerpResultItem(
@@ -70,7 +104,9 @@ final class YandexXmlAdapter implements SerpScraperAdapter
                     isAds: false,
                 );
             }
-        } catch (\Exception) {}
+        } catch (\Exception) {
+        }
+
         return $results;
     }
 
@@ -88,6 +124,7 @@ final class YandexXmlAdapter implements SerpScraperAdapter
                 'query' => 'test',
                 'groupby' => 'attr=d.mode=deep.groups-on-page=1.docs-in-group=1',
             ]);
+
             return str_contains($response->body(), '<yandexsearch');
         } catch (\Exception) {
             return false;

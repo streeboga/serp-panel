@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -17,6 +19,8 @@ use Illuminate\Support\Carbon;
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property-read Category $category
+ * @property-read Collection<int, Page> $pages
+ * @property-read Collection<int, Page> $targetPages
  */
 class Cluster extends Model
 {
@@ -32,5 +36,19 @@ class Cluster extends Model
     public function keywords(): HasMany
     {
         return $this->hasMany(Keyword::class);
+    }
+
+    /** @return MorphToMany<Page, $this> */
+    public function pages(): MorphToMany
+    {
+        return $this->morphToMany(Page::class, 'pageable')
+            ->withPivot('engine', 'device', 'priority', 'is_target')
+            ->withTimestamps();
+    }
+
+    /** @return MorphToMany<Page, $this> */
+    public function targetPages(): MorphToMany
+    {
+        return $this->pages()->wherePivot('is_target', true);
     }
 }

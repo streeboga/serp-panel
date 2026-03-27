@@ -28,4 +28,10 @@ interface SerpResultRepositoryInterface
      * @return Collection<int, SerpResult>
      */
     public function getCompetitorStats(array $snapshotIds, array $keywordIds): Collection;
+
+    /**
+     * @param  array<int>  $keywordIds
+     * @return Collection<int, SerpResult>
+     */
+    public function getPositionsForDomainAndKeywords(array $keywordIds, string $domain): Collection;
 }

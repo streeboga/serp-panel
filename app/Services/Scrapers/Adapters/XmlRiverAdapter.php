@@ -9,9 +9,12 @@ use App\Services\Scrapers\DTO\ScrapeRequest;
 use App\Services\Scrapers\DTO\ScrapeResponse;
 use App\Services\Scrapers\DTO\SerpResultItem;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 final class XmlRiverAdapter implements SerpScraperAdapter
 {
+    private const RESULTS_PER_PAGE = 10;
+
     /** @param array<string, mixed> $credentials */
     public function __construct(
         private readonly string $baseUrl,
@@ -20,58 +23,82 @@ final class XmlRiverAdapter implements SerpScraperAdapter
 
     public function scrape(ScrapeRequest $request): ScrapeResponse
     {
-        $params = [
-            'user' => $this->credentials['user'] ?? '',
-            'key' => $this->credentials['key'] ?? '',
-            'query' => $request->keyword,
-            'num' => $request->limit,
-        ];
-
-        if ($request->engine === 'yandex') {
-            $params['lr'] = $request->yandexLr;
-        } else {
-            $params['gl'] = $request->googleGl;
-            $params['hl'] = $request->googleHl;
-        }
-
-        // XMLRiver returns XML at /search/xml
         $url = rtrim($this->baseUrl, '/');
-        if (!str_contains($url, '/search')) {
+        if (! str_contains($url, '/search')) {
             $url .= '/search/xml';
         }
 
-        $response = Http::timeout(60)->get($url, $params);
-        $body = $response->body();
+        $firstPage = $request->engine === 'yandex' ? 0 : 1;
 
-        $results = $this->parseXmlResponse($body);
+        $baseParams = [
+            'user' => $this->credentials['user'] ?? '',
+            'key' => $this->credentials['key'] ?? '',
+            'query' => $request->keyword,
+            'groupby' => self::RESULTS_PER_PAGE,
+        ];
+
+        if ($request->engine === 'yandex') {
+            $baseParams['lr'] = $request->yandexLr;
+        } else {
+            $baseParams['gl'] = $request->googleGl;
+            $baseParams['hl'] = $request->googleHl;
+        }
+
+        $allResults = [];
+        $page = $firstPage;
+        $maxResults = $request->limit;
+
+        while (count($allResults) < $maxResults) {
+            try {
+                $response = Http::timeout(60)->get($url, array_merge($baseParams, ['page' => $page]));
+                $pageResults = $this->parseXmlResponse($response->body(), count($allResults));
+
+                if (empty($pageResults)) {
+                    break;
+                }
+
+                $allResults = array_merge($allResults, $pageResults);
+
+                if (count($pageResults) < self::RESULTS_PER_PAGE) {
+                    break;
+                }
+
+                $page++;
+            } catch (\Exception $e) {
+                Log::warning('XMLRiver page fetch failed', [
+                    'page' => $page,
+                    'error' => $e->getMessage(),
+                ]);
+                break;
+            }
+        }
 
         return new ScrapeResponse(
-            results: $results,
-            totalResults: count($results),
-            rawResponse: $body,
+            results: $allResults,
+            totalResults: count($allResults),
+            rawResponse: '',
         );
     }
 
     /** @return SerpResultItem[] */
-    private function parseXmlResponse(string $xml): array
+    private function parseXmlResponse(string $xml, int $positionOffset = 0): array
     {
         $results = [];
 
         try {
             $doc = new \SimpleXMLElement($xml);
 
-            // Check for error
             if (isset($doc->response->error)) {
                 return [];
             }
 
-            $position = 0;
+            $position = $positionOffset;
             $groups = $doc->response->results->grouping->group ?? [];
 
             foreach ($groups as $group) {
                 $position++;
                 $doc2 = $group->doc;
-                if (!$doc2) {
+                if (! $doc2) {
                     continue;
                 }
 
@@ -89,7 +116,6 @@ final class XmlRiverAdapter implements SerpScraperAdapter
                 );
             }
         } catch (\Exception) {
-            // XML parsing failed — return empty
         }
 
         return $results;
@@ -104,7 +130,7 @@ final class XmlRiverAdapter implements SerpScraperAdapter
     {
         try {
             $url = rtrim($this->baseUrl, '/');
-            if (!str_contains($url, '/search')) {
+            if (! str_contains($url, '/search')) {
                 $url .= '/search/xml';
             }
 
@@ -112,7 +138,8 @@ final class XmlRiverAdapter implements SerpScraperAdapter
                 'user' => $this->credentials['user'] ?? '',
                 'key' => $this->credentials['key'] ?? '',
                 'query' => 'test',
-                'num' => 1,
+                'groupby' => 1,
+                'page' => 1,
             ]);
 
             return str_contains($response->body(), '<yandexsearch');

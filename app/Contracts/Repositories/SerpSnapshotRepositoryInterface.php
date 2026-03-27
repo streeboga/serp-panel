@@ -37,4 +37,21 @@ interface SerpSnapshotRepositoryInterface
      * @return \Illuminate\Support\Collection<string, int>
      */
     public function getSnapshotIdsForConditions(\Illuminate\Support\Collection $conditions): \Illuminate\Support\Collection;
+
+    public function findById(int $id): SerpSnapshot;
+
+    public function previousForKeyword(int $keywordId, string $beforeDate): ?SerpSnapshot;
+
+    /**
+     * @param  array<int>  $keywordIds
+     * @return array<int, string>
+     */
+    public function getAvailableDates(array $keywordIds, int $limit): array;
+
+    /**
+     * @param  array<int>  $keywordIds
+     * @param  array<int, string>  $dates
+     * @return array<string, true>  Keys are "keywordId:date"
+     */
+    public function getMonitoredPairs(array $keywordIds, array $dates): array;
 }

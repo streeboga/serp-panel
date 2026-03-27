@@ -1,5 +1,6 @@
 import { memo, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
+import { Inbox } from 'lucide-react'
 
 interface EmptyStateProps {
   title: string
@@ -8,9 +9,6 @@ interface EmptyStateProps {
   className?: string
 }
 
-/**
- * Consistent empty state placeholder for lists and tables.
- */
 export const EmptyState = memo(function EmptyState({
   title,
   description,
@@ -18,10 +16,13 @@ export const EmptyState = memo(function EmptyState({
   className,
 }: EmptyStateProps) {
   return (
-    <div className={cn('flex flex-col items-center justify-center py-12 text-center', className)}>
-      <h3 className="text-lg font-medium text-muted-foreground">{title}</h3>
+    <div className={cn('flex flex-col items-center justify-center py-16 text-center', className)}>
+      <div className="glass-card rounded-lg p-4 mb-4">
+        <Inbox className="size-8 text-muted-foreground/50" />
+      </div>
+      <h3 className="text-sm font-medium text-foreground">{title}</h3>
       {description && (
-        <p className="text-sm text-muted-foreground mt-1 max-w-md">{description}</p>
+        <p className="text-[13px] text-muted-foreground mt-1 max-w-sm">{description}</p>
       )}
       {action && <div className="mt-4">{action}</div>}
     </div>

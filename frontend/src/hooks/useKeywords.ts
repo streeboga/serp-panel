@@ -47,6 +47,25 @@ export function useKeyword(projectId: string, keywordId: string) {
   })
 }
 
+export function useKeywordVariants(projectId: string, keywordText: string) {
+  return useQuery({
+    queryKey: ['keyword-variants', projectId, keywordText],
+    queryFn: () =>
+      api
+        .get('/keywords', {
+          params: {
+            per_page: 20,
+            'filter[keyword]': keywordText,
+          },
+        })
+        .then((r) => r.data)
+        .catch(() => []),
+    enabled: !!projectId && !!keywordText,
+    staleTime: 5 * 60_000,
+    retry: false,
+  })
+}
+
 export function useImportKeywords() {
   const qc = useQueryClient()
   return useMutation({

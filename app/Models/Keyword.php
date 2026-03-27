@@ -6,9 +6,11 @@ namespace App\Models;
 
 use App\Enums\Device;
 use App\Enums\Engine;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -26,6 +28,9 @@ use Illuminate\Support\Carbon;
  * @property-read int|null $position_change
  * @property-read int|null $frequency
  * @property-read string|null $our_url
+ * @property-read Collection<int, Page> $pages
+ * @property-read Collection<int, Page> $targetPages
+ * @property-read Collection<int, Page> $effectiveTargetPages
  */
 class Keyword extends Model
 {
@@ -42,12 +47,12 @@ class Keyword extends Model
             ->latest('collected_at')
             ->first();
 
-        if (!$latestSnapshot) {
+        if (! $latestSnapshot) {
             return null;
         }
 
         $ownDomain = $this->cluster?->category?->domain;
-        if (!$ownDomain || !$ownDomain->is_own) {
+        if (! $ownDomain || ! $ownDomain->is_own) {
             return null;
         }
 
@@ -71,7 +76,7 @@ class Keyword extends Model
         }
 
         $ownDomain = $this->cluster?->category?->domain;
-        if (!$ownDomain || !$ownDomain->is_own) {
+        if (! $ownDomain || ! $ownDomain->is_own) {
             return null;
         }
 
@@ -96,12 +101,12 @@ class Keyword extends Model
             ->latest('collected_at')
             ->first();
 
-        if (!$latestSnapshot) {
+        if (! $latestSnapshot) {
             return null;
         }
 
         $ownDomain = $this->cluster?->category?->domain;
-        if (!$ownDomain || !$ownDomain->is_own) {
+        if (! $ownDomain || ! $ownDomain->is_own) {
             return null;
         }
 
@@ -145,5 +150,132 @@ class Keyword extends Model
     public function wordstatSuggestions(): HasMany
     {
         return $this->hasMany(WordstatSuggestion::class);
+    }
+
+    /** @return MorphToMany<Page, $this> */
+    public function pages(): MorphToMany
+    {
+        return $this->morphToMany(Page::class, 'pageable')
+            ->withPivot('engine', 'device', 'priority', 'is_target')
+            ->withTimestamps();
+    }
+
+    /** @return MorphToMany<Page, $this> */
+    public function targetPages(): MorphToMany
+    {
+        return $this->pages()->wherePivot('is_target', true);
+    }
+
+    /** @return Collection<int, Page> */
+    public function getEffectiveTargetPagesAttribute(): Collection
+    {
+        if (! $this->relationLoaded('targetPages')) {
+            return new Collection();
+        }
+
+        $own = $this->targetPages;
+        if ($own->isNotEmpty()) {
+            return $own;
+        }
+
+        if (! $this->relationLoaded('cluster')) {
+            return new Collection();
+        }
+
+        $cluster = $this->cluster;
+        if (! $cluster || ! $cluster->relationLoaded('targetPages')) {
+            return new Collection();
+        }
+
+        $clusterPages = $cluster->targetPages;
+        if ($clusterPages->isNotEmpty()) {
+            return $clusterPages;
+        }
+
+        if (! $cluster->relationLoaded('category')) {
+            return new Collection();
+        }
+
+        $category = $cluster->category;
+        if (! $category || ! $category->relationLoaded('targetPages')) {
+            return new Collection();
+        }
+
+        return $category->targetPages;
+    }
+
+    public function getEffectiveTargetUrlAttribute(): ?string
+    {
+        return $this->effective_target_pages->first()?->url;
+    }
+
+    public function getTargetUrlSourceAttribute(): ?string
+    {
+        if (! $this->relationLoaded('targetPages')) {
+            return null;
+        }
+
+        $own = $this->targetPages;
+        if ($own->isNotEmpty()) {
+            return 'keyword';
+        }
+
+        if (! $this->relationLoaded('cluster')) {
+            return null;
+        }
+
+        $cluster = $this->cluster;
+        if (! $cluster || ! $cluster->relationLoaded('targetPages')) {
+            return null;
+        }
+
+        $clusterPages = $cluster->targetPages;
+        if ($clusterPages->isNotEmpty()) {
+            return 'cluster';
+        }
+
+        if (! $cluster->relationLoaded('category')) {
+            return null;
+        }
+
+        $category = $cluster->category;
+        if (! $category || ! $category->relationLoaded('targetPages')) {
+            return null;
+        }
+
+        $catPages = $category->targetPages;
+        if ($catPages->isNotEmpty()) {
+            return 'category';
+        }
+
+        return null;
+    }
+
+    public function getTargetMatchStatusAttribute(): ?string
+    {
+        if (! $this->relationLoaded('targetPages')) {
+            return null;
+        }
+
+        $targetUrl = $this->effective_target_url;
+        if ($targetUrl === null) {
+            return 'unset';
+        }
+
+        $ourUrl = $this->our_url;
+        $latestPosition = $this->latest_position;
+
+        if ($ourUrl === null || $latestPosition === null) {
+            return 'missing';
+        }
+
+        $targetPath = mb_strtolower(rtrim(parse_url($targetUrl, PHP_URL_PATH) ?? '/', '/'));
+        $actualPath = mb_strtolower(rtrim(parse_url($ourUrl, PHP_URL_PATH) ?? '/', '/'));
+
+        if ($targetPath === $actualPath) {
+            return $latestPosition <= 3 ? 'top3' : ($latestPosition <= 10 ? 'top10' : 'missing');
+        }
+
+        return 'cannibalization';
     }
 }

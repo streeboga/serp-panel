@@ -32,6 +32,9 @@ final class KeywordResource extends JsonApiResource
             'position_change' => $this->position_change,
             'frequency' => $this->frequency,
             'our_url' => $this->our_url,
+            'effective_target_url' => $this->effective_target_url,
+            'target_url_source' => $this->target_url_source,
+            'target_match_status' => $this->target_match_status,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

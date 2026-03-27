@@ -21,6 +21,9 @@ export interface KeywordRow {
   frequency_broad: number | null
   frequency_phrase: number | null
   our_url: string | null
+  effective_target_url: string | null
+  target_url_source: 'keyword' | 'cluster' | 'category' | null
+  target_match_status: 'top3' | 'top10' | 'cannibalization' | 'missing' | 'unset' | null
   positions: Record<string, PositionCell>
 }
 

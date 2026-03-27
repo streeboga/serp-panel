@@ -1,4 +1,4 @@
-import { createFileRoute, redirect } from '@tanstack/react-router'
+import { createFileRoute, redirect, Link } from '@tanstack/react-router'
 import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AppLayout } from '@/components/AppLayout'
@@ -15,6 +15,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { parseApiError } from '@/lib/api'
 import type { Schedule, Project, Scraper } from '@/types/api'
+import { Calendar, Plus, Play, Trash2, Info } from 'lucide-react'
 
 const FREQ_DAYS_LABELS: Record<string, string> = {
   '1': 'Ежедневно',
@@ -93,15 +94,27 @@ function SchedulesPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Расписания SERP</h1>
-          <Button onClick={() => setCreateOpen(true)}>Добавить расписание</Button>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-accent-blue" />
+              Расписания SERP
+            </h1>
+            <p className="text-[13px] text-muted-foreground mt-0.5">Автоматический сбор поисковой выдачи по расписанию</p>
+          </div>
+          <Button size="sm" className="bg-[#155dfc] hover:bg-[#1249d6]" onClick={() => setCreateOpen(true)}>
+            <Plus className="h-3.5 w-3.5 mr-1" />
+            Добавить расписание
+          </Button>
         </div>
 
-        <div className="rounded-lg border p-4 bg-muted/30 text-sm space-y-2">
-          <p className="font-medium">Как работает сбор SERP:</p>
-          <ul className="list-disc list-inside text-xs text-muted-foreground space-y-1">
+        <div className="glass-card rounded-lg p-3 text-[12px] space-y-2">
+          <p className="font-medium flex items-center gap-1.5">
+            <Info className="h-3.5 w-3.5 text-accent-blue" />
+            Как работает сбор SERP:
+          </p>
+          <ul className="list-disc list-inside text-[11px] text-muted-foreground space-y-1 ml-5">
             <li>Расписание привязано к <b>проекту</b> — собирает данные для всех ключевиков проекта</li>
             <li>Поисковик (Яндекс/Google), устройство (Desktop/Mobile) и регион берутся из <b>настроек каждого ключевика</b></li>
             <li>При импорте ключей вы выбираете поисковик, устройство и регион — они привязываются к ключу</li>
@@ -115,67 +128,70 @@ function SchedulesPage() {
         ) : schedules.length === 0 ? (
           <EmptyState title="Расписания не настроены" />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Проект</TableHead>
-                <TableHead>Парсер</TableHead>
-                <TableHead>Частота</TableHead>
-                <TableHead>Последний запуск</TableHead>
-                <TableHead>Следующий запуск</TableHead>
-                <TableHead>Статус</TableHead>
-                <TableHead>Действия</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {schedules.map((s) => (
-                <TableRow key={s.id}>
-                  <TableCell className="text-sm">
-                    {s.project?.name ?? projects.find((p) => p.id === s.project_id)?.name ?? `#${s.id}`}
-                  </TableCell>
-                  <TableCell className="text-sm">
-                    {s.scraper ? `${s.scraper.name} (${s.scraper.type})` : scrapers.find((sc) => sc.id === s.scraper_id)?.name ?? '—'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{s.frequency_days ? FREQ_DAYS_LABELS[String(s.frequency_days)] ?? `${s.frequency_days} дн.` : s.frequency}</Badge>
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {s.last_run_at ? new Date(s.last_run_at).toLocaleString() : '—'}
-                  </TableCell>
-                  <TableCell className="text-xs text-muted-foreground">
-                    {s.next_run_at ? new Date(s.next_run_at).toLocaleString() : '—'}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant={s.is_active ? 'default' : 'outline'} className="cursor-pointer" onClick={() => handleToggle(s)}>
-                      {s.is_active ? 'Вкл' : 'Выкл'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      <Button variant="outline" size="sm" className="text-xs" onClick={() => runSchedule.mutate(s.id)} disabled={runSchedule.isPending}>
-                        Запустить
-                      </Button>
-                      <Button variant="outline" size="sm" className="text-xs text-destructive" onClick={() => { if (confirm('Удалить расписание?')) deleteSchedule.mutate(s.id) }}>
-                        ✕
-                      </Button>
-                    </div>
-                  </TableCell>
+          <div className="glass-card rounded-lg overflow-hidden">
+            <Table className="compact-table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-[11px]">Проект</TableHead>
+                  <TableHead className="text-[11px]">Парсер</TableHead>
+                  <TableHead className="text-[11px]">Частота</TableHead>
+                  <TableHead className="text-[11px]">Последний запуск</TableHead>
+                  <TableHead className="text-[11px]">Следующий запуск</TableHead>
+                  <TableHead className="text-[11px]">Статус</TableHead>
+                  <TableHead className="text-[11px]">Действия</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {schedules.map((s) => (
+                  <TableRow key={s.id}>
+                    <TableCell className="text-[12px]">
+                      {s.project?.name ?? projects.find((p) => p.id === s.project_id)?.name ?? `#${s.id}`}
+                    </TableCell>
+                    <TableCell className="text-[12px]">
+                      {s.scraper ? `${s.scraper.name} (${s.scraper.type})` : scrapers.find((sc) => sc.id === s.scraper_id)?.name ?? '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="text-[10px]">{s.frequency_days ? FREQ_DAYS_LABELS[String(s.frequency_days)] ?? `${s.frequency_days} дн.` : s.frequency}</Badge>
+                    </TableCell>
+                    <TableCell className="text-[11px] text-muted-foreground">
+                      {s.last_run_at ? new Date(s.last_run_at).toLocaleString() : '—'}
+                    </TableCell>
+                    <TableCell className="text-[11px] text-muted-foreground">
+                      {s.next_run_at ? new Date(s.next_run_at).toLocaleString() : '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={s.is_active ? 'default' : 'outline'} className="cursor-pointer text-[10px]" onClick={() => handleToggle(s)}>
+                        {s.is_active ? 'Вкл' : 'Выкл'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button variant="outline" size="xs" className="text-[11px] hover:border-accent-blue hover:text-accent-blue" onClick={() => runSchedule.mutate(s.id)} disabled={runSchedule.isPending}>
+                          <Play className="h-3 w-3 mr-1" />
+                          Запустить
+                        </Button>
+                        <Button variant="outline" size="xs" className="text-[11px] text-destructive hover:text-destructive" onClick={() => { if (confirm('Удалить расписание?')) deleteSchedule.mutate(s.id) }}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="sm:max-w-sm">
-          <DialogHeader><DialogTitle>Добавить расписание SERP</DialogTitle></DialogHeader>
-          {formError && <p className="text-sm text-destructive">{formError}</p>}
+          <DialogHeader><DialogTitle className="text-[15px]">Добавить расписание SERP</DialogTitle></DialogHeader>
+          {formError && <p className="text-[12px] text-destructive">{formError}</p>}
           <form onSubmit={handleCreate} className="space-y-3">
             <div className="space-y-1">
-              <Label className="text-xs">Проект</Label>
+              <Label className="text-[11px]">Проект</Label>
               <Select value={projectId} onValueChange={(v) => setProjectId(v ?? '')}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Выберите проект" labels={projectLabels} /></SelectTrigger>
+                <SelectTrigger className="w-full h-8"><SelectValue placeholder="Выберите проект" labels={projectLabels} /></SelectTrigger>
                 <SelectContent>
                   {projects.map((p) => (
                     <SelectItem key={p.id} value={String(p.id)} label={p.name}>{p.name}</SelectItem>
@@ -184,20 +200,27 @@ function SchedulesPage() {
               </Select>
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Парсер</Label>
+              <Label className="text-[11px]">Парсер</Label>
               <Select value={scraperId} onValueChange={(v) => setScraperId(v ?? '')}>
-                <SelectTrigger className="w-full"><SelectValue placeholder="Выберите парсер" labels={scraperLabels} /></SelectTrigger>
+                <SelectTrigger className="w-full h-8"><SelectValue placeholder="Выберите парсер" labels={scraperLabels} /></SelectTrigger>
                 <SelectContent>
                   {scrapers.map((s) => (
                     <SelectItem key={s.id} value={String(s.id)} label={`${s.name} (${s.type})`}>{s.name} ({s.type})</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              {scrapers.length <= 1 ? (
+                <p className="text-[11px] text-muted-foreground mt-1">
+                  Нет нужного парсера?{' '}
+                  <Link to="/scrapers" className="text-accent-blue hover:underline">Создайте новый</Link>
+                  {' '}(XMLRiver, Яндекс XML, Webhook)
+                </p>
+              ) : null}
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">Частота</Label>
+              <Label className="text-[11px]">Частота</Label>
               <Select value={freqDays} onValueChange={(v) => setFreqDays(v ?? '1')}>
-                <SelectTrigger className="w-full"><SelectValue labels={FREQ_DAYS_LABELS} /></SelectTrigger>
+                <SelectTrigger className="w-full h-8"><SelectValue labels={FREQ_DAYS_LABELS} /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="1" label="Ежедневно">Ежедневно</SelectItem>
                   <SelectItem value="3" label="Раз в 3 дня">Раз в 3 дня</SelectItem>
@@ -212,7 +235,7 @@ function SchedulesPage() {
               Если нужен сбор по другому поисковику — импортируйте ключи с нужными параметрами.
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={createSchedule.isPending || !projectId || !scraperId}>
+              <Button type="submit" size="sm" className="bg-[#155dfc] hover:bg-[#1249d6]" disabled={createSchedule.isPending || !projectId || !scraperId}>
                 {createSchedule.isPending ? 'Создание...' : 'Создать'}
               </Button>
             </DialogFooter>

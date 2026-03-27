@@ -1,7 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useState, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -97,71 +96,67 @@ function DomainCategories({ domainId }: { domainId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
-        <h2 className="text-lg font-semibold">{t('projects.categoriesTab')}</h2>
-        <Button onClick={() => setCatDialogOpen(true)}>Add Category</Button>
+        <h2 className="text-base font-semibold tracking-tight">{t('projects.categoriesTab')}</h2>
+        <Button size="sm" onClick={() => setCatDialogOpen(true)}>+ Категория</Button>
       </div>
 
       {categories.length === 0 ? (
-        <EmptyState title="No categories yet" />
+        <EmptyState title="Категорий пока нет" />
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2">
           {categories.map((cat) => (
-            <Card key={cat.id}>
-              <CardHeader className="py-3 px-4">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{cat.name}</CardTitle>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setClusterCategoryId(cat.id)
-                        setClusterDialogOpen(true)
-                      }}
-                    >
-                      + Cluster
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-destructive"
-                      onClick={() => {
-                        if (confirm('Delete this category and all its clusters?')) {
-                          deleteCategory.mutate(cat.id)
-                        }
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  </div>
+            <div key={cat.id} className="glass-card rounded-lg p-3">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-[13px] font-semibold">{cat.name}</h3>
+                <div className="flex gap-1.5">
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    onClick={() => {
+                      setClusterCategoryId(cat.id)
+                      setClusterDialogOpen(true)
+                    }}
+                  >
+                    + Кластер
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="text-destructive"
+                    onClick={() => {
+                      if (confirm('Удалить категорию и все кластеры?')) {
+                        deleteCategory.mutate(cat.id)
+                      }
+                    }}
+                  >
+                    Удалить
+                  </Button>
                 </div>
-              </CardHeader>
+              </div>
               {cat.clusters && cat.clusters.length > 0 && (
-                <CardContent className="py-2 px-4">
-                  <div className="flex flex-wrap gap-2">
-                    {cat.clusters.map((cluster: Cluster) => (
-                      <Badge
-                        key={cluster.id}
-                        variant="secondary"
-                        className="text-sm py-1 px-3 gap-2"
+                <div className="flex flex-wrap gap-1.5">
+                  {cat.clusters.map((cluster: Cluster) => (
+                    <Badge
+                      key={cluster.id}
+                      variant="secondary"
+                      className="text-[11px] py-0.5 px-2 gap-1.5"
+                    >
+                      {cluster.name}
+                      <button
+                        className="text-destructive/60 hover:text-destructive"
+                        onClick={() => {
+                          if (confirm('Удалить кластер?')) {
+                            deleteCluster.mutate(cluster.id)
+                          }
+                        }}
                       >
-                        {cluster.name}
-                        <button
-                          className="ml-1 text-destructive hover:text-destructive/80"
-                          onClick={() => {
-                            if (confirm('Delete this cluster?')) {
-                              deleteCluster.mutate(cluster.id)
-                            }
-                          }}
-                        >
-                          x
-                        </button>
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
+                        x
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
               )}
-            </Card>
+            </div>
           ))}
         </div>
       )}

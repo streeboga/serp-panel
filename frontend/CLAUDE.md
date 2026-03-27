@@ -21,6 +21,7 @@ src/
 │   │       ├── keywords/$keywordId.tsx  # Keyword detail (SERP, History, Wordstat)
 │   │       ├── domains.tsx
 │   │       ├── competitors.tsx
+│   │       ├── pages.tsx         # Pages (target URLs) CRUD
 │   │       └── categories.tsx
 │   ├── classification/  # Rules + domain classifications
 │   ├── scrapers/        # Scraper CRUD
@@ -29,6 +30,7 @@ src/
 │   ├── alerts/
 │   └── settings/        # Org, billing, members, accounts
 ├── hooks/               # React Query hooks (1 file per resource)
+│   ├── usePages.ts      # Pages CRUD + attach/detach + target report (12 hooks)
 ├── components/
 │   ├── charts/          # PositionChart, TrendChart, TopDistributionChart
 │   ├── ui/              # shadcn/ui components
@@ -91,6 +93,15 @@ function fmtFreq(n: number | null): string {
   return String(n)
 }
 ```
+
+## Pages (Target URLs)
+
+- Target URL indicators in keywords table: TargetMatchIndicator component (top3/top10/cannibalization/missing/unset)
+- Quick markup from SERP: button opens QuickMarkupDialog (match-or-create)
+- Date comparison mode in SERP tab: toggle "Сравнить", shows two date columns with position delta
+- Competitor filter: multi-select by marked/unmarked/specific domains
+- Region display: badge in keyword header, included in variant switcher when multiple regions
+- Cascade: effective_target_url inherited keyword → cluster → category
 
 ## Common Pitfalls
 

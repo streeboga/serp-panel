@@ -6,7 +6,6 @@ import { EmptyState } from '@/components/EmptyState'
 import { TableSkeleton } from '@/components/PageSkeleton'
 import { useAuth } from '@/contexts/AuthContext'
 import { useTheme } from '@/contexts/ThemeContext'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,6 +45,7 @@ import { useAccounts, useCreateAccount, useDeleteAccount, useTestAccount } from 
 import type { ConnectedAccount } from '@/hooks/useAccounts'
 import { parseApiError } from '@/lib/api'
 import type { Member } from '@/types/api'
+import { Settings, Building2, User, Palette, CreditCard, Link2, Users, Pencil, Plus, Trash2, FlaskConical, ExternalLink } from 'lucide-react'
 
 export const Route = createLazyFileRoute('/settings/')({
   component: SettingsPage,
@@ -201,123 +201,134 @@ function SettingsPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
-        <h1 className="text-2xl font-bold">{t('settings.title')}</h1>
+      <div className="space-y-5">
+        <div>
+          <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
+            <Settings className="h-5 w-5 text-accent-blue" />
+            {t('settings.title')}
+          </h1>
+          <p className="text-[13px] text-muted-foreground mt-0.5">Управление организацией, аккаунтом и подключениями</p>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>{t('settings.organization')}</CardTitle>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="glass-card rounded-lg p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[13px] font-semibold flex items-center gap-1.5">
+                <Building2 className="h-4 w-4 text-accent-blue" />
+                {t('settings.organization')}
+              </h3>
               {org && (
                 <Button
                   variant="outline"
-                  size="sm"
+                  size="xs"
                   onClick={() => {
                     setEditOrgName(org.name)
                     setEditOrgOpen(true)
                   }}
                 >
+                  <Pencil className="h-3 w-3 mr-1" />
                   {t('common.edit')}
                 </Button>
               )}
-            </CardHeader>
-            <CardContent className="space-y-3">
+            </div>
+            <div className="space-y-2">
               {org ? (
                 <>
                   <div>
-                    <p className="text-sm text-muted-foreground">{t('settings.name')}</p>
-                    <p className="font-medium">{org.name}</p>
+                    <p className="text-[11px] text-muted-foreground">{t('settings.name')}</p>
+                    <p className="text-[12px] font-medium">{org.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">{t('settings.slug')}</p>
-                    <p className="font-mono text-sm">{org.slug}</p>
+                    <p className="text-[11px] text-muted-foreground">{t('settings.slug')}</p>
+                    <p className="font-mono text-[12px]">{org.slug}</p>
                   </div>
                 </>
               ) : (
-                <p className="text-muted-foreground">{t('settings.noOrganization')}</p>
+                <p className="text-[12px] text-muted-foreground">{t('settings.noOrganization')}</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('settings.yourAccount')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
+          <div className="glass-card rounded-lg p-4">
+            <h3 className="text-[13px] font-semibold flex items-center gap-1.5 mb-3">
+              <User className="h-4 w-4 text-accent-blue" />
+              {t('settings.yourAccount')}
+            </h3>
+            <div className="space-y-2">
               {user ? (
                 <>
                   <div>
-                    <p className="text-sm text-muted-foreground">{t('settings.name')}</p>
-                    <p className="font-medium">{user.name}</p>
+                    <p className="text-[11px] text-muted-foreground">{t('settings.name')}</p>
+                    <p className="text-[12px] font-medium">{user.name}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">{t('settings.email')}</p>
-                    <p>{user.email}</p>
+                    <p className="text-[11px] text-muted-foreground">{t('settings.email')}</p>
+                    <p className="text-[12px]">{user.email}</p>
                   </div>
                   {org?.role && (
                     <div>
-                      <p className="text-sm text-muted-foreground">{t('settings.role')}</p>
+                      <p className="text-[11px] text-muted-foreground">{t('settings.role')}</p>
                       <Badge variant="outline">{org.role}</Badge>
                     </div>
                   )}
                 </>
               ) : (
-                <p className="text-muted-foreground">{t('common.loading')}</p>
+                <p className="text-[12px] text-muted-foreground">{t('common.loading')}</p>
               )}
-            </CardContent>
-          </Card>
+            </div>
+          </div>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('settings.appearance')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>{t('settings.language')}</Label>
-                <Select
-                  value={i18n.language?.startsWith('ru') ? 'ru' : 'en'}
-                  onValueChange={handleLanguageChange}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="ru" label="Русский">Русский</SelectItem>
-                    <SelectItem value="en" label="English">English</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>{t('settings.theme')}</Label>
-                <Select
-                  value={theme}
-                  onValueChange={handleThemeChange}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="system" label={t('settings.themeSystem')}>{t('settings.themeSystem')}</SelectItem>
-                    <SelectItem value="light" label={t('settings.themeLight')}>{t('settings.themeLight')}</SelectItem>
-                    <SelectItem value="dark" label={t('settings.themeDark')}>{t('settings.themeDark')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+        <div className="glass-card rounded-lg p-4">
+          <h3 className="text-[13px] font-semibold flex items-center gap-1.5 mb-3">
+            <Palette className="h-4 w-4 text-accent-blue" />
+            {t('settings.appearance')}
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-[11px]">{t('settings.language')}</Label>
+              <Select
+                value={i18n.language?.startsWith('ru') ? 'ru' : 'en'}
+                onValueChange={handleLanguageChange}
+              >
+                <SelectTrigger className="w-full h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ru" label="Русский">Русский</SelectItem>
+                  <SelectItem value="en" label="English">English</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </CardContent>
-        </Card>
+            <div className="space-y-1.5">
+              <Label className="text-[11px]">{t('settings.theme')}</Label>
+              <Select
+                value={theme}
+                onValueChange={handleThemeChange}
+              >
+                <SelectTrigger className="w-full h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="system" label={t('settings.themeSystem')}>{t('settings.themeSystem')}</SelectItem>
+                  <SelectItem value="light" label={t('settings.themeLight')}>{t('settings.themeLight')}</SelectItem>
+                  <SelectItem value="dark" label={t('settings.themeDark')}>{t('settings.themeDark')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('billing.title')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="glass-card rounded-lg p-4">
+          <h3 className="text-[13px] font-semibold flex items-center gap-1.5 mb-3">
+            <CreditCard className="h-4 w-4 text-accent-blue" />
+            {t('billing.title')}
+          </h3>
+          <div className="space-y-3">
             {billing && (
               <>
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('billing.currentTier')}</p>
+                  <p className="text-[11px] text-muted-foreground">{t('billing.currentTier')}</p>
                   <Badge variant="default" className="mt-1">{billing.tier}</Badge>
                 </div>
                 {[
@@ -326,13 +337,13 @@ function SettingsPage() {
                   { label: t('billing.scrapers'), used: billing.scrapers_used, limit: billing.scrapers_limit },
                 ].map(({ label, used, limit }) => (
                   <div key={label} className="space-y-1">
-                    <div className="flex justify-between text-sm">
+                    <div className="flex justify-between text-[12px]">
                       <span>{label}</span>
                       <span className="text-muted-foreground">{used} / {limit}</span>
                     </div>
-                    <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div className="h-1.5 bg-muted rounded-full overflow-hidden">
                       <div
-                        className="h-full bg-primary rounded-full transition-all"
+                        className="h-full bg-accent-blue rounded-full transition-all"
                         style={{ width: `${limit > 0 ? Math.min((used / limit) * 100, 100) : 0}%` }}
                       />
                     </div>
@@ -340,26 +351,30 @@ function SettingsPage() {
                 ))}
               </>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Подключения</CardTitle>
-              <Button size="sm" className="text-xs" onClick={() => setAddAccountOpen(true)}>Добавить</Button>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-3">
+        <div className="glass-card rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[13px] font-semibold flex items-center gap-1.5">
+              <Link2 className="h-4 w-4 text-accent-blue" />
+              Подключения
+            </h3>
+            <Button size="xs" className="text-[11px] bg-[#155dfc] hover:bg-[#1249d6]" onClick={() => setAddAccountOpen(true)}>
+              <Plus className="h-3 w-3 mr-1" />
+              Добавить
+            </Button>
+          </div>
+          <div className="space-y-2">
             {accounts.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Нет подключённых аккаунтов. Добавьте Яндекс или XMLRiver.</p>
+              <p className="text-[12px] text-muted-foreground">Нет подключённых аккаунтов. Добавьте Яндекс или XMLRiver.</p>
             ) : (
               accounts.map((acc) => (
                 <div key={acc.id} className="flex items-center justify-between py-2 border-b last:border-0">
                   <div>
                     <div className="flex items-center gap-2">
                       <Badge variant="outline" className="text-[10px]">{acc.type}</Badge>
-                      <span className="text-sm font-medium">{acc.label}</span>
+                      <span className="text-[12px] font-medium">{acc.label}</span>
                     </div>
                     <p className="text-[11px] text-muted-foreground">
                       {acc.has_credentials ? 'Настроен' : 'Нет данных'}
@@ -370,28 +385,29 @@ function SettingsPage() {
                     <Badge variant={acc.is_active ? 'default' : 'outline'} className="text-[10px]">
                       {acc.is_active ? 'Вкл' : 'Выкл'}
                     </Badge>
-                    <Button variant="ghost" size="sm" className="h-7 text-[11px]" onClick={() => handleTest(acc.id)}>
+                    <Button variant="ghost" size="xs" className="h-7 text-[11px]" onClick={() => handleTest(acc.id)}>
+                      <FlaskConical className="h-3 w-3 mr-1" />
                       {testResults[acc.id] === null ? '...' : testResults[acc.id] === true ? '✓' : testResults[acc.id] === false ? '✗' : 'Тест'}
                     </Button>
-                    <Button variant="ghost" size="sm" className="h-7 text-[11px] text-destructive" onClick={() => { if (confirm('Удалить аккаунт?')) deleteAccount.mutate(acc.id) }}>
-                      ✕
+                    <Button variant="ghost" size="xs" className="h-7 text-[11px] text-destructive hover:text-destructive" onClick={() => { if (confirm('Удалить аккаунт?')) deleteAccount.mutate(acc.id) }}>
+                      <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
                 </div>
               ))
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Add account dialog */}
         <Dialog open={addAccountOpen} onOpenChange={setAddAccountOpen}>
           <DialogContent className="sm:max-w-sm">
-            <DialogHeader><DialogTitle>Добавить аккаунт</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle className="text-[15px]">Добавить аккаунт</DialogTitle></DialogHeader>
             <form onSubmit={handleAddAccount} className="space-y-3">
               <div className="space-y-1">
-                <Label className="text-xs">Тип</Label>
+                <Label className="text-[11px]">Тип</Label>
                 <Select value={addAccountType} onValueChange={(v) => setAddAccountType(v ?? 'yandex')}>
-                  <SelectTrigger className="w-full"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-full h-8"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="yandex" label="Яндекс (Wordstat)">Яндекс (Wordstat)</SelectItem>
                     <SelectItem value="xmlriver" label="XMLRiver (SERP)">XMLRiver (SERP)</SelectItem>
@@ -400,26 +416,27 @@ function SettingsPage() {
                 </Select>
               </div>
               <div className="space-y-1">
-                <Label className="text-xs">Название</Label>
-                <Input value={addAccountLabel} onChange={(e) => setAddAccountLabel(e.target.value)} placeholder="Мой аккаунт Яндекс" required />
+                <Label className="text-[11px]">Название</Label>
+                <Input className="h-8" value={addAccountLabel} onChange={(e) => setAddAccountLabel(e.target.value)} placeholder="Мой аккаунт Яндекс" required />
               </div>
 
               {addAccountType === 'yandex' && (
                 <div className="space-y-2">
-                  <div className="text-xs text-muted-foreground">
+                  <div className="text-[11px] text-muted-foreground">
                     1. Нажмите кнопку ниже для авторизации в Яндекс<br />
                     2. Скопируйте код подтверждения<br />
                     3. Вставьте код в поле ниже
                   </div>
-                  <Button type="button" variant="outline" size="sm" className="w-full text-xs" onClick={async () => {
+                  <Button type="button" variant="outline" size="sm" className="w-full text-[11px] hover:border-accent-blue hover:text-accent-blue" onClick={async () => {
                     const data = await yandexRedirect.mutateAsync()
                     if (data?.url) window.open(data.url, '_blank')
                   }}>
-                    Открыть Яндекс OAuth →
+                    <ExternalLink className="h-3 w-3 mr-1" />
+                    Открыть Яндекс OAuth
                   </Button>
                   <div className="space-y-1">
-                    <Label className="text-xs">Код подтверждения</Label>
-                    <Input value={addAccountCode} onChange={(e) => setAddAccountCode(e.target.value)} placeholder="Вставьте код из Яндекса" required />
+                    <Label className="text-[11px]">Код подтверждения</Label>
+                    <Input className="h-8" value={addAccountCode} onChange={(e) => setAddAccountCode(e.target.value)} placeholder="Вставьте код из Яндекса" required />
                   </div>
                 </div>
               )}
@@ -427,22 +444,22 @@ function SettingsPage() {
               {addAccountType === 'xmlriver' && (
                 <div className="space-y-2">
                   <div className="space-y-1">
-                    <Label className="text-xs">User ID</Label>
-                    <Input value={addAccountUser} onChange={(e) => setAddAccountUser(e.target.value)} placeholder="20272" required />
+                    <Label className="text-[11px]">User ID</Label>
+                    <Input className="h-8" value={addAccountUser} onChange={(e) => setAddAccountUser(e.target.value)} placeholder="20272" required />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">API Key</Label>
-                    <Input value={addAccountKey} onChange={(e) => setAddAccountKey(e.target.value)} placeholder="8857dd2a..." required />
+                    <Label className="text-[11px]">API Key</Label>
+                    <Input className="h-8" value={addAccountKey} onChange={(e) => setAddAccountKey(e.target.value)} placeholder="8857dd2a..." required />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-xs">Base URL</Label>
-                    <Input value={addAccountUrl} onChange={(e) => setAddAccountUrl(e.target.value)} placeholder="http://xmlriver.com/search/xml" />
+                    <Label className="text-[11px]">Base URL</Label>
+                    <Input className="h-8" value={addAccountUrl} onChange={(e) => setAddAccountUrl(e.target.value)} placeholder="http://xmlriver.com/search/xml" />
                   </div>
                 </div>
               )}
 
               <DialogFooter>
-                <Button type="submit" disabled={createAccount.isPending}>
+                <Button type="submit" size="sm" className="bg-[#155dfc] hover:bg-[#1249d6]" disabled={createAccount.isPending}>
                   {createAccount.isPending ? 'Добавление...' : 'Добавить'}
                 </Button>
               </DialogFooter>
@@ -450,32 +467,33 @@ function SettingsPage() {
           </DialogContent>
         </Dialog>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('settings.members')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
+        <div className="glass-card rounded-lg p-4">
+          <h3 className="text-[13px] font-semibold flex items-center gap-1.5 mb-3">
+            <Users className="h-4 w-4 text-accent-blue" />
+            {t('settings.members')}
+          </h3>
+          <div className="space-y-3">
             <form onSubmit={handleInvite} className="flex items-end gap-3">
               <div className="space-y-1">
-                <Label>{t('settings.email')}</Label>
+                <Label className="text-[11px]">{t('settings.email')}</Label>
                 <Input
                   type="email"
                   placeholder="user@example.com"
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
                   required
-                  className="w-64"
+                  className="w-64 h-8"
                 />
               </div>
               <div className="space-y-1">
-                <Label>{t('settings.inviteRole')}</Label>
+                <Label className="text-[11px]">{t('settings.inviteRole')}</Label>
                 <Select
                   value={inviteRole}
                   onValueChange={(v: string | null) =>
                     setInviteRole(v ?? 'viewer')
                   }
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full h-8">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -487,90 +505,93 @@ function SettingsPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <Button type="submit" disabled={inviteMember.isPending}>
+              <Button type="submit" size="sm" className="bg-[#155dfc] hover:bg-[#1249d6]" disabled={inviteMember.isPending}>
                 {inviteMember.isPending ? t('settings.inviting') : t('settings.invite')}
               </Button>
             </form>
-            {inviteFormError && <p className="text-sm text-destructive">{inviteFormError}</p>}
+            {inviteFormError && <p className="text-[12px] text-destructive">{inviteFormError}</p>}
 
             {membersLoading ? (
               <TableSkeleton rows={3} />
             ) : members.length === 0 ? (
               <EmptyState title={t('settings.noMembers')} />
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('settings.name')}</TableHead>
-                    <TableHead>{t('settings.email')}</TableHead>
-                    <TableHead>{t('settings.role')}</TableHead>
-                    <TableHead>{t('common.actions')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {members.map((member) => (
-                    <TableRow key={member.id}>
-                      <TableCell className="font-medium">
-                        {member.name}
-                      </TableCell>
-                      <TableCell>{member.email}</TableCell>
-                      <TableCell>
-                        <Badge variant={roleBadgeVariant(member.role)}>
-                          {member.role}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => {
-                              setRoleUserId(member.id)
-                              setRoleValue(member.role)
-                              setRoleDialogOpen(true)
-                            }}
-                          >
-                            {t('settings.changeRole')}
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => {
-                              if (confirm(t('settings.removeConfirm'))) {
-                                removeMember.mutate(member.id)
-                              }
-                            }}
-                          >
-                            {t('settings.remove')}
-                          </Button>
-                        </div>
-                      </TableCell>
+              <div className="rounded-lg border overflow-hidden">
+                <Table className="compact-table">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="text-[11px]">{t('settings.name')}</TableHead>
+                      <TableHead className="text-[11px]">{t('settings.email')}</TableHead>
+                      <TableHead className="text-[11px]">{t('settings.role')}</TableHead>
+                      <TableHead className="text-[11px]">{t('common.actions')}</TableHead>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {members.map((member) => (
+                      <TableRow key={member.id}>
+                        <TableCell className="text-[12px] font-medium">
+                          {member.name}
+                        </TableCell>
+                        <TableCell className="text-[12px]">{member.email}</TableCell>
+                        <TableCell>
+                          <Badge variant={roleBadgeVariant(member.role)}>
+                            {member.role}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            <Button
+                              variant="outline"
+                              size="xs"
+                              className="text-[11px] hover:border-accent-blue hover:text-accent-blue"
+                              onClick={() => {
+                                setRoleUserId(member.id)
+                                setRoleValue(member.role)
+                                setRoleDialogOpen(true)
+                              }}
+                            >
+                              {t('settings.changeRole')}
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="xs"
+                              className="text-[11px] text-destructive hover:text-destructive"
+                              onClick={() => {
+                                if (confirm(t('settings.removeConfirm'))) {
+                                  removeMember.mutate(member.id)
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
             )}
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       </div>
 
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{t('settings.changeRole')}</DialogTitle>
+            <DialogTitle className="text-[15px]">{t('settings.changeRole')}</DialogTitle>
           </DialogHeader>
-          {roleFormError && <p className="text-sm text-destructive">{roleFormError}</p>}
-          <form onSubmit={handleRoleChange} className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t('settings.role')}</Label>
+          {roleFormError && <p className="text-[12px] text-destructive">{roleFormError}</p>}
+          <form onSubmit={handleRoleChange} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-[11px]">{t('settings.role')}</Label>
               <Select
                 value={roleValue}
                 onValueChange={(v: string | null) =>
                   setRoleValue(v ?? 'viewer')
                 }
               >
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="w-full h-8">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -583,7 +604,7 @@ function SettingsPage() {
               </Select>
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={updateRole.isPending}>
+              <Button type="submit" size="sm" className="bg-[#155dfc] hover:bg-[#1249d6]" disabled={updateRole.isPending}>
                 {updateRole.isPending ? t('settings.saving') : t('settings.save')}
               </Button>
             </DialogFooter>
@@ -594,18 +615,19 @@ function SettingsPage() {
       <Dialog open={editOrgOpen} onOpenChange={setEditOrgOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{t('settings.editOrganization')}</DialogTitle>
+            <DialogTitle className="text-[15px]">{t('settings.editOrganization')}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleEditOrg} className="space-y-4">
-            <div className="space-y-2">
-              <Label>{t('settings.name')}</Label>
+          <form onSubmit={handleEditOrg} className="space-y-3">
+            <div className="space-y-1.5">
+              <Label className="text-[11px]">{t('settings.name')}</Label>
               <Input
+                className="h-8"
                 value={editOrgName}
                 onChange={(e) => setEditOrgName(e.target.value)}
                 required
               />
               {updateOrganization.isError && (
-                <p className="text-sm text-destructive">
+                <p className="text-[12px] text-destructive">
                   {(updateOrganization.error as any)?.response?.data?.message ??
                     (updateOrganization.error as Error)?.message ??
                     t('common.error')}
@@ -613,7 +635,7 @@ function SettingsPage() {
               )}
             </div>
             <DialogFooter>
-              <Button type="submit" disabled={updateOrganization.isPending}>
+              <Button type="submit" size="sm" className="bg-[#155dfc] hover:bg-[#1249d6]" disabled={updateOrganization.isPending}>
                 {updateOrganization.isPending ? t('settings.saving') : t('settings.save')}
               </Button>
             </DialogFooter>

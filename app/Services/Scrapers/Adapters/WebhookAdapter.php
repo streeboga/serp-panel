@@ -72,6 +72,7 @@ final class WebhookAdapter implements SerpScraperAdapter
                 isAds: (bool) ($item['is_ads'] ?? false),
             );
         }
+
         return $results;
     }
 }

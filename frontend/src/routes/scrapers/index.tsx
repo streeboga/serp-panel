@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/select'
 import { parseApiError } from '@/lib/api'
 import type { Scraper } from '@/types/api'
+import { Bot, Plus, Pencil, FlaskConical, Trash2 } from 'lucide-react'
 
 export const Route = createFileRoute('/scrapers/')({
   beforeLoad: () => {
@@ -176,34 +177,44 @@ function ScrapersPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{t('scrapers.title')}</h1>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
+              <Bot className="h-5 w-5 text-accent-blue" />
+              {t('scrapers.title')}
+            </h1>
+            <p className="text-[13px] text-muted-foreground mt-0.5">Настройка парсеров для сбора поисковой выдачи</p>
+          </div>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger render={<Button />}>{t('scrapers.addScraper')}</DialogTrigger>
+            <DialogTrigger render={<Button size="sm" className="bg-[#155dfc] hover:bg-[#1249d6]" />}>
+              <Plus className="h-3.5 w-3.5 mr-1" />
+              {t('scrapers.addScraper')}
+            </DialogTrigger>
             <DialogContent>
               <DialogHeader>
-                <DialogTitle>{t('scrapers.addScraper')}</DialogTitle>
+                <DialogTitle className="text-[15px]">{t('scrapers.addScraper')}</DialogTitle>
               </DialogHeader>
-              {formError && <p className="text-sm text-destructive">{formError}</p>}
-              <form onSubmit={handleCreate} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>{t('scrapers.name')}</Label>
+              {formError && <p className="text-[12px] text-destructive">{formError}</p>}
+              <form onSubmit={handleCreate} className="space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-[11px]">{t('scrapers.name')}</Label>
                   <Input
+                    className="h-8"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>{t('scrapers.type')}</Label>
+                <div className="space-y-1">
+                  <Label className="text-[11px]">{t('scrapers.type')}</Label>
                   <Select
                     value={type}
                     onValueChange={(v: string | null) =>
                       setType(v ?? 'xml_river')
                     }
                   >
-                    <SelectTrigger className="w-full">
+                    <SelectTrigger className="w-full h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -213,32 +224,35 @@ function ScrapersPage() {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="space-y-2">
-                  <Label>{t('scrapers.baseUrl')}</Label>
+                <div className="space-y-1">
+                  <Label className="text-[11px]">{t('scrapers.baseUrl')}</Label>
                   <Input
+                    className="h-8"
                     value={baseUrl}
                     onChange={(e) => setBaseUrl(e.target.value)}
                     placeholder="https://xmlriver.com/api"
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>{t('scrapers.enginesComma')}</Label>
+                <div className="space-y-1">
+                  <Label className="text-[11px]">{t('scrapers.enginesComma')}</Label>
                   <Input
+                    className="h-8"
                     value={engines}
                     onChange={(e) => setEngines(e.target.value)}
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label>{t('scrapers.rateLimit')} ({t('scrapers.rateLimitUnit')})</Label>
+                <div className="space-y-1">
+                  <Label className="text-[11px]">{t('scrapers.rateLimit')} ({t('scrapers.rateLimitUnit')})</Label>
                   <Input
+                    className="h-8"
                     type="number"
                     value={rateLimit}
                     onChange={(e) => setRateLimit(e.target.value)}
                   />
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={createScraper.isPending}>
+                  <Button type="submit" size="sm" className="bg-[#155dfc] hover:bg-[#1249d6]" disabled={createScraper.isPending}>
                     {createScraper.isPending ? t('scrapers.creating') : t('scrapers.create')}
                   </Button>
                 </DialogFooter>
@@ -252,120 +266,128 @@ function ScrapersPage() {
         ) : scrapers.length === 0 ? (
           <EmptyState title={t('scrapers.noScrapers')} />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('scrapers.name')}</TableHead>
-                <TableHead>{t('scrapers.type')}</TableHead>
-                <TableHead>{t('scrapers.baseUrl')}</TableHead>
-                <TableHead>{t('scrapers.engines')}</TableHead>
-                <TableHead>{t('scrapers.rateLimit')}</TableHead>
-                <TableHead>{t('scrapers.status')}</TableHead>
-                <TableHead>{t('scrapers.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {scrapers.map((scraper) => (
-                <TableRow key={scraper.id}>
-                  <TableCell className="font-medium">
-                    {scraper.name}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline">{scraper.type}</Badge>
-                  </TableCell>
-                  <TableCell className="max-w-xs truncate">
-                    {scraper.base_url}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      {(scraper.supported_engines ?? scraper.engines ?? []).map((eng) => (
-                        <Badge key={eng} variant="secondary">
-                          {eng}
-                        </Badge>
-                      ))}
-                    </div>
-                  </TableCell>
-                  <TableCell>{scraper.rate_limit}/{t('scrapers.rateLimitUnit').split('/')[0] === 'req' ? 'min' : t('scrapers.rateLimitUnit').split('/')[1]}</TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={scraper.is_active ? 'default' : 'secondary'}
-                      className="cursor-pointer"
-                      onClick={() => handleToggleActive(scraper)}
-                    >
-                      {scraper.is_active ? t('scrapers.active') : t('scrapers.inactive')}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(scraper)}
-                      >
-                        {t('scrapers.edit', 'Edit')}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleTest(scraper.id)}
-                        disabled={
-                          testResults[scraper.id]?.status === 'testing'
-                        }
-                      >
-                        {testResults[scraper.id]?.status === 'testing'
-                          ? t('scrapers.testing')
-                          : t('scrapers.test')}
-                      </Button>
-                      <Button
-                        variant="destructive"
-                        size="sm"
-                        onClick={() => deleteScraper.mutate(scraper.id)}
-                      >
-                        {t('scrapers.delete')}
-                      </Button>
-                    </div>
-                    {testResults[scraper.id] &&
-                      testResults[scraper.id].status !== 'testing' && (
-                        <p
-                          className={`text-xs mt-1 ${
-                            testResults[scraper.id].status === 'success'
-                              ? 'text-green-600'
-                              : 'text-destructive'
-                          }`}
-                        >
-                          {testResults[scraper.id].message}
-                        </p>
-                      )}
-                  </TableCell>
+          <div className="glass-card rounded-lg overflow-hidden">
+            <Table className="compact-table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-[11px]">{t('scrapers.name')}</TableHead>
+                  <TableHead className="text-[11px]">{t('scrapers.type')}</TableHead>
+                  <TableHead className="text-[11px]">{t('scrapers.baseUrl')}</TableHead>
+                  <TableHead className="text-[11px]">{t('scrapers.engines')}</TableHead>
+                  <TableHead className="text-[11px]">{t('scrapers.rateLimit')}</TableHead>
+                  <TableHead className="text-[11px]">{t('scrapers.status')}</TableHead>
+                  <TableHead className="text-[11px]">{t('scrapers.actions')}</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {scrapers.map((scraper) => (
+                  <TableRow key={scraper.id}>
+                    <TableCell className="text-[12px] font-medium">
+                      {scraper.name}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px]">{scraper.type}</Badge>
+                    </TableCell>
+                    <TableCell className="max-w-xs truncate text-[12px]">
+                      {scraper.base_url}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        {(scraper.supported_engines ?? scraper.engines ?? []).map((eng) => (
+                          <Badge key={eng} variant="secondary" className="text-[10px]">
+                            {eng}
+                          </Badge>
+                        ))}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-[12px]">{scraper.rate_limit}/{t('scrapers.rateLimitUnit').split('/')[0] === 'req' ? 'min' : t('scrapers.rateLimitUnit').split('/')[1]}</TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={scraper.is_active ? 'default' : 'secondary'}
+                        className="cursor-pointer text-[10px]"
+                        onClick={() => handleToggleActive(scraper)}
+                      >
+                        {scraper.is_active ? t('scrapers.active') : t('scrapers.inactive')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-1">
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          className="text-[11px] hover:border-accent-blue hover:text-accent-blue"
+                          onClick={() => openEditDialog(scraper)}
+                        >
+                          <Pencil className="h-3 w-3 mr-1" />
+                          {t('scrapers.edit', 'Edit')}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          className="text-[11px] hover:border-accent-blue hover:text-accent-blue"
+                          onClick={() => handleTest(scraper.id)}
+                          disabled={
+                            testResults[scraper.id]?.status === 'testing'
+                          }
+                        >
+                          <FlaskConical className="h-3 w-3 mr-1" />
+                          {testResults[scraper.id]?.status === 'testing'
+                            ? t('scrapers.testing')
+                            : t('scrapers.test')}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          className="text-[11px] text-destructive hover:text-destructive"
+                          onClick={() => deleteScraper.mutate(scraper.id)}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </div>
+                      {testResults[scraper.id] &&
+                        testResults[scraper.id].status !== 'testing' && (
+                          <p
+                            className={`text-[11px] mt-1 ${
+                              testResults[scraper.id].status === 'success'
+                                ? 'text-green-600'
+                                : 'text-destructive'
+                            }`}
+                          >
+                            {testResults[scraper.id].message}
+                          </p>
+                        )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{t('scrapers.editScraper', 'Edit Scraper')}</DialogTitle>
+              <DialogTitle className="text-[15px]">{t('scrapers.editScraper', 'Edit Scraper')}</DialogTitle>
             </DialogHeader>
-            {editFormError && <p className="text-sm text-destructive">{editFormError}</p>}
-            <form onSubmit={handleEdit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>{t('scrapers.name')}</Label>
+            {editFormError && <p className="text-[12px] text-destructive">{editFormError}</p>}
+            <form onSubmit={handleEdit} className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-[11px]">{t('scrapers.name')}</Label>
                 <Input
+                  className="h-8"
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label>{t('scrapers.type')}</Label>
+              <div className="space-y-1">
+                <Label className="text-[11px]">{t('scrapers.type')}</Label>
                 <Select
                   value={editType}
                   onValueChange={(v: string | null) =>
                     setEditType(v ?? 'xml_river')
                   }
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full h-8">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -375,32 +397,35 @@ function ScrapersPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>{t('scrapers.baseUrl')}</Label>
+              <div className="space-y-1">
+                <Label className="text-[11px]">{t('scrapers.baseUrl')}</Label>
                 <Input
+                  className="h-8"
                   value={editBaseUrl}
                   onChange={(e) => setEditBaseUrl(e.target.value)}
                   placeholder="https://xmlriver.com/api"
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label>{t('scrapers.enginesComma')}</Label>
+              <div className="space-y-1">
+                <Label className="text-[11px]">{t('scrapers.enginesComma')}</Label>
                 <Input
+                  className="h-8"
                   value={editEngines}
                   onChange={(e) => setEditEngines(e.target.value)}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>{t('scrapers.rateLimit')} ({t('scrapers.rateLimitUnit')})</Label>
+              <div className="space-y-1">
+                <Label className="text-[11px]">{t('scrapers.rateLimit')} ({t('scrapers.rateLimitUnit')})</Label>
                 <Input
+                  className="h-8"
                   type="number"
                   value={editRateLimit}
                   onChange={(e) => setEditRateLimit(e.target.value)}
                 />
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={updateScraper.isPending}>
+                <Button type="submit" size="sm" className="bg-[#155dfc] hover:bg-[#1249d6]" disabled={updateScraper.isPending}>
                   {updateScraper.isPending ? t('scrapers.saving', 'Saving...') : t('scrapers.save', 'Save')}
                 </Button>
               </DialogFooter>

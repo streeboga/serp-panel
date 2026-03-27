@@ -43,4 +43,10 @@ final class ProjectRepository implements ProjectRepositoryInterface
     {
         return Project::where('organization_id', $organizationId)->count();
     }
+
+    /** @return array<int> */
+    public function projectIdsForOrganization(int $orgId): array
+    {
+        return Project::where('organization_id', $orgId)->pluck('id')->toArray();
+    }
 }

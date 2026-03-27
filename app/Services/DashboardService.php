@@ -8,10 +8,9 @@ use App\Contracts\Repositories\CategoryRepositoryInterface;
 use App\Contracts\Repositories\ClusterRepositoryInterface;
 use App\Contracts\Repositories\DomainRepositoryInterface;
 use App\Contracts\Repositories\KeywordRepositoryInterface;
+use App\Contracts\Repositories\ProjectRepositoryInterface;
 use App\Contracts\Repositories\SerpResultRepositoryInterface;
 use App\Contracts\Repositories\SerpSnapshotRepositoryInterface;
-use App\Models\Domain;
-use App\Models\Project;
 
 final readonly class DashboardService
 {
@@ -22,6 +21,7 @@ final readonly class DashboardService
         private KeywordRepositoryInterface $keywordRepository,
         private SerpSnapshotRepositoryInterface $snapshotRepository,
         private SerpResultRepositoryInterface $resultRepository,
+        private ProjectRepositoryInterface $projectRepository,
     ) {}
 
     /** @return array<string, mixed> */
@@ -33,13 +33,12 @@ final readonly class DashboardService
                 ->pluck('name')
                 ->toArray();
         } else {
-            $projectIds = Project::where('organization_id', $orgId)->pluck('id')->toArray();
+            $projectIds = $this->projectRepository->projectIdsForOrganization($orgId);
             if (empty($projectIds)) {
                 return $this->emptyResponse();
             }
-            $domainIds = Domain::whereIn('project_id', $projectIds)->pluck('id')->toArray();
-            $ownDomains = Domain::whereIn('project_id', $projectIds)
-                ->where('is_own', true)
+            $domainIds = $this->domainRepository->domainIdsForProjects($projectIds);
+            $ownDomains = $this->domainRepository->ownDomainsForProjects($projectIds)
                 ->pluck('name')
                 ->toArray();
         }
@@ -61,7 +60,7 @@ final readonly class DashboardService
         $top20 = 0;
         $top100 = 0;
 
-        if (!empty($ownDomains)) {
+        if (! empty($ownDomains)) {
             $latestSnapshots = $this->snapshotRepository->latestSnapshotsPerKeyword($keywordIds);
 
             foreach ($latestSnapshots as $snap) {
@@ -73,9 +72,15 @@ final readonly class DashboardService
 
                 if ($bestPosition !== null) {
                     $top100++;
-                    if ($bestPosition <= 20) $top20++;
-                    if ($bestPosition <= 10) $top10++;
-                    if ($bestPosition <= 3) $top3++;
+                    if ($bestPosition <= 20) {
+                        $top20++;
+                    }
+                    if ($bestPosition <= 10) {
+                        $top10++;
+                    }
+                    if ($bestPosition <= 3) {
+                        $top3++;
+                    }
                 }
             }
         }

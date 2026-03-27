@@ -71,4 +71,27 @@ final class SerpResultRepository implements SerpResultRepositoryInterface
             ->limit(100)
             ->get();
     }
+
+    /**
+     * @param  array<int>  $keywordIds
+     * @return Collection<int, SerpResult>
+     */
+    public function getPositionsForDomainAndKeywords(array $keywordIds, string $domain): Collection
+    {
+        return SerpResult::query()
+            ->join('serp_snapshots', function ($join) use ($keywordIds) {
+                $join->on('serp_results.snapshot_id', '=', 'serp_snapshots.id')
+                    ->on('serp_results.collected_at', '=', 'serp_snapshots.collected_at')
+                    ->whereIn('serp_snapshots.keyword_id', $keywordIds);
+            })
+            ->where('serp_results.domain', $domain)
+            ->select([
+                'serp_snapshots.keyword_id',
+                DB::raw('DATE(serp_snapshots.collected_at) as date'),
+                DB::raw('MIN(serp_results.position) as position'),
+                DB::raw('MIN(serp_results.url) as url'),
+            ])
+            ->groupBy('serp_snapshots.keyword_id', DB::raw('DATE(serp_snapshots.collected_at)'))
+            ->get();
+    }
 }

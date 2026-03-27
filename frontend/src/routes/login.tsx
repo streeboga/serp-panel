@@ -6,7 +6,6 @@ import { parseApiError } from '@/lib/api'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 export const Route = createFileRoute('/login')({
   component: LoginPage,
@@ -39,46 +38,49 @@ function LoginPage() {
   )
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <Card className="w-full max-w-md">
-        <CardHeader>
-          <CardTitle className="text-2xl text-center">{t('app.name')}</CardTitle>
-        </CardHeader>
-        <CardContent>
+    <div className="min-h-screen flex items-center justify-center bg-background glow-bg">
+      <div className="relative z-10 w-full max-w-sm">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold tracking-tight">{t('app.name')}</h1>
+          <p className="text-[13px] text-muted-foreground mt-1">SEO мониторинг позиций</p>
+        </div>
+        <div className="glass-card rounded-lg p-6">
           <form onSubmit={handleSubmit} className="space-y-4">
-            {error && <p className="text-destructive text-sm">{error}</p>}
-            <div className="space-y-2">
-              <Label htmlFor="email">{t('auth.email')}</Label>
+            {error && <p className="text-destructive text-[12px] bg-destructive/10 rounded-lg px-3 py-2">{error}</p>}
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-[12px]">{t('auth.email')}</Label>
               <Input
                 id="email"
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className="h-9"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">{t('auth.password')}</Label>
+            <div className="space-y-1.5">
+              <Label htmlFor="password" className="text-[12px]">{t('auth.password')}</Label>
               <Input
                 id="password"
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                className="h-9"
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? t('auth.loggingIn') : t('auth.login')}
             </Button>
-            <p className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-[12px] text-muted-foreground">
               {t('auth.noAccount')}{' '}
-              <Link to="/register" className="text-primary hover:underline">
+              <Link to="/register" className="text-accent-blue hover:underline">
                 {t('auth.register')}
               </Link>
             </p>
           </form>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   )
 }

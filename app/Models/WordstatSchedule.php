@@ -17,6 +17,7 @@ use Illuminate\Support\Carbon;
  * @property bool $collect_trends
  * @property bool $collect_suggestions
  * @property array<int, int> $regions
+ * @property string|null $adapter_type
  * @property Carbon|null $last_run_at
  * @property Carbon|null $next_run_at
  * @property bool $is_active
@@ -28,7 +29,7 @@ class WordstatSchedule extends Model
     protected $fillable = [
         'project_id', 'cluster_id', 'keyword_id',
         'frequency_days', 'collect_trends', 'collect_suggestions',
-        'regions', 'last_run_at', 'next_run_at', 'is_active',
+        'regions', 'adapter_type', 'last_run_at', 'next_run_at', 'is_active',
     ];
 
     protected $casts = [

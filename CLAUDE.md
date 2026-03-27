@@ -34,16 +34,19 @@ Controller (thin) → Service (business logic) → Repository (queries) → Mode
 
 ```
 app/
-├── Http/Controllers/Api/V1/   # API controllers (19 шт)
-├── Http/Resources/            # JSON:API resources (20 шт)
+├── Http/Controllers/Api/V1/   # API controllers (23 шт)
+├── Http/Resources/            # JSON:API resources (22 шт)
 ├── Http/Requests/             # Form validation + DTO
-├── Models/                    # Eloquent models (21 шт)
+├── Models/                    # Eloquent models (25 шт, +Page, Pageable, PageSerpMatch)
 ├── Services/                  # Business logic
 │   ├── Scrapers/Adapters/     # XMLRiver, YandexXml, Webhook
 │   └── Wordstat/Adapters/     # YandexWordstat
-├── Repositories/Eloquent/     # Data access layer
+├── Repositories/Eloquent/     # Data access layer (23 repos)
+├── Builders/                  # Spatie QueryBuilder classes (10 шт)
 ├── Enums/                     # Engine, Device, Role, etc
-└── Jobs/                      # ScrapeSerpJob, CollectWordstatJob
+├── Events/                    # SerpSnapshotCollected, PositionAlertTriggered
+├── Listeners/                 # CheckPositionAlertsListener
+└── Jobs/                      # ScrapeSerpJob, CollectWordstatJob, SendPositionAlertJob
 
 frontend/src/
 ├── routes/                    # TanStack Router file-based pages
@@ -62,6 +65,10 @@ Organization → Project → Domain → Category → Cluster → Keyword
                                                          ↓
                                               SerpSnapshot → SerpResult
                                               WordstatFrequency
+                    → Page (target/competitor URLs, tags, polymorphic attach)
+                         ↓
+                      PageSerpMatch (denormalized SERP matching)
+                      Pageable (polymorphic pivot to Keyword/Cluster/Category)
 ```
 
 ## Important Conventions
@@ -87,7 +94,25 @@ Organization → Project → Domain → Category → Cluster → Keyword
 
 - `serp-scrape`: ScrapeSerpJob — collects SERP via adapter
 - `wordstat`: CollectWordstatJob — collects Wordstat frequencies
-- Run: `php artisan queue:work --queue=serp-scrape,wordstat`
+- `classification`: ClassifyDomainsJob — classifies domains from SERP
+- `default`: SendPositionAlertJob — sends Telegram/Email alerts on position changes
+- Run: `php artisan queue:work --queue=serp-scrape,wordstat,classification,default`
+
+## Events
+
+- `SerpSnapshotCollected` → `CheckPositionAlertsListener` → `SendPositionAlertJob`
+- Flow: SERP scrape completes → event fired → listener checks active alerts → dispatches notification job
+
+## Pages (Target URLs)
+
+Unified registry of tracked pages (own + competitors) with polymorphic attachment to keywords/clusters/categories.
+
+- **Page**: `pages` table — URL, path (normalized), page_type (commercial/informational/navigational/transactional), tags (spatie/laravel-tags)
+- **Pageable**: `pageables` — polymorphic pivot (page ↔ keyword/cluster/category), engine/device filters, priority, is_target
+- **PageSerpMatch**: `page_serp_matches` — denormalized SERP→Page matching, auto-populated by listener
+- **Cascade**: keyword.effective_target_url inherits from keyword → cluster → category
+- **Match status**: top3, top10, cannibalization, missing, unset
+- **Auto-matching**: `MatchPagesFromSerpListener` on `SerpSnapshotCollected` event
 
 ## Testing
 
@@ -105,4 +130,6 @@ QUEUE_CONNECTION=redis
 YANDEX_CLIENT_ID=...
 YANDEX_CLIENT_SECRET=...
 YANDEX_REDIRECT_URI=https://oauth.yandex.ru/verification_code
+TELEGRAM_BOT_TOKEN=...          # для алертов через Telegram
+MAIL_MAILER=smtp                # для алертов через Email
 ```

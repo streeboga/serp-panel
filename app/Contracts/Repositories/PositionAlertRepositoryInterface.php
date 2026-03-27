@@ -21,4 +21,7 @@ interface PositionAlertRepositoryInterface
     public function update(PositionAlert $alert, array $data): PositionAlert;
 
     public function delete(PositionAlert $alert): void;
+
+    /** @return Collection<int, PositionAlert> */
+    public function activeForKeyword(int $keywordId): Collection;
 }

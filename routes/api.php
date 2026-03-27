@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\V1\ConnectedAccountController;
 use App\Http\Controllers\Api\V1\ExportController;
 use App\Http\Controllers\Api\V1\KeywordController;
 use App\Http\Controllers\Api\V1\OrganizationController;
+use App\Http\Controllers\Api\V1\PageController;
 use App\Http\Controllers\Api\V1\PositionMatrixController;
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\RegionController;
@@ -94,12 +95,15 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         // Domains — read
         Route::get('projects/{project}/domains', [DomainController::class, 'index']);
         Route::get('domains/{domain}', [DomainController::class, 'show'])->withoutScopedBindings();
+        Route::get('domains/{domain}/index-results', [DomainController::class, 'indexResults']);
+        Route::get('domains/{domain}/keywords', [DomainController::class, 'keywords']);
 
         // Domains — write (manager+)
         Route::middleware('org.role:manager')->group(function () {
             Route::post('projects/{project}/domains', [DomainController::class, 'store']);
             Route::patch('domains/{domain}', [DomainController::class, 'update']);
             Route::delete('domains/{domain}', [DomainController::class, 'destroy']);
+            Route::post('domains/{domain}/index', [DomainController::class, 'indexDomain']);
         });
 
         // Categories — read
@@ -165,8 +169,29 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
             Route::post('schedules/{schedule}/run-now', [ScheduleController::class, 'runNow']);
         });
 
+        // Pages — read
+        Route::get('projects/{project}/pages', [PageController::class, 'index']);
+        Route::get('projects/{project}/pages/target-report', [PageController::class, 'targetReport']);
+        Route::get('pages/{page}', [PageController::class, 'show']);
+        Route::get('keywords/{keyword}/pages', [PageController::class, 'keywordPages']);
+
+        // Pages — write (manager+)
+        Route::middleware('org.role:manager')->group(function () {
+            Route::post('projects/{project}/pages', [PageController::class, 'store']);
+            Route::post('projects/{project}/pages/import', [PageController::class, 'import']);
+            Route::post('projects/{project}/pages/match-or-create', [PageController::class, 'matchOrCreate']);
+            Route::patch('pages/{page}', [PageController::class, 'update']);
+            Route::delete('pages/{page}', [PageController::class, 'destroy']);
+            Route::patch('pages/{page}/tags', [PageController::class, 'syncTags']);
+            Route::post('pages/{page}/attach', [PageController::class, 'attach']);
+            Route::post('pages/{page}/bulk-attach', [PageController::class, 'bulkAttach']);
+            Route::delete('pageables/{pageable}', [PageController::class, 'detachPageable']);
+        });
+
         // SERP
         Route::get('keywords/{keyword}/serp', [SerpController::class, 'index']);
+        Route::post('keywords/{keyword}/rescrape', [SerpController::class, 'rescrape']);
+        Route::get('keywords/{keyword}/serp/dates', [SerpController::class, 'dates']);
         Route::get('keywords/{keyword}/serp/history', [SerpController::class, 'history']);
 
         // Classification — read

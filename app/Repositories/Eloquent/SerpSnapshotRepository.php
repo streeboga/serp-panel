@@ -84,6 +84,20 @@ final class SerpSnapshotRepository implements SerpSnapshotRepositoryInterface
         return $query->get();
     }
 
+    public function findById(int $id): SerpSnapshot
+    {
+        return SerpSnapshot::with('results', 'keyword')->findOrFail($id);
+    }
+
+    public function previousForKeyword(int $keywordId, string $beforeDate): ?SerpSnapshot
+    {
+        return SerpSnapshot::where('keyword_id', $keywordId)
+            ->where('collected_at', '<', $beforeDate)
+            ->orderByDesc('collected_at')
+            ->with('results')
+            ->first();
+    }
+
     /**
      * @param  \Illuminate\Support\Collection<int, array{keyword_id: int, collected_at: string}>  $conditions
      * @return \Illuminate\Support\Collection<string, int>
@@ -98,5 +112,42 @@ final class SerpSnapshotRepository implements SerpSnapshotRepositoryInterface
                 });
             }
         })->pluck('id', 'collected_at');
+    }
+
+    /**
+     * @param  array<int>  $keywordIds
+     * @return array<int, string>
+     */
+    public function getAvailableDates(array $keywordIds, int $limit): array
+    {
+        return SerpSnapshot::whereIn('keyword_id', $keywordIds)
+            ->select(DB::raw('DISTINCT DATE(collected_at) as date'))
+            ->orderByDesc('date')
+            ->limit($limit)
+            ->pluck('date')
+            ->map(fn ($d) => (string) $d)
+            ->values()
+            ->toArray();
+    }
+
+    /** @inheritDoc */
+    public function getMonitoredPairs(array $keywordIds, array $dates): array
+    {
+        if ($keywordIds === [] || $dates === []) {
+            return [];
+        }
+
+        $pairs = SerpSnapshot::whereIn('keyword_id', $keywordIds)
+            ->whereIn(DB::raw('DATE(collected_at)'), $dates)
+            ->select('keyword_id', DB::raw('DATE(collected_at) as date'))
+            ->distinct()
+            ->get();
+
+        $result = [];
+        foreach ($pairs as $p) {
+            $result[$p->keyword_id . ':' . $p->date] = true;
+        }
+
+        return $result;
     }
 }

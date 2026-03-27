@@ -7,13 +7,6 @@ import { CardGridSkeleton } from '@/components/PageSkeleton'
 import { useProjects, useCreateProject } from '@/hooks/useProjects'
 import { Button } from '@/components/ui/button'
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card'
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -23,6 +16,7 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Plus, Globe, KeyRound, ChevronRight } from 'lucide-react'
 import type { Project } from '@/types/api'
 
 export const Route = createFileRoute('/projects/')({
@@ -62,35 +56,42 @@ function ProjectsPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{t('projects.title')}</h1>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight">{t('projects.title')}</h1>
+            <p className="text-[13px] text-muted-foreground mt-0.5">Управление проектами мониторинга</p>
+          </div>
           <Dialog open={open} onOpenChange={setOpen}>
-            <DialogTrigger render={<Button />}>{t('projects.newProject')}</DialogTrigger>
+            <DialogTrigger render={<Button size="sm" />}>
+              <Plus className="size-3.5 mr-1" />{t('projects.newProject')}
+            </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>{t('projects.createProject')}</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleCreate} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="project-name">{t('projects.name')}</Label>
+              <form onSubmit={handleCreate} className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="project-name" className="text-[12px]">{t('projects.name')}</Label>
                   <Input
                     id="project-name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     required
+                    className="h-8"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="project-desc">{t('projects.description')}</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="project-desc" className="text-[12px]">{t('projects.description')}</Label>
                   <Input
                     id="project-desc"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
+                    className="h-8"
                   />
                 </div>
                 <DialogFooter>
-                  <Button type="submit" disabled={createProject.isPending}>
+                  <Button type="submit" size="sm" disabled={createProject.isPending}>
                     {createProject.isPending ? t('projects.creating') : t('projects.create')}
                   </Button>
                 </DialogFooter>
@@ -106,27 +107,26 @@ function ProjectsPage() {
             title={t('projects.noProjects')}
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
             {projectList.map((project) => (
               <Link
                 key={project.id}
                 to="/projects/$projectId"
                 params={{ projectId: String(project.id) }}
               >
-                <Card className="hover:ring-2 hover:ring-primary/20 transition-all cursor-pointer">
-                  <CardHeader>
-                    <CardTitle>{project.name}</CardTitle>
-                    {project.description && (
-                      <CardDescription>{project.description}</CardDescription>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className="flex gap-4 text-sm text-muted-foreground">
-                      <span>{project.domains_count ?? 0} {t('projects.domains')}</span>
-                      <span>{project.keywords_count ?? 0} {t('projects.keywords')}</span>
-                    </div>
-                  </CardContent>
-                </Card>
+                <div className="bg-card rounded-lg p-4 transition-all hover:bg-accent-blue/5 cursor-pointer group">
+                  <div className="flex items-start justify-between mb-3">
+                    <h3 className="text-sm font-semibold group-hover:text-accent-blue transition-colors">{project.name}</h3>
+                    <ChevronRight className="size-4 text-muted-foreground/40 group-hover:text-accent-blue transition-colors" />
+                  </div>
+                  {project.description && (
+                    <p className="text-[12px] text-muted-foreground mb-3 line-clamp-2">{project.description}</p>
+                  )}
+                  <div className="flex gap-4 text-[11px] text-muted-foreground">
+                    <span className="flex items-center gap-1"><Globe className="size-3" />{project.domains_count ?? 0} {t('projects.domains')}</span>
+                    <span className="flex items-center gap-1"><KeyRound className="size-3" />{project.keywords_count ?? 0} {t('projects.keywords')}</span>
+                  </div>
+                </div>
               </Link>
             ))}
           </div>

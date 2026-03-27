@@ -51,4 +51,24 @@ final class DomainRepository implements DomainRepositoryInterface
     {
         return Domain::where('project_id', $projectId)->pluck('id')->toArray();
     }
+
+    /**
+     * @param  array<int>  $projectIds
+     * @return array<int>
+     */
+    public function domainIdsForProjects(array $projectIds): array
+    {
+        return Domain::whereIn('project_id', $projectIds)->pluck('id')->toArray();
+    }
+
+    /**
+     * @param  array<int>  $projectIds
+     * @return Collection<int, Domain>
+     */
+    public function ownDomainsForProjects(array $projectIds): Collection
+    {
+        return Domain::whereIn('project_id', $projectIds)
+            ->where('is_own', true)
+            ->get();
+    }
 }

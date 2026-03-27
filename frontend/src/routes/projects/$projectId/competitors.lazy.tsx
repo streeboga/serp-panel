@@ -119,7 +119,7 @@ function CompetitorsPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">{t('competitors.title')}</h2>
+        <h2 className="text-base font-semibold tracking-tight">{t('competitors.title')}</h2>
         <DataExportButton
           getData={getExportData}
           filename={`competitors-project-${projectId}`}
@@ -131,7 +131,8 @@ function CompetitorsPage() {
       ) : competitors.length === 0 ? (
         <EmptyState title={t('competitors.noData')} />
       ) : (
-        <Table>
+        <div className="glass-card rounded-lg overflow-hidden">
+        <Table className="compact-table">
           <TableHeader>
             {table.getHeaderGroups().map((hg) => (
               <TableRow key={hg.id}>
@@ -152,7 +153,7 @@ function CompetitorsPage() {
             {table.getRowModel().rows.map((row) => (
               <TableRow
                 key={row.id}
-                className={row.original.is_own ? 'bg-green-50 dark:bg-green-950/20' : undefined}
+                className={row.original.is_own ? 'bg-success/5' : undefined}
               >
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>
@@ -166,6 +167,7 @@ function CompetitorsPage() {
             ))}
           </TableBody>
         </Table>
+        </div>
       )}
     </div>
   )

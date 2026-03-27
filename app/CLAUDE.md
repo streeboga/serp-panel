@@ -13,7 +13,7 @@ Controller → Service → Repository → QueryBuilder → Model
 
 ## Controllers (`Http/Controllers/Api/V1/`)
 
-19 controllers. Key ones:
+23 controllers. Key ones:
 - `AuthController` — register, login, logout, me, updateProfile
 - `KeywordController` — index, show, import, bulkStore, update, bulkDestroy
 - `PositionMatrixController` — keyword × date × engine position grid
@@ -21,6 +21,7 @@ Controller → Service → Repository → QueryBuilder → Model
 - `ConnectedAccountController` — multi-account management (Yandex, XMLRiver)
 - `WebhookController` — incoming SERP data from external services
 - `YandexOAuthController` — OAuth flow with verification_code support
+- `PageController` — CRUD pages, attach/detach to entities, match-or-create, target report, tags sync
 
 ## Resources (`Http/Resources/`)
 
@@ -32,6 +33,9 @@ All extend `Support/JsonApiResource` — output `{ type, id, attributes, relatio
 - **Keyword**: has computed accessors `latest_position`, `position_change`, `frequency`, `our_url` — these traverse `cluster.category.domain` chain, MUST eager load
 - **Organization**: `yandex_token` encrypted, has `connected_accounts`
 - **SerpSnapshot/SerpResult**: partitioned by `collected_at` month
+- **Page**: has polymorphic morphedByMany (keywords, clusters, categories), HasTags trait, auto-normalizes path on save
+- **Pageable**: polymorphic pivot model (page ↔ keyword/cluster/category) with engine/device/priority/is_target
+- **PageSerpMatch**: denormalized SERP matching (auto-populated by listener)
 
 ## Scrapers (`Services/Scrapers/`)
 
@@ -46,8 +50,23 @@ SerpScraperAdapter (interface)
 
 ## Jobs
 
-- `ScrapeSerpJob(scrapeJobId)` — loads ScrapeJob → adapter → snapshot + results
+- `ScrapeSerpJob(scrapeJobId)` — loads ScrapeJob → adapter → snapshot + results → fires `SerpSnapshotCollected`
 - `CollectWordstatJob(keywordId, scheduleId, regionIds)` — Wordstat API → frequencies
+- `ClassifyDomainsJob(snapshotId, collectedAt, organizationId)` — classifies domains from SERP
+- `SendPositionAlertJob(alertId, keywordId, oldPosition, newPosition)` — sends Telegram/Email alerts
+
+## Events & Listeners
+
+- `SerpSnapshotCollected` — fired after SERP snapshot saved in `SerpSnapshotService::scrape()`
+- `PositionAlertTriggered` — fired when alert condition met
+- `CheckPositionAlertsListener` — listens to `SerpSnapshotCollected`, checks active alerts for keyword, dispatches `SendPositionAlertJob`
+- `SerpSnapshotCollected` → `MatchPagesFromSerpListener` → `PageMatchService::matchSnapshot()`
+
+## QueryBuilders (`Builders/`)
+
+10 QueryBuilder classes using Spatie QueryBuilder:
+- `KeywordQueryBuilder`, `ProjectQueryBuilder`, `ClassificationRuleQueryBuilder`, `ScrapeJobQueryBuilder` (existing)
+- `DomainQueryBuilder`, `SerpSnapshotQueryBuilder`, `ScrapeScheduleQueryBuilder`, `ScraperQueryBuilder`, `PositionAlertQueryBuilder`, `ClusterQueryBuilder` (new)
 
 ## Enums
 
@@ -55,6 +74,7 @@ SerpScraperAdapter (interface)
 - `Device`: desktop, mobile
 - `OrganizationRole`: admin, manager, analyst, viewer
 - `ClassificationRuleType`: domain_exact, domain_contains, domain_regex, url_regex, title_contains
+- `PageType`: commercial, informational, navigational, transactional
 
 ## Common Pitfalls
 

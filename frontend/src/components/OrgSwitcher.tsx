@@ -1,5 +1,6 @@
 import { useMemo, useState, useCallback } from 'react'
 import { useAuth } from '@/contexts/AuthContext'
+import { Building2, Check, ChevronDown } from 'lucide-react'
 
 export function OrgSwitcher() {
   const { user, organizationId, setOrganization } = useAuth()
@@ -23,28 +24,37 @@ export function OrgSwitcher() {
   if (orgs.length <= 1) return null
 
   return (
-    <div className="relative mt-1">
+    <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="w-full text-left text-xs px-2 py-1 rounded border border-input bg-transparent hover:bg-muted transition-colors truncate"
+        className="w-full flex items-center gap-2 text-[11px] px-2 py-1.5 rounded-lg border border-border bg-transparent hover:bg-muted transition-colors"
       >
-        {currentOrg?.name ?? 'Organization'}
-        <span className="float-right">▾</span>
+        <Building2 className="size-3 text-muted-foreground shrink-0" />
+        <span className="truncate flex-1 text-left">{currentOrg?.name ?? 'Organization'}</span>
+        <ChevronDown className="size-3 text-muted-foreground shrink-0" />
       </button>
       {open && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-popover border rounded-md shadow-md z-50">
-          {orgs.map((org) => (
-            <button
-              key={org.id}
-              onClick={() => handleSwitch(Number(org.id))}
-              className={`w-full text-left text-xs px-2 py-1.5 hover:bg-muted transition-colors ${
-                Number(org.id) === Number(organizationId) ? 'font-semibold bg-muted' : ''
-              }`}
-            >
-              {org.name}
-            </button>
-          ))}
-        </div>
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute top-full left-0 right-0 mt-1 glass-card rounded-lg shadow-lg z-50 py-1">
+            {orgs.map((org) => (
+              <button
+                key={org.id}
+                onClick={() => handleSwitch(Number(org.id))}
+                className={`w-full flex items-center gap-2 text-left text-[11px] px-2 py-1.5 hover:bg-muted transition-colors ${
+                  Number(org.id) === Number(organizationId) ? 'text-accent-blue font-medium' : ''
+                }`}
+              >
+                {Number(org.id) === Number(organizationId) ? (
+                  <Check className="size-3 text-accent-blue shrink-0" />
+                ) : (
+                  <span className="size-3 shrink-0" />
+                )}
+                {org.name}
+              </button>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )

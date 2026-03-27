@@ -7,8 +7,12 @@ namespace App\Providers;
 use App\Contracts\Repositories\CategoryRepositoryInterface;
 use App\Contracts\Repositories\ClassificationRuleRepositoryInterface;
 use App\Contracts\Repositories\ClusterRepositoryInterface;
+use App\Contracts\Repositories\ConnectedAccountRepositoryInterface;
 use App\Contracts\Repositories\DomainClassificationRepositoryInterface;
 use App\Contracts\Repositories\DomainRepositoryInterface;
+use App\Contracts\Repositories\PageableRepositoryInterface;
+use App\Contracts\Repositories\PageRepositoryInterface;
+use App\Contracts\Repositories\PageSerpMatchRepositoryInterface;
 use App\Contracts\Repositories\KeywordRepositoryInterface;
 use App\Contracts\Repositories\OrganizationRepositoryInterface;
 use App\Contracts\Repositories\PositionAlertRepositoryInterface;
@@ -28,8 +32,12 @@ use App\Contracts\Repositories\WordstatTrendRepositoryInterface;
 use App\Repositories\Eloquent\CategoryRepository;
 use App\Repositories\Eloquent\ClassificationRuleRepository;
 use App\Repositories\Eloquent\ClusterRepository;
+use App\Repositories\Eloquent\ConnectedAccountRepository;
 use App\Repositories\Eloquent\DomainClassificationRepository;
 use App\Repositories\Eloquent\DomainRepository;
+use App\Repositories\Eloquent\PageableRepository;
+use App\Repositories\Eloquent\PageRepository;
+use App\Repositories\Eloquent\PageSerpMatchRepository;
 use App\Repositories\Eloquent\KeywordRepository;
 use App\Repositories\Eloquent\OrganizationRepository;
 use App\Repositories\Eloquent\PositionAlertRepository;
@@ -73,5 +81,9 @@ final class RepositoryServiceProvider extends ServiceProvider
         RegionRepositoryInterface::class => RegionRepository::class,
         SiteTypeRepositoryInterface::class => SiteTypeRepository::class,
         DomainClassificationRepositoryInterface::class => DomainClassificationRepository::class,
+        ConnectedAccountRepositoryInterface::class => ConnectedAccountRepository::class,
+        PageRepositoryInterface::class => PageRepository::class,
+        PageableRepositoryInterface::class => PageableRepository::class,
+        PageSerpMatchRepositoryInterface::class => PageSerpMatchRepository::class,
     ];
 }

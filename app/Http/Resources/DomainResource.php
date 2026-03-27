@@ -27,6 +27,14 @@ final class DomainResource extends JsonApiResource
         return [
             'name' => $this->name,
             'is_own' => $this->is_own,
+            'type' => $this->type?->value,
+            'parent_id' => $this->parent_id,
+            'indexed_pages_count' => $this->indexed_pages_count,
+            'tags' => $this->resource->tags->map(fn ($tag) => [
+                'id' => $tag->id,
+                'name' => $tag->name,
+                'type' => $tag->type,
+            ])->values(),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

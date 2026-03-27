@@ -4,11 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Contracts\Repositories\KeywordRepositoryInterface;
+use App\Contracts\Repositories\ScrapeJobRepositoryInterface;
 use App\Contracts\Repositories\ScrapeScheduleRepositoryInterface;
 use App\DataTransferObjects\ScrapeSchedule\CreateScrapeScheduleData;
 use App\DataTransferObjects\ScrapeSchedule\UpdateScrapeScheduleData;
 use App\Jobs\ScrapeSerpJob;
-use App\Models\Keyword;
 use App\Models\ScrapeSchedule;
 use Illuminate\Database\Eloquent\Collection;
 
@@ -16,6 +17,8 @@ final readonly class ScheduleService
 {
     public function __construct(
         private ScrapeScheduleRepositoryInterface $repository,
+        private KeywordRepositoryInterface $keywordRepository,
+        private ScrapeJobRepositoryInterface $scrapeJobRepository,
     ) {}
 
     /** @return Collection<int, ScrapeSchedule> */
@@ -47,21 +50,20 @@ final readonly class ScheduleService
     public function runNow(ScrapeSchedule $schedule): ScrapeSchedule
     {
         // Get keywords for this schedule scope
-        $query = Keyword::query();
         if ($schedule->keyword_id) {
-            $query->where('id', $schedule->keyword_id);
+            $keywords = collect([$this->keywordRepository->findById($schedule->keyword_id)]);
         } elseif ($schedule->cluster_id) {
-            $query->where('cluster_id', $schedule->cluster_id);
+            $keywords = $this->keywordRepository->getByClusterId($schedule->cluster_id);
         } elseif ($schedule->category_id) {
-            $query->whereHas('cluster', fn ($q) => $q->where('category_id', $schedule->category_id));
+            $keywords = $this->keywordRepository->getByCategoryId($schedule->category_id);
         } elseif ($schedule->project_id) {
-            $query->whereHas('cluster.category.domain', fn ($q) => $q->where('project_id', $schedule->project_id));
+            $keywords = $this->keywordRepository->getByProjectId($schedule->project_id);
+        } else {
+            $keywords = collect();
         }
 
-        $keywords = $query->get();
-
         foreach ($keywords as $kw) {
-            $job = \App\Models\ScrapeJob::create([
+            $job = $this->scrapeJobRepository->create([
                 'keyword_id' => $kw->id,
                 'scraper_id' => $schedule->scraper_id,
                 'engine' => $kw->engine,

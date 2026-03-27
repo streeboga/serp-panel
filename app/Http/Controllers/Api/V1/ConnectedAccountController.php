@@ -6,22 +6,38 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Models\ConnectedAccount;
+use App\Services\ConnectedAccountService;
+use Dedoc\Scramble\Attributes\Group;
+use Dedoc\Scramble\Attributes\PathParameter;
+use Dedoc\Scramble\Attributes\QueryParameter;
+use Dedoc\Scramble\Attributes\Response;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Http;
 
+#[Group(name: 'Подключённые аккаунты', description: 'Управление аккаунтами внешних сервисов (XMLRiver, Yandex)', weight: 23)]
 final class ConnectedAccountController extends Controller
 {
+    public function __construct(
+        private readonly ConnectedAccountService $service,
+    ) {}
+
+    /**
+     * Список подключённых аккаунтов
+     *
+     * Возвращает все подключённые аккаунты внешних сервисов для текущей организации.
+     */
+    #[QueryParameter('page[size]', type: 'integer', description: 'Записей на страницу', example: 20)]
+    #[QueryParameter('page[number]', type: 'integer', description: 'Номер страницы', example: 1)]
+    #[Response(200, description: 'Список подключённых аккаунтов')]
     public function index(Request $request): JsonResponse
     {
-        $accounts = ConnectedAccount::where('organization_id', $request->get('organization')->id)
-            ->get()
+        $accounts = $this->service->listForOrganization($request->get('organization')->id)
             ->map(fn (ConnectedAccount $a) => [
                 'id' => $a->id,
                 'type' => $a->type,
                 'label' => $a->label,
                 'is_active' => $a->is_active,
-                'has_credentials' => !empty($a->credentials),
+                'has_credentials' => ! empty($a->credentials),
                 'expires_at' => $a->expires_at,
                 'created_at' => $a->created_at,
             ]);
@@ -29,6 +45,13 @@ final class ConnectedAccountController extends Controller
         return response()->json(['data' => $accounts]);
     }
 
+    /**
+     * Создание подключённого аккаунта
+     *
+     * Добавляет новый аккаунт внешнего сервиса. Для Yandex поддерживается обмен кода авторизации на токен.
+     */
+    #[Response(201, description: 'Аккаунт создан')]
+    #[Response(422, description: 'Ошибка валидации или не удалось получить токен')]
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -37,34 +60,30 @@ final class ConnectedAccountController extends Controller
             'credentials' => 'nullable|array',
         ]);
 
-        $orgId = $request->get('organization')->id;
-
-        // For Yandex with verification code
-        if ($validated['type'] === 'yandex' && isset($validated['credentials']['code'])) {
-            $token = $this->exchangeYandexCode($validated['credentials']['code']);
-            if (!$token) {
-                return response()->json(['message' => 'Не удалось получить токен. Проверьте код.'], 422);
-            }
-            $validated['credentials'] = ['token' => $token];
+        try {
+            $account = $this->service->create($request->get('organization')->id, $validated);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
-
-        $account = ConnectedAccount::create([
-            'organization_id' => $orgId,
-            'type' => $validated['type'],
-            'label' => $validated['label'],
-            'credentials' => $validated['credentials'] ?? [],
-            'is_active' => true,
-        ]);
 
         return response()->json([
             'id' => $account->id,
             'type' => $account->type,
             'label' => $account->label,
             'is_active' => $account->is_active,
-            'has_credentials' => !empty($account->credentials),
+            'has_credentials' => ! empty($account->credentials),
         ], 201);
     }
 
+    /**
+     * Обновление подключённого аккаунта
+     *
+     * Изменяет параметры или учётные данные существующего аккаунта.
+     * Для Yandex поддерживается обновление токена по коду авторизации.
+     */
+    #[PathParameter('account', description: 'ID подключённого аккаунта', example: '1')]
+    #[Response(200, description: 'Аккаунт обновлён')]
+    #[Response(422, description: 'Ошибка валидации или не удалось обновить токен')]
     public function update(Request $request, ConnectedAccount $account): JsonResponse
     {
         $validated = $request->validate([
@@ -73,16 +92,11 @@ final class ConnectedAccountController extends Controller
             'credentials' => 'sometimes|array',
         ]);
 
-        if (isset($validated['credentials']['code']) && $account->type === 'yandex') {
-            $token = $this->exchangeYandexCode($validated['credentials']['code']);
-            if ($token) {
-                $validated['credentials'] = ['token' => $token];
-            } else {
-                return response()->json(['message' => 'Не удалось обновить токен'], 422);
-            }
+        try {
+            $account = $this->service->update($account, $validated);
+        } catch (\RuntimeException $e) {
+            return response()->json(['message' => $e->getMessage()], 422);
         }
-
-        $account->update($validated);
 
         return response()->json([
             'id' => $account->id,
@@ -92,73 +106,32 @@ final class ConnectedAccountController extends Controller
         ]);
     }
 
+    /**
+     * Удаление подключённого аккаунта
+     *
+     * Удаляет аккаунт внешнего сервиса из организации.
+     */
+    #[PathParameter('account', description: 'ID подключённого аккаунта', example: '1')]
+    #[Response(204, description: 'Аккаунт удалён')]
+    #[Response(404, description: 'Аккаунт не найден')]
     public function destroy(ConnectedAccount $account): JsonResponse
     {
-        $account->delete();
+        $this->service->delete($account);
+
         return response()->json(null, 204);
     }
 
+    /**
+     * Проверка подключения аккаунта
+     *
+     * Выполняет тестовый запрос к внешнему сервису для проверки валидности учётных данных.
+     */
+    #[PathParameter('account', description: 'ID подключённого аккаунта', example: '1')]
+    #[Response(200, description: 'Результат проверки подключения')]
     public function test(ConnectedAccount $account): JsonResponse
     {
-        $ok = match ($account->type) {
-            'yandex' => $this->testYandex($account),
-            'xmlriver' => $this->testXmlRiver($account),
-            default => false,
-        };
+        $ok = $this->service->test($account);
 
         return response()->json(['ok' => $ok]);
-    }
-
-    private function exchangeYandexCode(string $code): ?string
-    {
-        try {
-            $response = Http::asForm()->post('https://oauth.yandex.ru/token', [
-                'grant_type' => 'authorization_code',
-                'code' => $code,
-                'client_id' => config('yandex.client_id'),
-                'client_secret' => config('yandex.client_secret'),
-            ]);
-
-            return $response->json('access_token');
-        } catch (\Exception) {
-            return null;
-        }
-    }
-
-    private function testYandex(ConnectedAccount $account): bool
-    {
-        $token = $account->credentials['token'] ?? null;
-        if (!$token) return false;
-
-        try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $token,
-            ])->get('https://login.yandex.ru/info');
-
-            return $response->ok();
-        } catch (\Exception) {
-            return false;
-        }
-    }
-
-    private function testXmlRiver(ConnectedAccount $account): bool
-    {
-        $creds = $account->credentials;
-        $baseUrl = $creds['base_url'] ?? 'http://xmlriver.com/search/xml';
-        $user = $creds['user'] ?? '';
-        $key = $creds['key'] ?? '';
-
-        try {
-            $response = Http::timeout(10)->get($baseUrl, [
-                'user' => $user,
-                'key' => $key,
-                'query' => 'test',
-                'num' => 1,
-            ]);
-
-            return str_contains($response->body(), '<yandexsearch');
-        } catch (\Exception) {
-            return false;
-        }
     }
 }

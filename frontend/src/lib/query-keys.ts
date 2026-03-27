@@ -121,4 +121,13 @@ export const queryKeys = {
   accounts: {
     all: ['accounts'] as const,
   },
+
+  pages: {
+    all: ['pages'] as const,
+    list: (projectId: string, filters?: Record<string, unknown>) =>
+      ['pages', 'list', projectId, filters] as const,
+    detail: (pageId: string) => ['pages', 'detail', pageId] as const,
+    targetReport: (projectId: string) =>
+      ['pages', 'target-report', projectId] as const,
+  },
 } as const

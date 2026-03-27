@@ -42,6 +42,9 @@ export interface Keyword {
   position_change: number | null
   frequency: number | null
   our_url: string | null
+  effective_target_url?: string | null
+  target_url_source?: 'keyword' | 'cluster' | 'category' | null
+  target_match_status?: 'top3' | 'top10' | 'cannibalization' | 'missing' | 'unset' | null
 }
 
 export interface SiteType {
@@ -67,8 +70,28 @@ export interface SerpHistoryItem {
 
 export interface Domain {
   id: number
+  project_id: number
   name: string
   is_own: boolean
+  type: 'own' | 'competitor' | 'satellite'
+  parent_id: number | null
+  parent?: Domain
+  indexed_pages_count: number | null
+  tags: Array<{ id: number; name: string; type: string }>
+  created_at: string
+  updated_at: string
+}
+
+export interface DomainIndexResult {
+  id: number
+  domain_id: number
+  url: string
+  title: string | null
+  description: string | null
+  snippet_links: Array<{ title: string; url: string }> | null
+  position: number
+  engine: string
+  collected_at: string
 }
 
 export interface Competitor {
@@ -235,6 +258,7 @@ export interface WordstatSchedule {
   collect_trends: boolean
   collect_suggestions: boolean
   regions: number[]
+  adapter_type: 'yandex' | 'xmlriver' | null
   last_run_at: string | null
   next_run_at: string | null
   is_active: boolean
@@ -248,4 +272,46 @@ export interface BillingUsage {
   scrapers_used: number
   scrapers_limit: number
   tier: string
+}
+
+export interface Page {
+  id: number
+  project_id: number
+  domain_id: number | null
+  domain?: Domain
+  url: string
+  path: string
+  title: string | null
+  page_type: 'commercial' | 'informational' | 'navigational' | 'transactional' | null
+  notes: string | null
+  tags: Array<{ id: number; name: string; type: string }>
+  created_at: string
+  updated_at: string
+}
+
+export interface Pageable {
+  id: number
+  page_id: number
+  page?: Page
+  pageable_type: string
+  pageable_id: number
+  engine: 'google' | 'yandex' | null
+  device: 'desktop' | 'mobile' | null
+  priority: number
+  is_target: boolean
+  created_at: string
+}
+
+export interface TargetReportRow {
+  keyword_id: number
+  keyword: string
+  engine: string
+  device: string
+  cluster: string
+  category: string
+  target_url: string | null
+  target_source: 'keyword' | 'cluster' | 'category' | null
+  actual_url: string | null
+  actual_position: number | null
+  match: boolean
 }

@@ -41,6 +41,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import type { ClassificationRule, SiteType } from '@/types/api'
+import { Tags, Plus, Pencil, Trash2, Globe } from 'lucide-react'
 
 export const Route = createLazyFileRoute('/classification/')({
   component: ClassificationPage,
@@ -140,30 +141,42 @@ function ClassificationPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{t('classification.title')}</h1>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
+              <Tags className="h-5 w-5 text-accent-blue" />
+              {t('classification.title')}
+            </h1>
+            <p className="text-[13px] text-muted-foreground mt-0.5">Правила классификации доменов по типам сайтов</p>
+          </div>
           <div className="flex gap-2">
             <Link to="/classification/domains">
-              <Button variant="outline">{t('classification.domains')}</Button>
+              <Button variant="outline" size="sm" className="text-[12px] hover:border-accent-blue hover:text-accent-blue">
+                <Globe className="h-3.5 w-3.5 mr-1" />
+                {t('classification.domains')}
+              </Button>
             </Link>
             <Dialog open={open} onOpenChange={setOpen}>
-              <DialogTrigger render={<Button />}>{t('classification.addRule')}</DialogTrigger>
+              <DialogTrigger render={<Button size="sm" className="bg-[#155dfc] hover:bg-[#1249d6]" />}>
+                <Plus className="h-3.5 w-3.5 mr-1" />
+                {t('classification.addRule')}
+              </DialogTrigger>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{t('classification.addClassificationRule')}</DialogTitle>
+                  <DialogTitle className="text-[15px]">{t('classification.addClassificationRule')}</DialogTitle>
                 </DialogHeader>
-                {formError && <p className="text-sm text-destructive">{formError}</p>}
-                <form onSubmit={handleCreate} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label>{t('classification.ruleType')}</Label>
+                {formError && <p className="text-[12px] text-destructive">{formError}</p>}
+                <form onSubmit={handleCreate} className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">{t('classification.ruleType')}</Label>
                     <Select
                       value={ruleType}
                       onValueChange={(v: string | null) =>
                         setRuleType(v ?? 'domain')
                       }
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full h-8">
                         <SelectValue labels={{ 'domain': t('classification.domain'), 'url_pattern': t('classification.urlPattern'), 'regex': t('classification.regex') }} />
                       </SelectTrigger>
                       <SelectContent>
@@ -175,24 +188,25 @@ function ClassificationPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>{t('classification.pattern')}</Label>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">{t('classification.pattern')}</Label>
                     <Input
+                      className="h-8"
                       value={pattern}
                       onChange={(e) => setPattern(e.target.value)}
                       placeholder="ozon.ru"
                       required
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>{t('classification.siteType')}</Label>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">{t('classification.siteType')}</Label>
                     <Select
                       value={siteTypeId}
                       onValueChange={(v: string | null) =>
                         setSiteTypeId(v ?? '')
                       }
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger className="w-full h-8">
                         <SelectValue placeholder={t('classification.selectType')} labels={siteTypeLabels} />
                       </SelectTrigger>
                       <SelectContent>
@@ -204,16 +218,17 @@ function ClassificationPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>{t('classification.priority')}</Label>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">{t('classification.priority')}</Label>
                     <Input
+                      className="h-8"
                       type="number"
                       value={priority}
                       onChange={(e) => setPriority(e.target.value)}
                     />
                   </div>
                   <DialogFooter>
-                    <Button type="submit" disabled={createRule.isPending}>
+                    <Button type="submit" size="sm" className="bg-[#155dfc] hover:bg-[#1249d6]" disabled={createRule.isPending}>
                       {createRule.isPending ? t('classification.creating') : t('classification.create')}
                     </Button>
                   </DialogFooter>
@@ -228,84 +243,89 @@ function ClassificationPage() {
         ) : rules.length === 0 ? (
           <EmptyState title={t('classification.noRules')} />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('classification.ruleType')}</TableHead>
-                <TableHead>{t('classification.pattern')}</TableHead>
-                <TableHead>{t('classification.siteType')}</TableHead>
-                <TableHead>{t('classification.priority')}</TableHead>
-                <TableHead>{t('classification.system')}</TableHead>
-                <TableHead>{t('common.actions')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rules.map((rule) => (
-                <TableRow key={rule.id}>
-                  <TableCell>
-                    <Badge variant="outline">{rule.rule_type}</Badge>
-                  </TableCell>
-                  <TableCell className="font-mono text-sm">
-                    {rule.pattern}
-                  </TableCell>
-                  <TableCell>
-                    {(rule.siteType ?? rule.site_type) ? (
-                      <SiteTypeBadge type={rule.siteType ?? rule.site_type ?? null} />
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                  <TableCell>{rule.priority}</TableCell>
-                  <TableCell>
-                    {rule.is_system ? (
-                      <Badge variant="secondary">{t('classification.system')}</Badge>
-                    ) : (
-                      '-'
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    {!rule.is_system && (
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleOpenEdit(rule)}
-                        >
-                          {t('common.edit')}
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => deleteRule.mutate(rule.id)}
-                          disabled={deleteRule.isPending}
-                        >
-                          {t('classification.delete')}
-                        </Button>
-                      </div>
-                    )}
-                  </TableCell>
+          <div className="glass-card rounded-lg overflow-hidden">
+            <Table className="compact-table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-[11px]">{t('classification.ruleType')}</TableHead>
+                  <TableHead className="text-[11px]">{t('classification.pattern')}</TableHead>
+                  <TableHead className="text-[11px]">{t('classification.siteType')}</TableHead>
+                  <TableHead className="text-[11px]">{t('classification.priority')}</TableHead>
+                  <TableHead className="text-[11px]">{t('classification.system')}</TableHead>
+                  <TableHead className="text-[11px]">{t('common.actions')}</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {rules.map((rule) => (
+                  <TableRow key={rule.id}>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px]">{rule.rule_type}</Badge>
+                    </TableCell>
+                    <TableCell className="font-mono text-[12px]">
+                      {rule.pattern}
+                    </TableCell>
+                    <TableCell>
+                      {(rule.siteType ?? rule.site_type) ? (
+                        <SiteTypeBadge type={rule.siteType ?? rule.site_type ?? null} />
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
+                    <TableCell className="text-[12px]">{rule.priority}</TableCell>
+                    <TableCell>
+                      {rule.is_system ? (
+                        <Badge variant="secondary" className="text-[10px]">{t('classification.system')}</Badge>
+                      ) : (
+                        '-'
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {!rule.is_system && (
+                        <div className="flex gap-1">
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            className="text-[11px] hover:border-accent-blue hover:text-accent-blue"
+                            onClick={() => handleOpenEdit(rule)}
+                          >
+                            <Pencil className="h-3 w-3 mr-1" />
+                            {t('common.edit')}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="xs"
+                            className="text-[11px] text-destructive hover:text-destructive"
+                            onClick={() => deleteRule.mutate(rule.id)}
+                            disabled={deleteRule.isPending}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
 
         <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{t('classification.editClassificationRule')}</DialogTitle>
+              <DialogTitle className="text-[15px]">{t('classification.editClassificationRule')}</DialogTitle>
             </DialogHeader>
-            {editFormError && <p className="text-sm text-destructive">{editFormError}</p>}
-            <form onSubmit={handleEdit} className="space-y-4">
-              <div className="space-y-2">
-                <Label>{t('classification.ruleType')}</Label>
+            {editFormError && <p className="text-[12px] text-destructive">{editFormError}</p>}
+            <form onSubmit={handleEdit} className="space-y-3">
+              <div className="space-y-1">
+                <Label className="text-[11px]">{t('classification.ruleType')}</Label>
                 <Select
                   value={editRule.rule_type}
                   onValueChange={(v: string | null) =>
                     setEditRule((prev) => ({ ...prev, rule_type: v ?? 'domain' }))
                   }
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full h-8">
                     <SelectValue labels={{ 'domain': t('classification.domain'), 'url_pattern': t('classification.urlPattern'), 'regex': t('classification.regex') }} />
                   </SelectTrigger>
                   <SelectContent>
@@ -317,9 +337,10 @@ function ClassificationPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>{t('classification.pattern')}</Label>
+              <div className="space-y-1">
+                <Label className="text-[11px]">{t('classification.pattern')}</Label>
                 <Input
+                  className="h-8"
                   value={editRule.pattern}
                   onChange={(e) =>
                     setEditRule((prev) => ({ ...prev, pattern: e.target.value }))
@@ -328,15 +349,15 @@ function ClassificationPage() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <Label>{t('classification.siteType')}</Label>
+              <div className="space-y-1">
+                <Label className="text-[11px]">{t('classification.siteType')}</Label>
                 <Select
                   value={editRule.site_type_id}
                   onValueChange={(v: string | null) =>
                     setEditRule((prev) => ({ ...prev, site_type_id: v ?? '' }))
                   }
                 >
-                  <SelectTrigger className="w-full">
+                  <SelectTrigger className="w-full h-8">
                     <SelectValue placeholder={t('classification.selectType')} labels={siteTypeLabels} />
                   </SelectTrigger>
                   <SelectContent>
@@ -348,9 +369,10 @@ function ClassificationPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="space-y-2">
-                <Label>{t('classification.priority')}</Label>
+              <div className="space-y-1">
+                <Label className="text-[11px]">{t('classification.priority')}</Label>
                 <Input
+                  className="h-8"
                   type="number"
                   value={editRule.priority}
                   onChange={(e) =>
@@ -359,7 +381,7 @@ function ClassificationPage() {
                 />
               </div>
               <DialogFooter>
-                <Button type="submit" disabled={updateRule.isPending}>
+                <Button type="submit" size="sm" className="bg-[#155dfc] hover:bg-[#1249d6]" disabled={updateRule.isPending}>
                   {updateRule.isPending ? t('common.saving') : t('common.save')}
                 </Button>
               </DialogFooter>

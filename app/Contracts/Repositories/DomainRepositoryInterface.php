@@ -28,4 +28,16 @@ interface DomainRepositoryInterface
 
     /** @return array<int, int> */
     public function domainIdsForProject(int $projectId): array;
+
+    /**
+     * @param  array<int>  $projectIds
+     * @return array<int>
+     */
+    public function domainIdsForProjects(array $projectIds): array;
+
+    /**
+     * @param  array<int>  $projectIds
+     * @return Collection<int, Domain>
+     */
+    public function ownDomainsForProjects(array $projectIds): Collection;
 }

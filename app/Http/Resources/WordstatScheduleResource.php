@@ -29,6 +29,7 @@ final class WordstatScheduleResource extends JsonApiResource
             'collect_trends' => $this->collect_trends,
             'collect_suggestions' => $this->collect_suggestions,
             'regions' => $this->regions,
+            'adapter_type' => $this->adapter_type,
             'is_active' => $this->is_active,
             'last_run_at' => $this->last_run_at,
             'next_run_at' => $this->next_run_at,

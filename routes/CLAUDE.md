@@ -56,6 +56,9 @@ GET  /billing/usage
 GET  /export/keywords
 GET  /export/serp
 GET  /serp/competitors
+GET  /projects/{project}/pages
+GET  /projects/{project}/pages/target-report
+GET  /pages/{page}
 ```
 
 ### Write (manager+)
@@ -95,6 +98,14 @@ POST   /classification/rules
 PATCH  /classification/rules/{rule}
 DELETE /classification/rules/{rule}
 PATCH  /domains/{domain}/classify
+POST   /projects/{project}/pages
+POST   /projects/{project}/pages/match-or-create
+PATCH  /pages/{page}
+DELETE /pages/{page}
+PATCH  /pages/{page}/tags
+POST   /pages/{page}/attach
+POST   /pages/{page}/bulk-attach
+DELETE /pageables/{pageable}
 ```
 
 ### Admin only

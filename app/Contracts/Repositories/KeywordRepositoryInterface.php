@@ -42,4 +42,16 @@ interface KeywordRepositoryInterface
     public function getByOrganizationWithRelations(int $organizationId): Collection;
 
     public function countByOrganization(int $organizationId): int;
+
+    /** @return Collection<int, Keyword> */
+    public function getByProjectWithRelations(int $projectId): Collection;
+
+    /** @return Collection<int, Keyword> */
+    public function getByClusterId(int $clusterId): Collection;
+
+    /** @return Collection<int, Keyword> */
+    public function getByCategoryId(int $categoryId): Collection;
+
+    /** @return Collection<int, Keyword> */
+    public function getByProjectId(int $projectId): Collection;
 }

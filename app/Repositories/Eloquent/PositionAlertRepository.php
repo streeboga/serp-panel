@@ -42,4 +42,12 @@ final class PositionAlertRepository implements PositionAlertRepositoryInterface
     {
         $alert->delete();
     }
+
+    /** @return Collection<int, PositionAlert> */
+    public function activeForKeyword(int $keywordId): Collection
+    {
+        return PositionAlert::where('keyword_id', $keywordId)
+            ->where('is_active', true)
+            ->get();
+    }
 }

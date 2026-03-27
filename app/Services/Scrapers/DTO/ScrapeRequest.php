@@ -11,7 +11,7 @@ final readonly class ScrapeRequest
         public string $engine,
         public string $device,
         public int $regionId,
-        public int $limit = 100,
+        public int $limit = 30,
         public ?int $yandexLr = null,
         public ?string $googleGl = null,
         public ?string $googleHl = null,

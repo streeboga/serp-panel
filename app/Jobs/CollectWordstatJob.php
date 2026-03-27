@@ -9,7 +9,7 @@ use App\Contracts\Repositories\WordstatFrequencyRepositoryInterface;
 use App\Contracts\Repositories\WordstatScheduleRepositoryInterface;
 use App\Contracts\Repositories\WordstatSuggestionRepositoryInterface;
 use App\Contracts\Repositories\WordstatTrendRepositoryInterface;
-use App\Services\Wordstat\Contracts\WordstatAdapter;
+use App\Services\Wordstat\WordstatAdapterFactory;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -36,13 +36,15 @@ class CollectWordstatJob implements ShouldQueue
     }
 
     public function handle(
-        WordstatAdapter $adapter,
         KeywordRepositoryInterface $keywordRepository,
         WordstatFrequencyRepositoryInterface $frequencyRepository,
         WordstatTrendRepositoryInterface $trendRepository,
         WordstatSuggestionRepositoryInterface $suggestionRepository,
         WordstatScheduleRepositoryInterface $scheduleRepository,
     ): void {
+        $schedule = $scheduleRepository->findById($this->scheduleId);
+        $adapter = WordstatAdapterFactory::make($schedule->adapter_type);
+
         $keyword = $keywordRepository->findById($this->keywordId);
         $collectedAt = now()->toDateString();
 
@@ -93,7 +95,6 @@ class CollectWordstatJob implements ShouldQueue
             }
         }
 
-        $schedule = $scheduleRepository->findById($this->scheduleId);
         $scheduleRepository->update($schedule, [
             'last_run_at' => now(),
             'next_run_at' => now()->addDays($schedule->frequency_days),

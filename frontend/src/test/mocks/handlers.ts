@@ -63,6 +63,14 @@ export const mockMembers = [
   { id: 3, name: 'Bob Smith', email: 'bob@example.com', role: 'member' },
 ]
 
+export const mockPages = [
+  { id: 1, project_id: 1, domain_id: 1, url: 'https://example.com/seo', path: '/seo', title: 'SEO Page', page_type: 'commercial' as const, notes: null, tags: [], created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
+  { id: 2, project_id: 1, domain_id: 1, url: 'https://example.com/blog', path: '/blog', title: 'Blog Page', page_type: 'informational' as const, notes: null, tags: [], created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
+  { id: 3, project_id: 1, domain_id: 2, url: 'https://competitor.com/landing', path: '/landing', title: 'Landing Page', page_type: 'transactional' as const, notes: null, tags: [], created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
+  { id: 4, project_id: 1, domain_id: null, url: 'https://another.com/nav', path: '/nav', title: 'Nav Page', page_type: 'navigational' as const, notes: null, tags: [], created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
+  { id: 5, project_id: 1, domain_id: null, url: 'https://unknown.com/page', path: '/page', title: 'Unknown Type', page_type: null, notes: null, tags: [], created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z' },
+]
+
 export const mockClusters = [
   { id: 1, name: 'SEO Keywords', category: { name: 'Marketing' } },
   { id: 2, name: 'Brand Keywords', category: null },
@@ -184,6 +192,11 @@ export const handlers = [
 
   http.get(`${BASE}/projects/:projectId/clusters`, () => {
     return HttpResponse.json(mockClusters)
+  }),
+
+  // Pages
+  http.get(`${BASE}/projects/:projectId/pages`, () => {
+    return HttpResponse.json({ data: mockPages })
   }),
 
   // Organization

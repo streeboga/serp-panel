@@ -16,6 +16,7 @@ use App\Models\WordstatSchedule;
 use App\Models\WordstatSuggestion;
 use App\Models\WordstatTrend;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 final readonly class WordstatService
 {
@@ -24,6 +25,7 @@ final readonly class WordstatService
         private WordstatTrendRepositoryInterface $trendRepository,
         private WordstatSuggestionRepositoryInterface $suggestionRepository,
         private WordstatScheduleRepositoryInterface $scheduleRepository,
+        private KeywordRepositoryInterface $keywordRepository,
     ) {}
 
     /** @return Collection<int, WordstatFrequency> */
@@ -76,7 +78,7 @@ final readonly class WordstatService
     {
         // Dispatch jobs for all keywords in the schedule scope
         $keywords = $this->getKeywordsForSchedule($schedule);
-        $regionIds = !empty($schedule->regions) ? $schedule->regions : [2]; // default Moscow
+        $regionIds = ! empty($schedule->regions) ? $schedule->regions : [2]; // default Moscow
 
         foreach ($keywords as $kw) {
             CollectWordstatJob::dispatch(
@@ -98,17 +100,24 @@ final readonly class WordstatService
     private function getKeywordsForSchedule(WordstatSchedule $schedule): \Illuminate\Support\Collection
     {
         if ($schedule->keyword_id) {
-            $kw = Keyword::find($schedule->keyword_id);
-            return $kw ? collect([$kw]) : collect();
+            try {
+                $kw = $this->keywordRepository->findById($schedule->keyword_id);
+
+                return collect([$kw]);
+            } catch (ModelNotFoundException) {
+                return collect();
+            }
         }
 
         if ($schedule->cluster_id) {
-            return Keyword::where('cluster_id', $schedule->cluster_id)->get();
+            return $this->keywordRepository->getByClusterId($schedule->cluster_id);
         }
 
         // All keywords in project
-        return Keyword::whereHas('cluster.category.domain', function ($q) use ($schedule) {
-            $q->where('project_id', $schedule->project_id);
-        })->get();
+        if ($schedule->project_id === null) {
+            return collect();
+        }
+
+        return $this->keywordRepository->getByProjectId($schedule->project_id);
     }
 }

@@ -8,6 +8,7 @@ use App\Contracts\Repositories\RegionRepositoryInterface;
 use App\Contracts\Repositories\ScrapeJobRepositoryInterface;
 use App\Contracts\Repositories\SerpResultRepositoryInterface;
 use App\Contracts\Repositories\SerpSnapshotRepositoryInterface;
+use App\Events\SerpSnapshotCollected;
 use App\Models\ScrapeJob;
 use App\Services\Scrapers\DTO\ScrapeRequest;
 use App\Services\Scrapers\ScraperFactory;
@@ -74,5 +75,15 @@ final readonly class SerpSnapshotService
             'completed_at' => now(),
             'raw_response' => mb_convert_encoding($response->rawResponse ?? '', 'UTF-8', 'UTF-8'),
         ]);
+
+        $keyword->load('cluster.category.domain.project');
+        $organizationId = $keyword->cluster->category->domain->project->organization_id;
+
+        SerpSnapshotCollected::dispatch(
+            $snapshot->id,
+            $keyword->id,
+            $organizationId,
+            $collectedAt,
+        );
     }
 }

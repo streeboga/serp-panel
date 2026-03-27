@@ -14,6 +14,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, Dialog
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { parseApiError } from '@/lib/api'
 import type { Cluster, Region } from '@/types/api'
+import { TargetMatchIndicator } from '@/components/TargetMatchIndicator'
+import { Search, Upload, Save, Trash2, FolderInput, Filter, Layers } from 'lucide-react'
 
 export const Route = createLazyFileRoute('/projects/$projectId/keywords')({ component: KeywordsPage })
 
@@ -43,7 +45,7 @@ const GROUP_OPTIONS: { value: GroupByOption; label: string }[] = [
   { value: 'region', label: 'Регион' },
 ]
 
-// ─── Group-by multi-select (different from filter — empty = no grouping) ───
+// ─── Group-by multi-select ───
 function GroupBySelect({ selected, onChange }: {
   selected: Set<GroupByOption>
   onChange: (s: Set<GroupByOption>) => void
@@ -51,24 +53,24 @@ function GroupBySelect({ selected, onChange }: {
   const [open, setOpen] = useState(false)
   return (
     <div className="relative">
-      <button onClick={() => setOpen(!open)} className="flex items-center gap-1 px-2 py-1 text-xs border rounded-md hover:bg-muted transition-colors">
+      <button onClick={() => setOpen(!open)} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded-lg border border-border bg-transparent hover:bg-muted transition-colors">
+        <Layers className="size-3 text-muted-foreground" />
         {selected.size > 0
           ? GROUP_OPTIONS.filter((g) => selected.has(g.value)).map((g) => g.label).join(' + ')
           : 'Группировка'}
-        {selected.size > 0 && <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">{selected.size}</Badge>}
-        <span className="text-[10px]">▾</span>
+        {selected.size > 0 && <Badge variant="secondary" className="ml-0.5 text-[9px] px-1 py-0 h-3.5">{selected.size}</Badge>}
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 bg-popover border rounded-md shadow-lg z-50 min-w-[160px]">
+          <div className="absolute top-full left-0 mt-1 glass-card rounded-lg shadow-lg z-50 min-w-[160px] py-1">
             {selected.size > 0 && (
-              <button className="w-full text-left px-2 py-1.5 text-xs hover:bg-muted border-b text-muted-foreground" onClick={() => { onChange(new Set()); setOpen(false) }}>
+              <button className="w-full text-left px-2.5 py-1.5 text-[11px] hover:bg-muted border-b border-border text-muted-foreground" onClick={() => { onChange(new Set()); setOpen(false) }}>
                 Сбросить
               </button>
             )}
             {GROUP_OPTIONS.map((g) => (
-              <label key={g.value} className="flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-muted cursor-pointer">
+              <label key={g.value} className="flex items-center gap-2 px-2.5 py-1.5 text-[11px] hover:bg-muted cursor-pointer">
                 <input
                   type="checkbox"
                   checked={selected.has(g.value)}
@@ -78,7 +80,7 @@ function GroupBySelect({ selected, onChange }: {
                     else next.add(g.value)
                     onChange(next)
                   }}
-                  className="rounded"
+                  className="rounded accent-accent-blue"
                 />
                 {g.label}
               </label>
@@ -91,12 +93,12 @@ function GroupBySelect({ selected, onChange }: {
 }
 
 // ─── Multi-select filter dropdown ───
-// empty Set = no filter (show all). Non-empty = show only selected.
-function MultiFilter({ label, options, selected, onChange }: {
+function MultiFilter({ label, options, selected, onChange, icon }: {
   label: string
   options: string[]
   selected: Set<string>
   onChange: (s: Set<string>) => void
+  icon?: React.ReactNode
 }) {
   const [open, setOpen] = useState(false)
   const isFiltering = selected.size > 0
@@ -104,48 +106,43 @@ function MultiFilter({ label, options, selected, onChange }: {
 
   const toggle = (opt: string) => {
     if (!isFiltering) {
-      // Currently showing all → uncheck one = select all EXCEPT this one
       onChange(new Set(options.filter((o) => o !== opt)))
     } else if (selected.has(opt)) {
-      // Uncheck: remove from selection
       const next = new Set(selected)
       next.delete(opt)
-      // If nothing left, reset to "all"
       onChange(next.size === 0 ? new Set() : next)
     } else {
-      // Check: add to selection
       const next = new Set(selected)
       next.add(opt)
-      // If all selected, reset to "all"
       onChange(next.size === options.length ? new Set() : next)
     }
   }
 
   return (
     <div className="relative">
-      <button onClick={() => setOpen(!open)} className="flex items-center gap-1 px-2 py-1 text-xs border rounded-md hover:bg-muted transition-colors">
+      <button onClick={() => setOpen(!open)} className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 text-[11px] font-medium rounded-lg border transition-colors ${isFiltering ? 'border-accent-blue/40 bg-accent-blue/5 text-accent-blue' : 'border-border bg-transparent hover:bg-muted'}`}>
+        {icon}
         {label}
-        {isFiltering && <Badge variant="secondary" className="ml-1 text-[10px] px-1 py-0">{selected.size}</Badge>}
-        <span className="text-[10px]">▾</span>
+        {isFiltering && <Badge variant="secondary" className="ml-0.5 text-[9px] px-1 py-0 h-3.5">{selected.size}</Badge>}
       </button>
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-full left-0 mt-1 bg-popover border rounded-md shadow-lg z-50 min-w-[150px] max-h-60 overflow-auto">
+          <div className="absolute top-full left-0 mt-1 glass-card rounded-lg shadow-lg z-50 min-w-[150px] max-h-60 overflow-auto py-1">
             <button
-              className="w-full flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-muted cursor-pointer border-b"
+              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] hover:bg-muted cursor-pointer border-b border-border"
               onClick={() => onChange(new Set())}
             >
-              <input type="checkbox" checked={!isFiltering} readOnly className="rounded" />
+              <input type="checkbox" checked={!isFiltering} readOnly className="rounded accent-accent-blue" />
               Все
             </button>
             {options.map((opt) => (
-              <label key={opt} className="flex items-center gap-2 px-2 py-1.5 text-xs hover:bg-muted cursor-pointer">
+              <label key={opt} className="flex items-center gap-2 px-2.5 py-1.5 text-[11px] hover:bg-muted cursor-pointer">
                 <input
                   type="checkbox"
                   checked={isChecked(opt)}
                   onChange={() => toggle(opt)}
-                  className="rounded"
+                  className="rounded accent-accent-blue"
                 />
                 {opt}
               </label>
@@ -165,13 +162,15 @@ function fmtFreq(n: number | null | undefined): string {
   return String(n)
 }
 
-function PositionCell({ position, delta }: { position: number | null; delta: number | null }) {
-  if (position === null) return <span className="text-muted-foreground text-[11px]">—</span>
+function PositionCell({ position, delta, monitored }: { position: number | null; delta: number | null; monitored?: boolean }) {
+  if (position === null && !monitored) return <span className="text-muted-foreground/30 text-[10px]" title="Мониторинг не проводился">—</span>
+  if (position === null) return <span className="text-muted-foreground/50 text-[10px]" title="Не в ТОП-100">&gt;100</span>
+  const posColor = position <= 3 ? 'text-success font-semibold' : position <= 10 ? 'text-accent-blue font-medium' : position <= 30 ? 'text-foreground' : 'text-muted-foreground'
   return (
     <div className="text-center leading-tight">
-      <span className="font-medium tabular-nums text-xs">{position}</span>
+      <span className={`tabular-nums text-[11px] ${posColor}`}>{position}</span>
       {delta !== null && delta !== 0 && (
-        <div className={`text-[10px] tabular-nums ${delta > 0 ? 'text-green-600' : 'text-red-500'}`}>
+        <div className={`text-[9px] tabular-nums ${delta > 0 ? 'text-success' : 'text-destructive'}`}>
           {delta > 0 ? `+${delta}` : delta}
         </div>
       )}
@@ -190,7 +189,6 @@ function savePresets(presets: FilterPreset[]) {
 
 // ─── Main ───
 function KeywordsPage() {
-  // If a child route (keyword detail) is active, render it instead
   const matches = useMatches()
   const hasChildRoute = matches.some((m) => m.id.includes('keywordId'))
   if (hasChildRoute) return <Outlet />
@@ -243,14 +241,14 @@ function KeywordsTable() {
   }, [allKeywords, search, filterEngines, filterDevices, filterCategories, filterClusters, filterRegions])
 
   // ── Group + merge engines ──
-  type MergedRow = { keyword: string; keyword_id: number; frequency: number | null; frequency_exact: number | null; frequency_broad: number | null; frequency_phrase: number | null; our_url: string | null; cluster: string | null; category: string | null; region: string | null; engines: Record<string, Record<string, { position: number | null; delta: number | null }>> }
+  type MergedRow = { keyword: string; keyword_id: number; frequency: number | null; frequency_exact: number | null; frequency_broad: number | null; frequency_phrase: number | null; our_url: string | null; effective_target_url: string | null; target_match_status: 'top3' | 'top10' | 'cannibalization' | 'missing' | 'unset' | null; cluster: string | null; category: string | null; region: string | null; engines: Record<string, Record<string, { position: number | null; delta: number | null; monitored?: boolean }>> }
 
   const mergedRows = useMemo(() => {
     const map = new Map<string, MergedRow>()
     for (const kw of filtered) {
       const key = kw.keyword
       if (!map.has(key)) {
-        map.set(key, { keyword: kw.keyword, keyword_id: kw.keyword_id, frequency: kw.frequency, frequency_exact: kw.frequency_exact, frequency_broad: kw.frequency_broad, frequency_phrase: kw.frequency_phrase, our_url: kw.our_url, cluster: kw.cluster, category: kw.category, region: kw.region, engines: {} })
+        map.set(key, { keyword: kw.keyword, keyword_id: kw.keyword_id, frequency: kw.frequency, frequency_exact: kw.frequency_exact, frequency_broad: kw.frequency_broad, frequency_phrase: kw.frequency_phrase, our_url: kw.our_url, effective_target_url: kw.effective_target_url, target_match_status: kw.target_match_status, cluster: kw.cluster, category: kw.category, region: kw.region, engines: {} })
       }
       const e = map.get(key)!
       if (!e.our_url && kw.our_url) e.our_url = kw.our_url
@@ -284,7 +282,6 @@ function KeywordsTable() {
       else if (sortField === 'frequency_phrase') { va = a.frequency_phrase; vb = b.frequency_phrase }
       else if (sortField === 'frequency_broad') { va = a.frequency_broad; vb = b.frequency_broad }
       else if (sortField === 'position' && latestDate) {
-        // Sort by best position on latest date across all engines
         const posA = Math.min(...Object.values(a.engines).map((e) => e[latestDate]?.position ?? 999))
         const posB = Math.min(...Object.values(b.engines).map((e) => e[latestDate]?.position ?? 999))
         va = posA; vb = posB
@@ -299,11 +296,11 @@ function KeywordsTable() {
   }, [mergedRows, sortField, sortDir, dates])
 
   const sortIcon = (field: SortField) => {
-    if (sortField !== field) return <span className="text-[9px] opacity-30 ml-0.5">↕</span>
-    return <span className="text-[9px] ml-0.5">{sortDir === 'asc' ? '↑' : '↓'}</span>
+    if (sortField !== field) return <span className="text-[8px] opacity-30 ml-0.5">↕</span>
+    return <span className="text-[8px] ml-0.5 text-accent-blue">{sortDir === 'asc' ? '↑' : '↓'}</span>
   }
 
-  // ── Grouping (multi-field) ──
+  // ── Grouping ──
   const groups = useMemo(() => {
     if (groupByFields.size === 0) return [{ label: '', rows: sortedRows }]
     const fields = [...groupByFields]
@@ -401,7 +398,6 @@ function KeywordsTable() {
     const rawLines = importText.split('\n').map((l) => l.trim()).filter(Boolean)
     if (!rawLines.length) return
 
-    // Parse CSV format: keyword;cluster
     const parsedLines = rawLines.map((line) => {
       if (line.includes(';')) {
         const [kw, clusterName] = line.split(';').map((s) => s.trim())
@@ -411,7 +407,6 @@ function KeywordsTable() {
       return { keyword: line, cluster_id: Number(importClusterId) }
     })
 
-    // Group by cluster_id
     const byCluster = new Map<number, string[]>()
     for (const p of parsedLines) {
       if (!byCluster.has(p.cluster_id)) byCluster.set(p.cluster_id, [])
@@ -444,120 +439,126 @@ function KeywordsTable() {
   }, [selectedIds, bulkMoveClusterId, updateKeyword])
 
   // ── Render ──
-  const totalCols = 5 + dates.length * visibleEngines.length // checkbox + keyword + 3 freq cols + date*engine cells
+  const totalCols = 6 + dates.length * visibleEngines.length
 
   return (
     <div className="space-y-3">
       {/* ── Filter bar ── */}
-      <div className="flex flex-wrap items-center gap-2">
-        <form onSubmit={handleSearch} className="flex gap-1">
-          <Input placeholder={t('keywords.searchPlaceholder')} value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="w-48 h-8 text-xs" />
-          <Button type="submit" variant="outline" size="sm" className="h-8 text-xs">{t('keywords.search')}</Button>
-        </form>
+      <div className="glass-card rounded-lg p-2.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <form onSubmit={handleSearch} className="flex gap-1">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground" />
+              <Input placeholder={t('keywords.searchPlaceholder')} value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className="w-44 h-7 text-[11px] pl-7" />
+            </div>
+          </form>
 
-        {uniqueEngines.length > 1 && <MultiFilter label="Поисковик" options={uniqueEngines} selected={filterEngines} onChange={setFilterEngines} />}
-        {uniqueDevices.length > 1 && <MultiFilter label="Устройство" options={uniqueDevices} selected={filterDevices} onChange={setFilterDevices} />}
-        {uniqueCategories.length > 1 && <MultiFilter label="Категория" options={uniqueCategories} selected={filterCategories} onChange={setFilterCategories} />}
-        {uniqueClusters.length > 1 && <MultiFilter label="Кластер" options={uniqueClusters} selected={filterClusters} onChange={setFilterClusters} />}
-        {uniqueRegions.length > 1 && <MultiFilter label="Регион" options={uniqueRegions} selected={filterRegions} onChange={setFilterRegions} />}
+          <div className="w-px h-5 bg-border mx-0.5" />
 
-        <Select value={String(days)} onValueChange={(v) => setDays(Number(v ?? 14))}>
-          <SelectTrigger className="w-20 h-8 text-xs"><SelectValue labels={{ '7': '7d', '14': '14d', '30': '30d' }} /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="7" label="7d">7d</SelectItem>
-            <SelectItem value="14" label="14d">14d</SelectItem>
-            <SelectItem value="30" label="30d">30d</SelectItem>
-          </SelectContent>
-        </Select>
+          {uniqueEngines.length > 1 && <MultiFilter label="Поисковик" options={uniqueEngines} selected={filterEngines} onChange={setFilterEngines} icon={<Filter className="size-3 text-muted-foreground" />} />}
+          {uniqueDevices.length > 1 && <MultiFilter label="Устройство" options={uniqueDevices} selected={filterDevices} onChange={setFilterDevices} />}
+          {uniqueCategories.length > 1 && <MultiFilter label="Категория" options={uniqueCategories} selected={filterCategories} onChange={setFilterCategories} />}
+          {uniqueClusters.length > 1 && <MultiFilter label="Кластер" options={uniqueClusters} selected={filterClusters} onChange={setFilterClusters} />}
+          {uniqueRegions.length > 1 && <MultiFilter label="Регион" options={uniqueRegions} selected={filterRegions} onChange={setFilterRegions} />}
 
-        <GroupBySelect selected={groupByFields} onChange={setGroupByFields} />
-
-        {/* Presets */}
-        {presets.length > 0 && (
-          <Select value="__load__" onValueChange={(v) => { if (v && v !== '__load__') handleLoadPreset(v) }}>
-            <SelectTrigger className="w-28 h-8 text-xs"><SelectValue placeholder="Пресеты" labels={presetLabels} /></SelectTrigger>
+          <Select value={String(days)} onValueChange={(v) => setDays(Number(v ?? 14))}>
+            <SelectTrigger className="w-16 h-7 text-[11px]"><SelectValue labels={{ '7': '7д', '14': '14д', '30': '30д' }} /></SelectTrigger>
             <SelectContent>
-              {presets.map((p) => (
-                <SelectItem key={p.name} value={p.name} label={p.name}>
-                  {p.name}
-                </SelectItem>
-              ))}
+              <SelectItem value="7" label="7д">7 дней</SelectItem>
+              <SelectItem value="14" label="14д">14 дней</SelectItem>
+              <SelectItem value="30" label="30д">30 дней</SelectItem>
             </SelectContent>
           </Select>
-        )}
-        <Button variant="ghost" size="sm" className="h-8 text-xs" onClick={() => setPresetDialogOpen(true)}>
-          Сохранить пресет
-        </Button>
 
-        {selectedIds.size > 0 && (
-          <div className="flex items-center gap-1 border-l pl-2 ml-1">
-            <span className="text-xs text-muted-foreground">Выбрано: {selectedIds.size}</span>
-            <Button variant="outline" size="sm" className="h-7 text-[11px]" onClick={() => setBulkMoveOpen(true)}>
-              Переместить
-            </Button>
-            <Button variant="outline" size="sm" className="h-7 text-[11px] text-destructive" onClick={handleBulkDelete} disabled={deleteKeywords.isPending}>
-              Удалить
-            </Button>
-          </div>
-        )}
+          <GroupBySelect selected={groupByFields} onChange={setGroupByFields} />
 
-        <div className="ml-auto">
-          <Dialog open={importOpen} onOpenChange={setImportOpen}>
-            <DialogTrigger render={<Button className="h-8 text-xs" />}>{t('keywords.importKeywords')}</DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader><DialogTitle>{t('keywords.importKeywords')}</DialogTitle></DialogHeader>
-              {importFormError && <p className="text-sm text-destructive">{importFormError}</p>}
-              <form onSubmit={handleImport} className="space-y-3">
-                <div className="space-y-1">
-                  <Label className="text-xs">{t('keywords.keywordsPerLine')}</Label>
-                  <p className="text-[11px] text-muted-foreground whitespace-pre-line">{'Формат: один ключ на строку ИЛИ CSV: ключ;кластер\nПример CSV:\nкупить смартфон;Смартфоны\nноутбук для работы;Ноутбуки'}</p>
-                  <textarea className="w-full min-h-24 rounded-lg border border-input bg-transparent px-3 py-2 text-sm" value={importText} onChange={(e) => setImportText(e.target.value)} required placeholder={"купить смартфон\nноутбук для работы\nили CSV:\nкупить смартфон;Смартфоны"} />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">{t('keywords.cluster')}</Label>
-                  <Select value={importClusterId} onValueChange={(v) => setImportClusterId(v ?? '')}><SelectTrigger className="w-full"><SelectValue placeholder={t('keywords.selectCluster')} labels={clusterLabels} /></SelectTrigger><SelectContent>{clusters.map((c) => (<SelectItem key={c.id} value={String(c.id)} label={c.category?.name ? `${c.category.name} / ${c.name}` : c.name}>{c.category?.name ? `${c.category.name} / ${c.name}` : c.name}</SelectItem>))}</SelectContent></Select>
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">{t('keywords.region')}</Label>
-                  <div className="max-h-32 overflow-auto border rounded-md p-2 space-y-1">
-                    {regionsList.map((r) => (
-                      <label key={r.id} className="flex items-center gap-2 text-xs cursor-pointer">
-                        <input type="checkbox" checked={importRegionIds.has(r.id)} onChange={() => toggleImportRegion(r.id)} className="rounded" />
-                        {r.name}
-                      </label>
-                    ))}
+          {/* Presets */}
+          {presets.length > 0 && (
+            <Select value="__load__" onValueChange={(v) => { if (v && v !== '__load__') handleLoadPreset(v) }}>
+              <SelectTrigger className="w-24 h-7 text-[11px]"><SelectValue placeholder="Пресет" labels={presetLabels} /></SelectTrigger>
+              <SelectContent>
+                {presets.map((p) => (
+                  <SelectItem key={p.name} value={p.name} label={p.name}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          <Button variant="ghost" size="xs" onClick={() => setPresetDialogOpen(true)}>
+            <Save className="size-3" />
+          </Button>
+
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-1 border-l border-border pl-2 ml-0.5">
+              <span className="text-[10px] text-muted-foreground tabular-nums">{selectedIds.size}</span>
+              <Button variant="outline" size="xs" onClick={() => setBulkMoveOpen(true)}>
+                <FolderInput className="size-3" />
+              </Button>
+              <Button variant="destructive" size="xs" onClick={handleBulkDelete} disabled={deleteKeywords.isPending}>
+                <Trash2 className="size-3" />
+              </Button>
+            </div>
+          )}
+
+          <div className="ml-auto">
+            <Dialog open={importOpen} onOpenChange={setImportOpen}>
+              <DialogTrigger render={<Button size="xs" />}>
+                <Upload className="size-3 mr-1" />{t('keywords.import')}
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader><DialogTitle>{t('keywords.importKeywords')}</DialogTitle></DialogHeader>
+                {importFormError && <p className="text-[11px] text-destructive">{importFormError}</p>}
+                <form onSubmit={handleImport} className="space-y-3">
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">{t('keywords.keywordsPerLine')}</Label>
+                    <p className="text-[10px] text-muted-foreground whitespace-pre-line">{'Формат: один ключ на строку ИЛИ CSV: ключ;кластер'}</p>
+                    <textarea className="w-full min-h-20 rounded-lg border border-input bg-transparent px-3 py-2 text-[12px] font-mono" value={importText} onChange={(e) => setImportText(e.target.value)} required placeholder={"купить смартфон\nноутбук для работы"} />
                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div><Label className="text-xs">{t('keywords.engine')}</Label><div className="flex gap-3 mt-1">{['google', 'yandex'].map((e) => (<label key={e} className="flex items-center gap-1 text-xs cursor-pointer"><input type="checkbox" checked={importEngines.has(e)} onChange={() => { const n = new Set(importEngines); if (n.has(e)) { if (n.size > 1) n.delete(e) } else n.add(e); setImportEngines(n) }} className="rounded" />{e === 'google' ? 'G' : 'Я'}</label>))}</div></div>
-                  <div><Label className="text-xs">{t('keywords.device')}</Label><div className="flex gap-3 mt-1">{['desktop', 'mobile'].map((d) => (<label key={d} className="flex items-center gap-1 text-xs cursor-pointer"><input type="checkbox" checked={importDevices.has(d)} onChange={() => { const n = new Set(importDevices); if (n.has(d)) { if (n.size > 1) n.delete(d) } else n.add(d); setImportDevices(n) }} className="rounded" />{d === 'desktop' ? 'D' : 'M'}</label>))}</div></div>
-                </div>
-                <DialogFooter><Button type="submit" disabled={importKeywords.isPending || !importClusterId || importRegionIds.size === 0}>{importKeywords.isPending ? '...' : t('keywords.import')}</Button></DialogFooter>
-              </form>
-            </DialogContent>
-          </Dialog>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">{t('keywords.cluster')}</Label>
+                    <Select value={importClusterId} onValueChange={(v) => setImportClusterId(v ?? '')}><SelectTrigger className="w-full h-7 text-[11px]"><SelectValue placeholder={t('keywords.selectCluster')} labels={clusterLabels} /></SelectTrigger><SelectContent>{clusters.map((c) => (<SelectItem key={c.id} value={String(c.id)} label={c.category?.name ? `${c.category.name} / ${c.name}` : c.name}>{c.category?.name ? `${c.category.name} / ${c.name}` : c.name}</SelectItem>))}</SelectContent></Select>
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-[11px]">{t('keywords.region')}</Label>
+                    <div className="max-h-28 overflow-auto border rounded-lg p-2 space-y-0.5">
+                      {regionsList.map((r) => (
+                        <label key={r.id} className="flex items-center gap-2 text-[11px] cursor-pointer py-0.5">
+                          <input type="checkbox" checked={importRegionIds.has(r.id)} onChange={() => toggleImportRegion(r.id)} className="rounded accent-accent-blue" />
+                          {r.name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><Label className="text-[11px]">{t('keywords.engine')}</Label><div className="flex gap-3 mt-1">{['google', 'yandex'].map((e) => (<label key={e} className="flex items-center gap-1 text-[11px] cursor-pointer"><input type="checkbox" checked={importEngines.has(e)} onChange={() => { const n = new Set(importEngines); if (n.has(e)) { if (n.size > 1) n.delete(e) } else n.add(e); setImportEngines(n) }} className="rounded accent-accent-blue" />{e === 'google' ? 'G' : 'Я'}</label>))}</div></div>
+                    <div><Label className="text-[11px]">{t('keywords.device')}</Label><div className="flex gap-3 mt-1">{['desktop', 'mobile'].map((d) => (<label key={d} className="flex items-center gap-1 text-[11px] cursor-pointer"><input type="checkbox" checked={importDevices.has(d)} onChange={() => { const n = new Set(importDevices); if (n.has(d)) { if (n.size > 1) n.delete(d) } else n.add(d); setImportDevices(n) }} className="rounded accent-accent-blue" />{d === 'desktop' ? 'D' : 'M'}</label>))}</div></div>
+                  </div>
+                  <DialogFooter><Button type="submit" size="sm" disabled={importKeywords.isPending || !importClusterId || importRegionIds.size === 0}>{importKeywords.isPending ? '...' : t('keywords.import')}</Button></DialogFooter>
+                </form>
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
       </div>
 
       {/* ── Preset save dialog ── */}
       <Dialog open={presetDialogOpen} onOpenChange={setPresetDialogOpen}>
         <DialogContent className="sm:max-w-xs">
-          <DialogHeader><DialogTitle>Сохранить пресет фильтров</DialogTitle></DialogHeader>
+          <DialogHeader><DialogTitle>Сохранить пресет</DialogTitle></DialogHeader>
           <div className="space-y-2">
-            <Input placeholder="Название пресета" value={presetName} onChange={(e) => setPresetName(e.target.value)} />
+            <Input placeholder="Название" value={presetName} onChange={(e) => setPresetName(e.target.value)} className="h-8 text-[12px]" />
             {presets.length > 0 && (
               <div className="space-y-1">
-                <p className="text-xs text-muted-foreground">Сохранённые:</p>
+                <p className="text-[10px] text-muted-foreground">Сохранённые:</p>
                 {presets.map((p) => (
-                  <div key={p.name} className="flex items-center justify-between text-xs">
+                  <div key={p.name} className="flex items-center justify-between text-[11px]">
                     <span>{p.name}</span>
-                    <Button variant="ghost" size="sm" className="h-5 text-[10px] text-destructive" onClick={() => handleDeletePreset(p.name)}>x</Button>
+                    <Button variant="ghost" size="icon-xs" className="text-destructive" onClick={() => handleDeletePreset(p.name)}><Trash2 className="size-3" /></Button>
                   </div>
                 ))}
               </div>
             )}
           </div>
-          <DialogFooter><Button onClick={handleSavePreset} disabled={!presetName.trim()}>Сохранить</Button></DialogFooter>
+          <DialogFooter><Button size="sm" onClick={handleSavePreset} disabled={!presetName.trim()}>Сохранить</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
@@ -565,9 +566,9 @@ function KeywordsTable() {
       <Dialog open={bulkMoveOpen} onOpenChange={setBulkMoveOpen}>
         <DialogContent className="sm:max-w-xs">
           <DialogHeader><DialogTitle>Переместить в кластер</DialogTitle></DialogHeader>
-          <p className="text-xs text-muted-foreground">Выбрано ключевых слов: {selectedIds.size}</p>
+          <p className="text-[11px] text-muted-foreground">Выбрано: {selectedIds.size}</p>
           <Select value={bulkMoveClusterId} onValueChange={(v) => setBulkMoveClusterId(v ?? '')}>
-            <SelectTrigger className="w-full"><SelectValue placeholder="Выберите кластер" labels={clusterLabels} /></SelectTrigger>
+            <SelectTrigger className="w-full h-8 text-[12px]"><SelectValue placeholder="Кластер" labels={clusterLabels} /></SelectTrigger>
             <SelectContent>
               {clusters.map((c) => (
                 <SelectItem key={c.id} value={String(c.id)} label={c.category?.name ? `${c.category.name} / ${c.name}` : c.name}>
@@ -577,8 +578,8 @@ function KeywordsTable() {
             </SelectContent>
           </Select>
           <DialogFooter>
-            <Button onClick={handleBulkMove} disabled={!bulkMoveClusterId || updateKeyword.isPending}>
-              {updateKeyword.isPending ? 'Перемещение...' : 'Переместить'}
+            <Button size="sm" onClick={handleBulkMove} disabled={!bulkMoveClusterId || updateKeyword.isPending}>
+              {updateKeyword.isPending ? '...' : 'Переместить'}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -586,30 +587,31 @@ function KeywordsTable() {
 
       {/* ── Table ── */}
       {isLoading ? <TableSkeleton rows={10} /> : mergedRows.length === 0 ? <EmptyState title={t('keywords.noKeywords')} /> : (
-        <div className="overflow-x-auto border rounded-lg">
-          <table className="w-full text-sm">
-            <thead className="bg-muted/50 sticky top-0 z-20">
-              <tr>
-                <th className="sticky left-0 bg-muted/50 z-30 px-1.5 py-1.5 w-7">
-                  <input type="checkbox" checked={mergedRows.length > 0 && selectedIds.size === mergedRows.length} onChange={() => selectedIds.size === mergedRows.length ? setSelectedIds(new Set()) : setSelectedIds(new Set(mergedRows.map((k) => k.keyword_id)))} className="rounded" />
+        <div className="overflow-x-auto glass-card rounded-lg">
+          <table className="w-full compact-table">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="sticky left-0 z-30 bg-card px-1.5 py-2 w-7">
+                  <input type="checkbox" checked={mergedRows.length > 0 && selectedIds.size === mergedRows.length} onChange={() => selectedIds.size === mergedRows.length ? setSelectedIds(new Set()) : setSelectedIds(new Set(mergedRows.map((k) => k.keyword_id)))} className="rounded accent-accent-blue" />
                 </th>
-                <th className="sticky left-7 bg-muted/50 z-30 px-2 py-1.5 text-left font-medium text-xs min-w-[220px] cursor-pointer select-none" onClick={() => toggleSort('keyword')}>
+                <th className="sticky left-7 z-30 bg-card px-2 py-2 text-left font-medium text-[10px] uppercase tracking-wider min-w-[200px] cursor-pointer select-none text-muted-foreground" onClick={() => toggleSort('keyword')}>
                   {t('keywords.keyword')}{sortIcon('keyword')}
                 </th>
-                <th className="px-0.5 py-1.5 text-center font-medium text-xs w-24" colSpan={3}>
-                  <div className="flex text-[10px]">
-                    <div className="flex-1 cursor-pointer select-none" title="Exact (точное)" onClick={() => toggleSort('frequency_exact')}>!{sortIcon('frequency_exact')}</div>
-                    <div className="flex-1 cursor-pointer select-none" title="Phrase (фразовое)" onClick={() => toggleSort('frequency_phrase')}>&laquo;&raquo;{sortIcon('frequency_phrase')}</div>
-                    <div className="flex-1 cursor-pointer select-none" title="Broad (широкое)" onClick={() => toggleSort('frequency_broad')}>~{sortIcon('frequency_broad')}</div>
+                <th className="px-1 py-2 text-left font-medium text-[10px] uppercase tracking-wider w-24 text-muted-foreground">Цель</th>
+                <th className="px-0.5 py-2 text-center font-medium text-[10px] uppercase tracking-wider w-20 text-muted-foreground" colSpan={3}>
+                  <div className="flex">
+                    <div className="flex-1 cursor-pointer select-none" title="Exact" onClick={() => toggleSort('frequency_exact')}>!{sortIcon('frequency_exact')}</div>
+                    <div className="flex-1 cursor-pointer select-none" title="Phrase" onClick={() => toggleSort('frequency_phrase')}>&laquo;&raquo;{sortIcon('frequency_phrase')}</div>
+                    <div className="flex-1 cursor-pointer select-none" title="Broad" onClick={() => toggleSort('frequency_broad')}>~{sortIcon('frequency_broad')}</div>
                   </div>
                 </th>
                 {dates.map((date, idx) => (
-                  <th key={date} className="px-0.5 py-1 text-center font-medium border-l" colSpan={visibleEngines.length}>
-                    <div className={`text-[10px] leading-tight ${idx === 0 ? 'cursor-pointer select-none' : ''}`} onClick={idx === 0 ? () => toggleSort('position') : undefined}>
+                  <th key={date} className="px-0.5 py-1.5 text-center font-medium border-l border-border" colSpan={visibleEngines.length}>
+                    <div className={`text-[10px] leading-tight text-muted-foreground ${idx === 0 ? 'cursor-pointer select-none' : ''}`} onClick={idx === 0 ? () => toggleSort('position') : undefined}>
                       {formatDate(date)}{idx === 0 && sortIcon('position')}
                     </div>
                     {visibleEngines.length > 1 && (
-                      <div className="flex">{visibleEngines.map((e) => (<div key={e} className="flex-1 text-[9px] text-muted-foreground font-normal">{e === 'google' ? 'G' : 'Я'}</div>))}</div>
+                      <div className="flex">{visibleEngines.map((e) => (<div key={e} className="flex-1 text-[8px] text-muted-foreground/60 font-normal">{e === 'google' ? 'G' : 'Я'}</div>))}</div>
                     )}
                   </th>
                 ))}
@@ -624,7 +626,7 @@ function KeywordsTable() {
         </div>
       )}
 
-      <p className="text-xs text-muted-foreground">{t('keywords.total')}: {mergedRows.length} rows ({filtered.length} kw)</p>
+      <p className="text-[10px] text-muted-foreground/60 tabular-nums">{mergedRows.length} запросов ({filtered.length} строк)</p>
     </div>
   )
 }
@@ -638,35 +640,38 @@ function GroupSection({ label, rows, dates, engines, totalCols, projectId, selec
   return (
     <>
       {showGroupHeader && (
-        <tr className="bg-muted/80">
-          <td colSpan={totalCols} className="px-3 py-1.5 text-xs font-semibold cursor-pointer" onClick={() => setCollapsed(!collapsed)}>
-            <span className="mr-1">{collapsed ? '▸' : '▾'}</span>
+        <tr className="bg-accent-blue/5">
+          <td colSpan={totalCols} className="px-3 py-1.5 text-[11px] font-semibold cursor-pointer" onClick={() => setCollapsed(!collapsed)}>
+            <span className="mr-1.5 text-accent-blue">{collapsed ? '▸' : '▾'}</span>
             {label} <span className="font-normal text-muted-foreground">({rows.length})</span>
           </td>
         </tr>
       )}
       {!collapsed && rows.map((kw) => (
-        <tr key={kw.keyword_id} className="border-t hover:bg-muted/20">
-          <td className="sticky left-0 bg-background z-10 px-1.5 py-1">
-            <input type="checkbox" checked={selectedIds.has(kw.keyword_id)} onChange={() => setSelectedIds((p) => { const n = new Set(p); n.has(kw.keyword_id) ? n.delete(kw.keyword_id) : n.add(kw.keyword_id); return n })} className="rounded" />
+        <tr key={kw.keyword_id} className="border-t border-border/50 hover:bg-muted/30 transition-colors">
+          <td className="sticky left-0 bg-card z-10 px-1.5 py-0.5">
+            <input type="checkbox" checked={selectedIds.has(kw.keyword_id)} onChange={() => setSelectedIds((p) => { const n = new Set(p); n.has(kw.keyword_id) ? n.delete(kw.keyword_id) : n.add(kw.keyword_id); return n })} className="rounded accent-accent-blue" />
           </td>
-          <td className="sticky left-7 bg-background z-10 px-2 py-1">
+          <td className="sticky left-7 bg-card z-10 px-2 py-0.5">
             <div className="flex items-center gap-1">
               {kw.our_url && (
-                <a href={kw.our_url} target="_blank" rel="noopener noreferrer" className="text-green-600 hover:text-green-800 shrink-0" title={kw.our_url}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                <a href={kw.our_url} target="_blank" rel="noopener noreferrer" className="text-success hover:text-success/80 shrink-0" title={kw.our_url}>
+                  <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                 </a>
               )}
-              <Link to="/projects/$projectId/keywords/$keywordId" params={{ projectId, keywordId: String(kw.keyword_id) }} className="text-primary hover:underline truncate text-xs">{kw.keyword}</Link>
+              <Link to="/projects/$projectId/keywords/$keywordId" params={{ projectId, keywordId: String(kw.keyword_id) }} className="text-foreground hover:text-accent-blue transition-colors truncate text-[12px]">{kw.keyword}</Link>
             </div>
-            {kw.cluster && <div className="text-[9px] text-muted-foreground truncate">{kw.category ? `${kw.category} / ` : ''}{kw.cluster}</div>}
+            {kw.cluster && <div className="text-[9px] text-muted-foreground/60 truncate">{kw.category ? `${kw.category} / ` : ''}{kw.cluster}</div>}
           </td>
-          <td className="px-1 py-1 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_exact?.toLocaleString()}>{fmtFreq(kw.frequency_exact)}</td>
-          <td className="px-1 py-1 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_phrase?.toLocaleString()}>{fmtFreq(kw.frequency_phrase)}</td>
-          <td className="px-1 py-1 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_broad?.toLocaleString()}>{fmtFreq(kw.frequency_broad)}</td>
+          <td className="px-1 py-0.5">
+            <TargetMatchIndicator status={kw.target_match_status ?? null} targetUrl={kw.effective_target_url} />
+          </td>
+          <td className="px-0.5 py-0.5 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_exact?.toLocaleString()}>{fmtFreq(kw.frequency_exact)}</td>
+          <td className="px-0.5 py-0.5 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_phrase?.toLocaleString()}>{fmtFreq(kw.frequency_phrase)}</td>
+          <td className="px-0.5 py-0.5 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_broad?.toLocaleString()}>{fmtFreq(kw.frequency_broad)}</td>
           {dates.map((date) => engines.map((eng) => (
-            <td key={`${date}-${eng}`} className="px-0.5 py-1 border-l w-10">
-              <PositionCell position={kw.engines[eng]?.[date]?.position ?? null} delta={kw.engines[eng]?.[date]?.delta ?? null} />
+            <td key={`${date}-${eng}`} className="px-0.5 py-0.5 border-l border-border/30 w-9">
+              <PositionCell position={kw.engines[eng]?.[date]?.position ?? null} delta={kw.engines[eng]?.[date]?.delta ?? null} monitored={kw.engines[eng]?.[date]?.monitored} />
             </td>
           )))}
         </tr>

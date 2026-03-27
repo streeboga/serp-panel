@@ -81,4 +81,35 @@ final class KeywordRepository implements KeywordRepositoryInterface
             $q->where('organization_id', $organizationId);
         })->count();
     }
+
+    /** @return Collection<int, Keyword> */
+    public function getByProjectWithRelations(int $projectId): Collection
+    {
+        return Keyword::query()
+            ->with(['cluster.category', 'region'])
+            ->whereHas('cluster.category.domain', fn ($q) => $q->where('project_id', $projectId))
+            ->get();
+    }
+
+    /** @return Collection<int, Keyword> */
+    public function getByClusterId(int $clusterId): Collection
+    {
+        return Keyword::where('cluster_id', $clusterId)->get();
+    }
+
+    /** @return Collection<int, Keyword> */
+    public function getByCategoryId(int $categoryId): Collection
+    {
+        return Keyword::query()
+            ->whereHas('cluster', fn ($q) => $q->where('category_id', $categoryId))
+            ->get();
+    }
+
+    /** @return Collection<int, Keyword> */
+    public function getByProjectId(int $projectId): Collection
+    {
+        return Keyword::query()
+            ->whereHas('cluster.category.domain', fn ($q) => $q->where('project_id', $projectId))
+            ->get();
+    }
 }

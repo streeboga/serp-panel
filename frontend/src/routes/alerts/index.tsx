@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next'
 import { AppLayout } from '@/components/AppLayout'
 import { EmptyState } from '@/components/EmptyState'
 import { TableSkeleton } from '@/components/PageSkeleton'
-import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
@@ -21,6 +20,7 @@ import {
   useUpdateAlert,
 } from '@/hooks/useAlerts'
 import type { PositionAlert } from '@/types/api'
+import { Bell, Trash2 } from 'lucide-react'
 
 export const Route = createFileRoute('/alerts/')({
   beforeLoad: () => {
@@ -50,9 +50,15 @@ function AlertsPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-6">
+      <div className="space-y-5">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">{t('alerts.title')}</h1>
+          <div>
+            <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
+              <Bell className="h-5 w-5 text-accent-blue" />
+              {t('alerts.title')}
+            </h1>
+            <p className="text-[13px] text-muted-foreground mt-0.5">Мониторинг изменений позиций и уведомления</p>
+          </div>
         </div>
 
         {isLoading ? (
@@ -60,75 +66,74 @@ function AlertsPage() {
         ) : alerts.length === 0 ? (
           <EmptyState title={t('alerts.noAlerts')} />
         ) : (
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t('alerts.keyword')}</TableHead>
-                    <TableHead>{t('alerts.threshold')}</TableHead>
-                    <TableHead>{t('alerts.direction')}</TableHead>
-                    <TableHead>{t('alerts.channel')}</TableHead>
-                    <TableHead>Получатель</TableHead>
-                    <TableHead>{t('alerts.status')}</TableHead>
-                    <TableHead>{t('alerts.lastTriggered')}</TableHead>
-                    <TableHead>{t('common.actions')}</TableHead>
+          <div className="glass-card rounded-lg overflow-hidden">
+            <Table className="compact-table">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-[11px]">{t('alerts.keyword')}</TableHead>
+                  <TableHead className="text-[11px]">{t('alerts.threshold')}</TableHead>
+                  <TableHead className="text-[11px]">{t('alerts.direction')}</TableHead>
+                  <TableHead className="text-[11px]">{t('alerts.channel')}</TableHead>
+                  <TableHead className="text-[11px]">Получатель</TableHead>
+                  <TableHead className="text-[11px]">{t('alerts.status')}</TableHead>
+                  <TableHead className="text-[11px]">{t('alerts.lastTriggered')}</TableHead>
+                  <TableHead className="text-[11px]">{t('common.actions')}</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {alerts.map((alert) => (
+                  <TableRow key={alert.id}>
+                    <TableCell className="text-[12px] font-medium">
+                      {alert.keyword?.keyword ?? `#${alert.keyword_id}`}
+                    </TableCell>
+                    <TableCell className="text-[12px]">{alert.threshold_position}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="text-[10px]">
+                        {alert.direction === 'drops_below'
+                          ? t('alerts.dropsBelow')
+                          : t('alerts.risesAbove')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className="text-[10px]">{alert.channel}</Badge>
+                    </TableCell>
+                    <TableCell className="text-[12px] text-muted-foreground">
+                      {alert.recipient || '—'}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={alert.is_active ? 'default' : 'outline'}
+                        className="cursor-pointer text-[10px]"
+                        onClick={() => handleToggleActive(alert)}
+                      >
+                        {alert.is_active ? t('alerts.active') : t('alerts.inactive')}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-[11px] text-muted-foreground">
+                      {alert.last_triggered_at
+                        ? new Date(alert.last_triggered_at).toLocaleDateString()
+                        : t('alerts.never')}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="outline"
+                        size="xs"
+                        className="text-[11px] text-destructive hover:text-destructive"
+                        onClick={() => {
+                          if (confirm(t('alerts.deleteConfirm'))) {
+                            deleteAlert.mutate(alert.id)
+                          }
+                        }}
+                      >
+                        <Trash2 className="h-3 w-3 mr-1" />
+                        {t('alerts.delete')}
+                      </Button>
+                    </TableCell>
                   </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {alerts.map((alert) => (
-                    <TableRow key={alert.id}>
-                      <TableCell className="font-medium">
-                        {alert.keyword?.keyword ?? `#${alert.keyword_id}`}
-                      </TableCell>
-                      <TableCell>{alert.threshold_position}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {alert.direction === 'drops_below'
-                            ? t('alerts.dropsBelow')
-                            : t('alerts.risesAbove')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">{alert.channel}</Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {alert.recipient || '—'}
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={alert.is_active ? 'default' : 'outline'}
-                          className="cursor-pointer"
-                          onClick={() => handleToggleActive(alert)}
-                        >
-                          {alert.is_active ? t('alerts.active') : t('alerts.inactive')}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {alert.last_triggered_at
-                          ? new Date(alert.last_triggered_at).toLocaleDateString()
-                          : t('alerts.never')}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="text-destructive"
-                          onClick={() => {
-                            if (confirm(t('alerts.deleteConfirm'))) {
-                              deleteAlert.mutate(alert.id)
-                            }
-                          }}
-                        >
-                          {t('alerts.delete')}
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
     </AppLayout>

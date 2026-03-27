@@ -24,4 +24,7 @@ interface ProjectRepositoryInterface
     public function delete(Project $project): void;
 
     public function countByOrganization(int $organizationId): int;
+
+    /** @return array<int> */
+    public function projectIdsForOrganization(int $orgId): array;
 }
