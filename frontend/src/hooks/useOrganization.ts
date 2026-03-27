@@ -67,3 +67,24 @@ export function useUpdateMemberRole() {
       qc.invalidateQueries({ queryKey: queryKeys.organization.members }),
   })
 }
+
+export function useCreateOrganization() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { name: string }) =>
+      api.post('/organizations', data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.organizations.all })
+    },
+  })
+}
+
+export function useDeleteOrganization() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: () => api.delete('/organization').then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.organizations.all })
+    },
+  })
+}

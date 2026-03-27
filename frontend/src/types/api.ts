@@ -29,6 +29,9 @@ export interface Project {
   description?: string
   domains_count?: number
   keywords_count?: number
+  is_public?: boolean
+  public_slug?: string | null
+  public_url?: string | null
   created_at?: string
   updated_at?: string
 }
@@ -161,6 +164,15 @@ export interface Organization {
   name: string
   slug: string
   role?: string
+}
+
+export interface ApiToken {
+  id: string
+  name: string
+  abilities: string[]
+  last_used_at: string | null
+  expires_at: string | null
+  created_at: string
 }
 
 export interface User {

@@ -38,14 +38,17 @@ import {
   useRemoveMember,
   useUpdateMemberRole,
   useUpdateOrganization,
+  useDeleteOrganization,
 } from '@/hooks/useOrganization'
+import { useTokens, useCreateToken, useRevokeToken } from '@/hooks/useTokens'
+import { useProjects } from '@/hooks/useProjects'
 import { useBillingUsage } from '@/hooks/useBilling'
 import { useYandexRedirect } from '@/hooks/useYandex'
 import { useAccounts, useCreateAccount, useDeleteAccount, useTestAccount } from '@/hooks/useAccounts'
 import type { ConnectedAccount } from '@/hooks/useAccounts'
 import { parseApiError } from '@/lib/api'
-import type { Member } from '@/types/api'
-import { Settings, Building2, User, Palette, CreditCard, Link2, Users, Pencil, Plus, Trash2, FlaskConical, ExternalLink } from 'lucide-react'
+import type { Member, ApiToken, Project } from '@/types/api'
+import { Settings, Building2, User, Palette, CreditCard, Link2, Users, Pencil, Plus, Trash2, FlaskConical, ExternalLink, Key, Copy, Check } from 'lucide-react'
 
 export const Route = createLazyFileRoute('/settings/')({
   component: SettingsPage,
@@ -66,13 +69,29 @@ function roleBadgeVariant(role: string) {
 
 function SettingsPage() {
   const { t, i18n } = useTranslation()
-  const { user } = useAuth()
+  const { user, organizationId, setOrganization } = useAuth()
   const { theme, setTheme } = useTheme()
   const { data: membersData, isLoading: membersLoading } = useMembers()
   const inviteMember = useInviteMember()
   const removeMember = useRemoveMember()
   const updateRole = useUpdateMemberRole()
   const updateOrganization = useUpdateOrganization()
+
+  const deleteOrganization = useDeleteOrganization()
+
+  const { data: tokensData } = useTokens()
+  const tokens: ApiToken[] = useMemo(() => {
+    const d = tokensData?.data ?? tokensData
+    return Array.isArray(d) ? d : []
+  }, [tokensData])
+  const createToken = useCreateToken()
+  const revokeToken = useRevokeToken()
+
+  const { data: projectsData } = useProjects()
+  const projects: Project[] = useMemo(() => {
+    const d = projectsData?.data ?? projectsData
+    return Array.isArray(d) ? d : []
+  }, [projectsData])
 
   const { data: billingData } = useBillingUsage()
   const billing = billingData?.data ?? billingData
@@ -137,6 +156,17 @@ function SettingsPage() {
   const [roleUserId, setRoleUserId] = useState<number | null>(null)
   const [roleValue, setRoleValue] = useState('member')
 
+  const [deleteOrgOpen, setDeleteOrgOpen] = useState(false)
+
+  const [createTokenOpen, setCreateTokenOpen] = useState(false)
+  const [tokenName, setTokenName] = useState('')
+  const [tokenRole, setTokenRole] = useState('viewer')
+  const [tokenProjectId, setTokenProjectId] = useState<string>('')
+  const [tokenExpires, setTokenExpires] = useState('never')
+  const [createdToken, setCreatedToken] = useState<string | null>(null)
+  const [showTokenDialog, setShowTokenDialog] = useState(false)
+  const [tokenCopied, setTokenCopied] = useState(false)
+
   const handleInvite = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault()
@@ -181,6 +211,69 @@ function SettingsPage() {
     [editOrgName, updateOrganization],
   )
 
+  const handleDeleteOrg = useCallback(async () => {
+    try {
+      await deleteOrganization.mutateAsync()
+      setDeleteOrgOpen(false)
+      // Switch to first remaining org or reload
+      const remaining = (user?.organizations ?? []).filter(
+        (o) => Number(o.id) !== Number(organizationId),
+      )
+      if (remaining.length > 0) {
+        setOrganization(Number(remaining[0].id))
+      }
+      window.location.reload()
+    } catch {}
+  }, [deleteOrganization, user, organizationId, setOrganization])
+
+  const handleCreateToken = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault()
+      if (!tokenName.trim()) return
+      const expiresMap: Record<string, string | null> = {
+        '30d': new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0],
+        '90d': new Date(Date.now() + 90 * 86400000).toISOString().split('T')[0],
+        '1y': new Date(Date.now() + 365 * 86400000).toISOString().split('T')[0],
+        never: null,
+      }
+      try {
+        const result = await createToken.mutateAsync({
+          name: tokenName.trim(),
+          role: tokenRole,
+          project_id: tokenProjectId ? Number(tokenProjectId) : null,
+          expires_at: expiresMap[tokenExpires] ?? null,
+        })
+        const plainText = result?.plain_text_token ?? result?.data?.plain_text_token
+        setCreateTokenOpen(false)
+        setTokenName('')
+        setTokenRole('viewer')
+        setTokenProjectId('')
+        setTokenExpires('never')
+        if (plainText) {
+          setCreatedToken(plainText)
+          setShowTokenDialog(true)
+          setTokenCopied(false)
+        }
+      } catch {}
+    },
+    [tokenName, tokenRole, tokenProjectId, tokenExpires, createToken],
+  )
+
+  const handleCopyToken = useCallback(() => {
+    if (createdToken) {
+      navigator.clipboard.writeText(createdToken)
+      setTokenCopied(true)
+      setTimeout(() => setTokenCopied(false), 2000)
+    }
+  }, [createdToken])
+
+  const tokenRoleLabel = useCallback((abilities: string[]) => {
+    const joined = abilities.join(',')
+    if (joined.includes(':write')) return 'manager'
+    if (joined.includes(':export')) return 'analyst'
+    return 'viewer'
+  }, [])
+
   const handleLanguageChange = useCallback(
     (v: string | null) => {
       if (v) {
@@ -218,17 +311,30 @@ function SettingsPage() {
                 {t('settings.organization')}
               </h3>
               {org && (
-                <Button
-                  variant="outline"
-                  size="xs"
-                  onClick={() => {
-                    setEditOrgName(org.name)
-                    setEditOrgOpen(true)
-                  }}
-                >
-                  <Pencil className="h-3 w-3 mr-1" />
-                  {t('common.edit')}
-                </Button>
+                <div className="flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="xs"
+                    onClick={() => {
+                      setEditOrgName(org.name)
+                      setEditOrgOpen(true)
+                    }}
+                  >
+                    <Pencil className="h-3 w-3 mr-1" />
+                    {t('common.edit')}
+                  </Button>
+                  {org.role === 'admin' && (
+                    <Button
+                      variant="outline"
+                      size="xs"
+                      className="text-[11px] text-destructive hover:text-destructive"
+                      onClick={() => setDeleteOrgOpen(true)}
+                    >
+                      <Trash2 className="h-3 w-3 mr-1" />
+                      Удалить
+                    </Button>
+                  )}
+                </div>
               )}
             </div>
             <div className="space-y-2">
@@ -574,7 +680,195 @@ function SettingsPage() {
             )}
           </div>
         </div>
+
+        {/* API Tokens */}
+        <div className="glass-card rounded-lg p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-[13px] font-semibold flex items-center gap-1.5">
+              <Key className="h-4 w-4 text-accent-blue" />
+              API Токены
+            </h3>
+            <Button size="xs" className="text-[11px] bg-[#155dfc] hover:bg-[#1249d6]" onClick={() => setCreateTokenOpen(true)}>
+              <Plus className="h-3 w-3 mr-1" />
+              Создать токен
+            </Button>
+          </div>
+          {tokens.length === 0 ? (
+            <p className="text-[12px] text-muted-foreground">Нет API токенов. Создайте токен для интеграции.</p>
+          ) : (
+            <div className="rounded-lg border overflow-hidden">
+              <Table className="compact-table">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-[11px]">Название</TableHead>
+                    <TableHead className="text-[11px]">Роль</TableHead>
+                    <TableHead className="text-[11px]">Последнее использование</TableHead>
+                    <TableHead className="text-[11px]">Истекает</TableHead>
+                    <TableHead className="text-[11px]">Действия</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tokens.map((token) => (
+                    <TableRow key={token.id}>
+                      <TableCell className="text-[12px] font-medium">{token.name}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline">{tokenRoleLabel(token.abilities)}</Badge>
+                      </TableCell>
+                      <TableCell className="text-[12px] text-muted-foreground">
+                        {token.last_used_at
+                          ? new Date(token.last_used_at).toLocaleDateString()
+                          : 'Никогда'}
+                      </TableCell>
+                      <TableCell className="text-[12px] text-muted-foreground">
+                        {token.expires_at
+                          ? new Date(token.expires_at).toLocaleDateString()
+                          : 'Бессрочно'}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="xs"
+                          className="text-[11px] text-destructive hover:text-destructive"
+                          onClick={() => {
+                            if (confirm('Отозвать токен? Это действие нельзя отменить.')) {
+                              revokeToken.mutate(token.id)
+                            }
+                          }}
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </div>
       </div>
+
+      {/* Delete organization dialog */}
+      <Dialog open={deleteOrgOpen} onOpenChange={setDeleteOrgOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-[15px]">Удалить организацию</DialogTitle>
+          </DialogHeader>
+          <p className="text-[12px] text-muted-foreground">
+            Вы уверены? Организация будет удалена (можно восстановить).
+          </p>
+          <DialogFooter>
+            <Button variant="outline" size="sm" onClick={() => setDeleteOrgOpen(false)}>
+              Отмена
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteOrg}
+              disabled={deleteOrganization.isPending}
+            >
+              {deleteOrganization.isPending ? 'Удаление...' : 'Удалить'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create token dialog */}
+      <Dialog open={createTokenOpen} onOpenChange={setCreateTokenOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-[15px]">Создать API токен</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleCreateToken} className="space-y-3">
+            <div className="space-y-1">
+              <Label className="text-[11px]">Название</Label>
+              <Input
+                className="h-8"
+                value={tokenName}
+                onChange={(e) => setTokenName(e.target.value)}
+                placeholder="Мой API токен"
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px]">Роль</Label>
+              <Select value={tokenRole} onValueChange={(v) => setTokenRole(v ?? 'viewer')}>
+                <SelectTrigger className="w-full h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="viewer" label="Viewer">Viewer</SelectItem>
+                  <SelectItem value="analyst" label="Analyst">Analyst</SelectItem>
+                  <SelectItem value="manager" label="Manager">Manager</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px]">Проект</Label>
+              <Select value={tokenProjectId} onValueChange={(v) => setTokenProjectId(v ?? '')}>
+                <SelectTrigger className="w-full h-8">
+                  <SelectValue placeholder="Все проекты" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="" label="Все проекты">Все проекты</SelectItem>
+                  {projects.map((p) => (
+                    <SelectItem key={p.id} value={String(p.id)} label={p.name}>
+                      {p.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[11px]">Срок действия</Label>
+              <Select value={tokenExpires} onValueChange={(v) => setTokenExpires(v ?? 'never')}>
+                <SelectTrigger className="w-full h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="30d" label="30 дней">30 дней</SelectItem>
+                  <SelectItem value="90d" label="90 дней">90 дней</SelectItem>
+                  <SelectItem value="1y" label="1 год">1 год</SelectItem>
+                  <SelectItem value="never" label="Бессрочно">Бессрочно</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <DialogFooter>
+              <Button type="submit" size="sm" className="bg-[#155dfc] hover:bg-[#1249d6]" disabled={createToken.isPending}>
+                {createToken.isPending ? 'Создание...' : 'Создать'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Token created dialog */}
+      <Dialog open={showTokenDialog} onOpenChange={(open) => { setShowTokenDialog(open); if (!open) setCreatedToken(null) }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-[15px]">Токен создан</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <Input
+                className="h-8 font-mono text-[11px] flex-1"
+                value={createdToken ?? ''}
+                readOnly
+              />
+              <Button variant="outline" size="xs" className="shrink-0" onClick={handleCopyToken}>
+                {tokenCopied ? <Check className="h-3 w-3 text-green-500" /> : <Copy className="h-3 w-3" />}
+              </Button>
+            </div>
+            <p className="text-[11px] text-amber-500 font-medium">
+              Сохраните токен — он больше не будет показан
+            </p>
+          </div>
+          <DialogFooter>
+            <Button size="sm" onClick={() => { setShowTokenDialog(false); setCreatedToken(null) }}>
+              Готово
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={roleDialogOpen} onOpenChange={setRoleDialogOpen}>
         <DialogContent className="sm:max-w-sm">
