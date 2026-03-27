@@ -38,7 +38,7 @@ final class KeywordQueryBuilder
             )
             ->defaultSort('-created_at');
 
-        $query->with(['region', 'cluster']);
+        $query->with(['region', 'cluster.category.domain.tags']);
 
         return $query;
     }

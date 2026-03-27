@@ -2,7 +2,9 @@ import { createLazyFileRoute, Link } from '@tanstack/react-router'
 import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDomain, useDomains, useIndexDomain, useDomainIndexResults, useDomainKeywords } from '@/hooks/useDomains'
-import { usePages, useCreatePage, useImportPages } from '@/hooks/usePages'
+import { usePages, useCreatePage, useImportPages, useBulkAttachPage } from '@/hooks/usePages'
+import { useCategories } from '@/hooks/useCategories'
+import { useKeywords, useProjectClusters } from '@/hooks/useKeywords'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -68,6 +70,8 @@ const PAGE_TYPE_BADGE_VARIANT: Record<string, 'default' | 'secondary' | 'outline
 function truncateUrl(url: string, maxLen = 60): string {
   return url.length > maxLen ? `${url.slice(0, maxLen)}...` : url
 }
+
+const BULK_TYPES = ['keyword', 'cluster', 'category'] as const
 
 function DomainDetailPage() {
   const { t } = useTranslation()
@@ -193,12 +197,113 @@ function PagesTab({
   const { t } = useTranslation()
   const { data: pagesData, isLoading } = usePages({ projectId, domain_id: domainId })
   const createPage = useCreatePage(projectId)
+  const bulkAttach = useBulkAttachPage()
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pages: any[] = useMemo(() => {
     const d = pagesData?.data ?? pagesData
     return Array.isArray(d) ? d : []
   }, [pagesData])
+
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState(() => new Set<number>())
+
+  const toggleSelect = useCallback((id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const toggleAll = useCallback(() => {
+    setSelectedIds((prev) =>
+      prev.size === pages.length ? new Set() : new Set(pages.map((p) => p.id)),
+    )
+  }, [pages])
+
+  // Bulk assign dialog
+  const [bulkOpen, setBulkOpen] = useState(false)
+  const [bulkType, setBulkType] = useState<'keyword' | 'cluster' | 'category'>('keyword')
+  const [bulkIds, setBulkIds] = useState(() => new Set<number>())
+  const [bulkError, setBulkError] = useState<string | null>(null)
+
+  // Data for bulk assign selectors
+  const { data: keywordsData } = useKeywords({ projectId, per_page: 500 })
+  const { data: categoriesData } = useCategories(domainId)
+  const { data: clustersData } = useProjectClusters(projectId)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const projectKeywords: any[] = useMemo(() => {
+    const d = keywordsData?.data ?? keywordsData
+    return Array.isArray(d) ? d : []
+  }, [keywordsData])
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const categories: any[] = useMemo(() => {
+    const d = categoriesData?.data ?? categoriesData
+    return Array.isArray(d) ? d : []
+  }, [categoriesData])
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const clusters: any[] = useMemo(() => {
+    const d = clustersData?.data ?? clustersData
+    return Array.isArray(d) ? d : []
+  }, [clustersData])
+
+  const bulkItems = useMemo(() => {
+    if (bulkType === 'keyword') return projectKeywords.map((k) => ({ id: k.id, name: k.keyword }))
+    if (bulkType === 'cluster') return clusters.map((c) => ({ id: c.id, name: c.name }))
+    return categories.map((c) => ({ id: c.id, name: c.name }))
+  }, [bulkType, projectKeywords, clusters, categories])
+
+  const toggleBulkId = useCallback((id: number) => {
+    setBulkIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }, [])
+
+  const openBulkForPage = useCallback((pageId: number) => {
+    setSelectedIds(new Set([pageId]))
+    setBulkType('keyword')
+    setBulkIds(new Set())
+    setBulkSearch('')
+    setBulkError(null)
+    setBulkOpen(true)
+  }, [])
+
+  const [bulkSearch, setBulkSearch] = useState('')
+
+  const filteredBulkItems = useMemo(() => {
+    if (!bulkSearch.trim()) return bulkItems
+    const q = bulkSearch.toLowerCase()
+    return bulkItems.filter((item) => item.name?.toLowerCase().includes(q))
+  }, [bulkItems, bulkSearch])
+
+  const handleBulkAssign = useCallback(async () => {
+    if (selectedIds.size === 0 || bulkIds.size === 0) return
+    setBulkError(null)
+    try {
+      const ids = Array.from(bulkIds)
+      await Promise.all(
+        Array.from(selectedIds).map((pageId) =>
+          bulkAttach.mutateAsync({
+            pageId: String(pageId),
+            data: { pageable_type: bulkType, pageable_ids: ids },
+          }),
+        ),
+      )
+      setBulkOpen(false)
+      setBulkIds(new Set())
+      setSelectedIds(new Set())
+    } catch (err) {
+      setBulkError(parseApiError(err))
+    }
+  }, [selectedIds, bulkIds, bulkType, bulkAttach])
 
   // Create dialog
   const [createOpen, setCreateOpen] = useState(false)
@@ -249,15 +354,32 @@ function PagesTab({
         <h3 className="text-sm font-medium text-muted-foreground">
           {t('domainDetail.pages')} ({pages.length})
         </h3>
-        <Button
-          className="h-8 text-xs"
-          onClick={() => {
-            resetCreateForm()
-            setCreateOpen(true)
-          }}
-        >
-          {t('pages.addPage')}
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 ? (
+            <Button
+              className="h-8 text-xs"
+              variant="secondary"
+              onClick={() => {
+                setBulkType('keyword')
+                setBulkIds(new Set())
+                setBulkSearch('')
+                setBulkError(null)
+                setBulkOpen(true)
+              }}
+            >
+              Назначить ({selectedIds.size})
+            </Button>
+          ) : null}
+          <Button
+            className="h-8 text-xs"
+            onClick={() => {
+              resetCreateForm()
+              setCreateOpen(true)
+            }}
+          >
+            {t('pages.addPage')}
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
@@ -268,21 +390,37 @@ function PagesTab({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('pages.url')}</TableHead>
-              <TableHead>{t('pages.title_field')}</TableHead>
-              <TableHead>{t('pages.pageType')}</TableHead>
-              <TableHead>{t('pages.tags')}</TableHead>
-              <TableHead>{t('pages.attachments')}</TableHead>
+              <TableHead className="w-10">
+                <input
+                  type="checkbox"
+                  className="h-4 w-4 rounded border-input accent-primary"
+                  checked={selectedIds.size === pages.length && pages.length > 0}
+                  onChange={toggleAll}
+                />
+              </TableHead>
+              <TableHead className="max-w-[300px]">{t('pages.url')}</TableHead>
+              <TableHead className="max-w-[160px]">{t('pages.title_field')}</TableHead>
+              <TableHead className="w-[120px]">{t('pages.pageType')}</TableHead>
+              <TableHead className="max-w-[140px]">{t('pages.tags')}</TableHead>
+              <TableHead className="w-[60px]">{t('pages.attachments')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {pages.map((page) => (
-              <TableRow key={page.id}>
-                <TableCell className="text-sm font-medium max-w-[400px]" title={page.url}>
-                  {truncateUrl(page.url ?? '')}
+              <TableRow key={page.id} data-state={selectedIds.has(page.id) ? 'selected' : undefined}>
+                <TableCell className="w-10">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-input accent-primary"
+                    checked={selectedIds.has(page.id)}
+                    onChange={() => toggleSelect(page.id)}
+                  />
                 </TableCell>
-                <TableCell className="text-sm max-w-[200px]" title={page.title ?? ''}>
-                  {page.title ?? '—'}
+                <TableCell className="text-sm font-medium max-w-[300px]" title={page.url}>
+                  <span className="block truncate">{page.path || page.url}</span>
+                </TableCell>
+                <TableCell className="text-sm max-w-[160px]" title={page.title ?? ''}>
+                  <span className="block truncate">{page.title ?? '—'}</span>
                 </TableCell>
                 <TableCell>
                   {page.page_type ? (
@@ -293,13 +431,13 @@ function PagesTab({
                     '—'
                   )}
                 </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap gap-1">
+                <TableCell className="max-w-[140px]">
+                  <div className="flex flex-wrap gap-1 overflow-hidden max-h-[1.75rem]">
                     {Array.isArray(page.tags) && page.tags.length > 0
                       ? page.tags.map((tag: any) => {
                           const name = typeof tag === 'string' ? tag : tag.name
                           return (
-                            <Badge key={name} variant="secondary" className="text-xs">
+                            <Badge key={name} variant="secondary" className="text-xs truncate max-w-[100px]">
                               {name}
                             </Badge>
                           )
@@ -307,8 +445,43 @@ function PagesTab({
                       : '—'}
                   </div>
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {page.keywords_count ?? page.attachments_count ?? 0}
+                <TableCell className="text-sm">
+                  {(() => {
+                    const kws = Array.isArray(page.keywords) ? page.keywords : []
+                    const cls = Array.isArray(page.clusters) ? page.clusters : []
+                    const cats = Array.isArray(page.categories) ? page.categories : []
+                    const hasAny = kws.length > 0 || cls.length > 0 || cats.length > 0
+                    if (!hasAny) {
+                      return (
+                        <Button
+                          variant="ghost"
+                          className="h-6 px-2 text-xs text-muted-foreground"
+                          onClick={() => openBulkForPage(page.id)}
+                        >
+                          Выбрать
+                        </Button>
+                      )
+                    }
+                    return (
+                      <div className="flex flex-wrap gap-1 overflow-hidden max-h-[2.5rem]">
+                        {kws.map((k: any) => (
+                          <Badge key={`kw-${k.id}`} variant="outline" className="text-[10px] truncate max-w-[90px]">
+                            {k.keyword}
+                          </Badge>
+                        ))}
+                        {cls.map((c: any) => (
+                          <Badge key={`cl-${c.id}`} variant="secondary" className="text-[10px] truncate max-w-[90px]">
+                            {c.name}
+                          </Badge>
+                        ))}
+                        {cats.map((c: any) => (
+                          <Badge key={`cat-${c.id}`} className="text-[10px] truncate max-w-[90px]">
+                            {c.name}
+                          </Badge>
+                        ))}
+                      </div>
+                    )
+                  })()}
                 </TableCell>
               </TableRow>
             ))}
@@ -379,6 +552,71 @@ function PagesTab({
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk assign dialog */}
+      <Dialog open={bulkOpen} onOpenChange={setBulkOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Назначить для {selectedIds.size} страниц</DialogTitle>
+          </DialogHeader>
+          {bulkError ? <p className="text-sm text-destructive">{bulkError}</p> : null}
+          <div className="space-y-3">
+            <div className="flex gap-1">
+              {BULK_TYPES.map((type) => (
+                <Button
+                  key={type}
+                  variant={bulkType === type ? 'default' : 'outline'}
+                  className="h-8 text-xs"
+                  onClick={() => {
+                    setBulkType(type)
+                    setBulkIds(new Set())
+                    setBulkSearch('')
+                  }}
+                >
+                  {type === 'keyword' ? 'Ключевики' : type === 'cluster' ? 'Кластеры' : 'Категории'}
+                </Button>
+              ))}
+            </div>
+            <Input
+              placeholder="Поиск..."
+              value={bulkSearch}
+              onChange={(e) => setBulkSearch(e.target.value)}
+              className="h-8 text-sm"
+            />
+            <div className="border rounded-md max-h-[280px] overflow-y-auto">
+              {filteredBulkItems.length === 0 ? (
+                <p className="text-sm text-muted-foreground p-3">Нет элементов</p>
+              ) : (
+                filteredBulkItems.map((item) => (
+                  <label
+                    key={item.id}
+                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-muted cursor-pointer text-sm"
+                  >
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-input accent-primary"
+                      checked={bulkIds.has(item.id)}
+                      onChange={() => toggleBulkId(item.id)}
+                    />
+                    <span className="truncate">{item.name}</span>
+                  </label>
+                ))
+              )}
+            </div>
+            <DialogFooter>
+              <Button
+                onClick={handleBulkAssign}
+                disabled={bulkIds.size === 0 || bulkAttach.isPending}
+                className="h-8 text-xs"
+              >
+                {bulkAttach.isPending
+                  ? 'Назначаем...'
+                  : `Назначить (${bulkIds.size})`}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
@@ -495,43 +733,37 @@ function IndexTab({ domainId, projectId }: { domainId: string; projectId: string
           <TableHeader>
             <TableRow>
               <TableHead className="w-12">{t('domainDetail.position')}</TableHead>
-              <TableHead>{t('domainDetail.url')}</TableHead>
-              <TableHead>{t('domainDetail.title')}</TableHead>
-              <TableHead className="max-w-[300px]">{t('domainDetail.description')}</TableHead>
-              <TableHead>{t('domainDetail.snippetLinks')}</TableHead>
-              <TableHead>{t('domainDetail.engine')}</TableHead>
-              <TableHead>{t('domainDetail.date')}</TableHead>
+              <TableHead className="max-w-[200px]">{t('domainDetail.url')}</TableHead>
+              <TableHead className="max-w-[180px]">{t('domainDetail.title')}</TableHead>
+              <TableHead className="max-w-[250px]">{t('domainDetail.description')}</TableHead>
+              <TableHead className="max-w-[120px]">{t('domainDetail.snippetLinks')}</TableHead>
+              <TableHead className="w-[60px]">{t('domainDetail.engine')}</TableHead>
+              <TableHead className="w-[60px]">{t('domainDetail.date')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {results.map((row) => (
               <TableRow key={row.id}>
                 <TableCell className="tabular-nums font-medium">{row.position}</TableCell>
-                <TableCell className="text-sm max-w-[250px]" title={row.url}>
+                <TableCell className="text-sm max-w-[200px]" title={row.url}>
                   <a
                     href={row.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-primary hover:underline"
+                    className="text-primary hover:underline block truncate"
                   >
-                    {truncateUrl(row.url, 50)}
+                    {new URL(row.url).pathname}
                   </a>
                 </TableCell>
-                <TableCell className="text-sm max-w-[200px]" title={row.title ?? ''}>
-                  {row.title ?? '—'}
+                <TableCell className="text-sm max-w-[180px]" title={row.title ?? ''}>
+                  <span className="block truncate">{row.title ?? '—'}</span>
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground max-w-[300px]">
-                  <div>
-                    {row.description
-                      ? row.description.length > 120
-                        ? `${row.description.slice(0, 120)}...`
-                        : row.description
-                      : '—'}
-                  </div>
+                <TableCell className="text-sm text-muted-foreground max-w-[250px]">
+                  <span className="block truncate">{row.description ?? '—'}</span>
                 </TableCell>
-                <TableCell>
+                <TableCell className="max-w-[120px]">
                   {row.snippet_links && row.snippet_links.length > 0 ? (
-                    <div className="flex flex-wrap gap-1">
+                    <div className="flex flex-wrap gap-1 overflow-hidden max-h-[1.75rem]">
                       {row.snippet_links.map((link, idx) => (
                         <a
                           key={idx}
@@ -540,7 +772,7 @@ function IndexTab({ domainId, projectId }: { domainId: string; projectId: string
                           rel="noopener noreferrer"
                           className="inline-block"
                         >
-                          <Badge variant="outline" className="text-xs cursor-pointer hover:bg-muted">
+                          <Badge variant="outline" className="text-xs cursor-pointer hover:bg-muted truncate max-w-[100px]">
                             {link.title}
                           </Badge>
                         </a>
@@ -605,19 +837,21 @@ function KeywordsTab({ domainId }: { domainId: string }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>{t('keywords.keyword')}</TableHead>
-              <TableHead>{t('keywords.engine')}</TableHead>
-              <TableHead>{t('keywords.device')}</TableHead>
-              <TableHead>{t('keywords.cluster')}</TableHead>
-              <TableHead>{t('keywords.category')}</TableHead>
-              <TableHead>{t('keywords.region')}</TableHead>
-              <TableHead className="text-right">{t('keywords.position')}</TableHead>
+              <TableHead className="max-w-[250px]">{t('keywords.keyword')}</TableHead>
+              <TableHead className="w-[70px]">{t('keywords.engine')}</TableHead>
+              <TableHead className="w-[60px]">{t('keywords.device')}</TableHead>
+              <TableHead className="max-w-[140px]">{t('keywords.cluster')}</TableHead>
+              <TableHead className="max-w-[140px]">{t('keywords.category')}</TableHead>
+              <TableHead className="max-w-[100px]">{t('keywords.region')}</TableHead>
+              <TableHead className="w-[70px] text-right">{t('keywords.position')}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {keywords.map((kw) => (
               <TableRow key={kw.id}>
-                <TableCell className="text-sm font-medium">{kw.keyword}</TableCell>
+                <TableCell className="text-sm font-medium max-w-[250px]">
+                  <span className="block truncate">{kw.keyword}</span>
+                </TableCell>
                 <TableCell>
                   <Badge variant="secondary" className="text-xs">
                     {ENGINE_LABELS[kw.engine] ?? kw.engine}
@@ -628,9 +862,15 @@ function KeywordsTab({ domainId }: { domainId: string }) {
                     {DEVICE_LABELS[kw.device] ?? kw.device}
                   </Badge>
                 </TableCell>
-                <TableCell className="text-sm">{kw.cluster ?? '—'}</TableCell>
-                <TableCell className="text-sm">{kw.category ?? '—'}</TableCell>
-                <TableCell className="text-sm">{kw.region ?? '—'}</TableCell>
+                <TableCell className="text-sm max-w-[140px]">
+                  <span className="block truncate">{kw.cluster ?? '—'}</span>
+                </TableCell>
+                <TableCell className="text-sm max-w-[140px]">
+                  <span className="block truncate">{kw.category ?? '—'}</span>
+                </TableCell>
+                <TableCell className="text-sm max-w-[100px]">
+                  <span className="block truncate">{kw.region ?? '—'}</span>
+                </TableCell>
                 <TableCell className="text-right tabular-nums font-medium">
                   {kw.latest_position != null ? (
                     <Badge

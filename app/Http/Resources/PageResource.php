@@ -36,6 +36,18 @@ final class PageResource extends JsonApiResource
                 'type' => $tag->type,
             ])->values(),
             'attachments_count' => $this->attachments_count,
+            'keywords' => $this->whenLoaded('keywords', fn () => $this->keywords->map(fn ($kw) => [
+                'id' => $kw->id,
+                'keyword' => $kw->keyword,
+            ])->values()),
+            'clusters' => $this->whenLoaded('clusters', fn () => $this->clusters->map(fn ($c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+            ])->values()),
+            'categories' => $this->whenLoaded('categories', fn () => $this->categories->map(fn ($c) => [
+                'id' => $c->id,
+                'name' => $c->name,
+            ])->values()),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

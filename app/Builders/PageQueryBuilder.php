@@ -43,6 +43,6 @@ final class PageQueryBuilder
                 AllowedInclude::relationship('tags'),
             )
             ->defaultSort('-created_at')
-            ->with(['domain', 'tags']);
+            ->with(['domain', 'tags', 'keywords', 'clusters', 'categories']);
     }
 }
