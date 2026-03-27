@@ -4,15 +4,16 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\Engine;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Domain\StoreDomainRequest;
 use App\Http\Requests\Domain\UpdateDomainRequest;
 use App\Http\Resources\DomainResource;
-use App\Jobs\IndexDomainJob;
 use App\Models\Domain;
 use App\Models\Keyword;
 use App\Models\Pageable;
 use App\Models\Project;
+use App\Services\DomainIndexingService;
 use App\Services\DomainService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
@@ -27,6 +28,7 @@ final class DomainController extends Controller
 {
     public function __construct(
         private readonly DomainService $service,
+        private readonly DomainIndexingService $indexingService,
     ) {}
 
     /**
@@ -127,7 +129,7 @@ final class DomainController extends Controller
      * Запускает фоновый запрос site:{domain} через парсер для получения списка проиндексированных страниц.
      */
     #[PathParameter('domain', description: 'ID домена', example: '1')]
-    #[QueryParameter('engine', type: 'string', description: 'Поисковая система (google, yandex)', example: 'google')]
+    #[QueryParameter('engine', type: 'string', description: 'Поисковая система', enum: ['google', 'yandex'])]
     #[QueryParameter('limit', type: 'integer', description: 'Максимум результатов', example: 100)]
     #[Response(200, description: 'Индексация запущена')]
     public function indexDomain(Request $request, Domain $domain): JsonResponse
@@ -136,12 +138,49 @@ final class DomainController extends Controller
             abort(404);
         }
 
-        $engine = $request->input('engine', 'google');
+        $engine = Engine::from($request->input('engine', 'google'));
         $limit = (int) $request->input('limit', 100);
 
-        IndexDomainJob::dispatch($domain->id, $engine, $limit);
+        $this->indexingService->startIndexing($domain, $engine, $limit);
 
         return response()->json(['data' => ['message' => 'Индексация запущена']]);
+    }
+
+    /**
+     * Статус индексации домена
+     *
+     * Возвращает текущий прогресс индексации: статус батча, количество собранных и найденных страниц.
+     */
+    #[PathParameter('domain', description: 'ID домена', example: '1')]
+    #[QueryParameter('engine', type: 'string', description: 'Поисковая система', enum: ['google', 'yandex'])]
+    #[Response(200, description: 'Статус индексации')]
+    public function indexStatus(Request $request, Domain $domain): JsonResponse
+    {
+        if ($domain->project->organization_id !== $request->get('organization')->id) {
+            abort(404);
+        }
+
+        $engine = Engine::from($request->input('engine', 'google'));
+
+        return response()->json(['data' => $this->indexingService->getStatus($domain, $engine)]);
+    }
+
+    /**
+     * Отмена индексации домена
+     *
+     * Отменяет текущий батч индексации. Уже собранные результаты сохраняются.
+     */
+    #[PathParameter('domain', description: 'ID домена', example: '1')]
+    #[Response(200, description: 'Индексация отменена')]
+    public function cancelIndex(Request $request, Domain $domain): JsonResponse
+    {
+        if ($domain->project->organization_id !== $request->get('organization')->id) {
+            abort(404);
+        }
+
+        $this->indexingService->cancel($domain);
+
+        return response()->json(['data' => ['message' => 'Индексация отменена']]);
     }
 
     /**
@@ -196,7 +235,7 @@ final class DomainController extends Controller
         }
 
         $results = $domain->indexResults()
-            ->orderBy('position')
+            ->orderBy('last_position')
             ->limit((int) $request->input('limit', 100))
             ->get();
 

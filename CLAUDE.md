@@ -93,10 +93,11 @@ Organization → Project → Domain → Category → Cluster → Keyword
 ## Queue Jobs
 
 - `serp-scrape`: ScrapeSerpJob — collects SERP via adapter
+- `indexing`: IndexDomainJob (orchestrator) + FetchIndexPageJob (page worker) — domain index via site: query, batch processing with Bus::batch()
 - `wordstat`: CollectWordstatJob — collects Wordstat frequencies
 - `classification`: ClassifyDomainsJob — classifies domains from SERP
 - `default`: SendPositionAlertJob — sends Telegram/Email alerts on position changes
-- Run: `php artisan queue:work --queue=serp-scrape,wordstat,classification,default`
+- Run: `php artisan queue:work --queue=serp-scrape,indexing,wordstat,classification,default`
 
 ## Events
 

@@ -23,35 +23,25 @@ final class XmlRiverAdapter implements SerpScraperAdapter
 
     public function scrape(ScrapeRequest $request): ScrapeResponse
     {
-        $url = rtrim($this->baseUrl, '/');
-        if (! str_contains($url, '/search')) {
-            $url .= '/search/xml';
-        }
-
+        $url = $this->buildUrl();
+        $baseParams = $this->buildParams($request);
         $firstPage = $request->engine === 'yandex' ? 0 : 1;
-
-        $baseParams = [
-            'user' => $this->credentials['user'] ?? '',
-            'key' => $this->credentials['key'] ?? '',
-            'query' => $request->keyword,
-            'groupby' => self::RESULTS_PER_PAGE,
-        ];
-
-        if ($request->engine === 'yandex') {
-            $baseParams['lr'] = $request->yandexLr;
-        } else {
-            $baseParams['gl'] = $request->googleGl;
-            $baseParams['hl'] = $request->googleHl;
-        }
 
         $allResults = [];
         $page = $firstPage;
         $maxResults = $request->limit;
+        $totalFound = 0;
 
         while (count($allResults) < $maxResults) {
             try {
                 $response = Http::timeout(60)->get($url, array_merge($baseParams, ['page' => $page]));
-                $pageResults = $this->parseXmlResponse($response->body(), count($allResults));
+                $xml = $response->body();
+
+                if ($page === $firstPage) {
+                    $totalFound = $this->parseTotalFound($xml);
+                }
+
+                $pageResults = $this->parseXmlResponse($xml, count($allResults));
 
                 if (empty($pageResults)) {
                     break;
@@ -75,7 +65,27 @@ final class XmlRiverAdapter implements SerpScraperAdapter
 
         return new ScrapeResponse(
             results: $allResults,
-            totalResults: count($allResults),
+            totalResults: $totalFound ?: count($allResults),
+            rawResponse: '',
+        );
+    }
+
+    public function scrapePage(ScrapeRequest $request, int $page): ScrapeResponse
+    {
+        $url = $this->buildUrl();
+        $params = $this->buildParams($request);
+        $firstPage = $request->engine === 'yandex' ? 0 : 1;
+        $positionOffset = ($page - $firstPage) * self::RESULTS_PER_PAGE;
+
+        $response = Http::timeout(60)->get($url, array_merge($params, ['page' => $page]));
+        $xml = $response->body();
+
+        $totalFound = $this->parseTotalFound($xml);
+        $results = $this->parseXmlResponse($xml, $positionOffset);
+
+        return new ScrapeResponse(
+            results: $results,
+            totalResults: $totalFound,
             rawResponse: '',
         );
     }
@@ -129,10 +139,7 @@ final class XmlRiverAdapter implements SerpScraperAdapter
     public function healthCheck(): bool
     {
         try {
-            $url = rtrim($this->baseUrl, '/');
-            if (! str_contains($url, '/search')) {
-                $url .= '/search/xml';
-            }
+            $url = $this->buildUrl();
 
             $response = Http::timeout(10)->get($url, [
                 'user' => $this->credentials['user'] ?? '',
@@ -146,5 +153,51 @@ final class XmlRiverAdapter implements SerpScraperAdapter
         } catch (\Exception) {
             return false;
         }
+    }
+
+    private function buildUrl(): string
+    {
+        $url = rtrim($this->baseUrl, '/');
+        if (! str_contains($url, '/search')) {
+            $url .= '/search/xml';
+        }
+
+        return $url;
+    }
+
+    /** @return array<string, mixed> */
+    private function buildParams(ScrapeRequest $request): array
+    {
+        $params = [
+            'user' => $this->credentials['user'] ?? '',
+            'key' => $this->credentials['key'] ?? '',
+            'query' => $request->keyword,
+            'groupby' => self::RESULTS_PER_PAGE,
+        ];
+
+        if ($request->engine === 'yandex') {
+            $params['lr'] = $request->yandexLr;
+        } else {
+            $params['gl'] = $request->googleGl;
+            $params['hl'] = $request->googleHl;
+        }
+
+        return $params;
+    }
+
+    private function parseTotalFound(string $xml): int
+    {
+        try {
+            $doc = new \SimpleXMLElement($xml);
+
+            foreach ($doc->response->found ?? [] as $found) {
+                if ((string) $found['priority'] === 'all') {
+                    return (int) (string) $found;
+                }
+            }
+        } catch (\Exception) {
+        }
+
+        return 0;
     }
 }

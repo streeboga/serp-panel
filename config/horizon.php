@@ -219,9 +219,18 @@ return [
                 'queue' => ['serp-scrape'],
                 'balance' => 'auto',
                 'minProcesses' => 1,
-                'maxProcesses' => 10,
+                'maxProcesses' => 7,
                 'tries' => 3,
                 'timeout' => 300,
+            ],
+            'index-supervisor' => [
+                'connection' => 'redis',
+                'queue' => ['indexing'],
+                'balance' => 'auto',
+                'minProcesses' => 1,
+                'maxProcesses' => 3,
+                'tries' => 3,
+                'timeout' => 120,
             ],
             'wordstat-supervisor' => [
                 'connection' => 'redis',
@@ -254,7 +263,7 @@ return [
         'local' => [
             'default-supervisor' => [
                 'connection' => 'redis',
-                'queue' => ['serp-scrape', 'wordstat', 'classification', 'default'],
+                'queue' => ['serp-scrape', 'indexing', 'wordstat', 'classification', 'default'],
                 'balance' => 'auto',
                 'minProcesses' => 1,
                 'maxProcesses' => 3,

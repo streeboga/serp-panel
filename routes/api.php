@@ -96,6 +96,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::get('projects/{project}/domains', [DomainController::class, 'index']);
         Route::get('domains/{domain}', [DomainController::class, 'show'])->withoutScopedBindings();
         Route::get('domains/{domain}/index-results', [DomainController::class, 'indexResults']);
+        Route::get('domains/{domain}/index-status', [DomainController::class, 'indexStatus']);
         Route::get('domains/{domain}/keywords', [DomainController::class, 'keywords']);
 
         // Domains — write (manager+)
@@ -104,6 +105,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
             Route::patch('domains/{domain}', [DomainController::class, 'update']);
             Route::delete('domains/{domain}', [DomainController::class, 'destroy']);
             Route::post('domains/{domain}/index', [DomainController::class, 'indexDomain']);
+            Route::delete('domains/{domain}/index', [DomainController::class, 'cancelIndex']);
         });
 
         // Categories — read
