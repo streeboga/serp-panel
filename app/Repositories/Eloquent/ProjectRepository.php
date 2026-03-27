@@ -27,9 +27,10 @@ final class ProjectRepository implements ProjectRepositoryInterface
         return Project::create($data);
     }
 
+    /** @param array<string, mixed> $data */
     public function update(Project $project, array $data): Project
     {
-        $project->update(array_filter($data, fn ($v) => $v !== null));
+        $project->update($data);
 
         return $project->refresh();
     }
@@ -37,6 +38,13 @@ final class ProjectRepository implements ProjectRepositoryInterface
     public function delete(Project $project): void
     {
         $project->delete();
+    }
+
+    public function findByPublicSlug(string $slug): Project
+    {
+        return Project::where('public_slug', $slug)
+            ->where('is_public', true)
+            ->firstOrFail();
     }
 
     public function countByOrganization(int $organizationId): int

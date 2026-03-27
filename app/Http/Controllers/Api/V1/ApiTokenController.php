@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\Enums\OrganizationRole;
 use App\Http\Controllers\Controller;
 use App\Services\ApiTokenService;
 use Dedoc\Scramble\Attributes\Group;
@@ -60,23 +61,20 @@ final class ApiTokenController extends Controller
             'expires_at' => 'nullable|date|after:now',
         ]);
 
-        if (!empty($validated['project_id'])) {
-            $org = $request->get('organization');
-            if (!$org->projects()->where('id', $validated['project_id'])->exists()) {
-                return response()->json([
-                    'errors' => [['status' => '422', 'title' => 'Validation Error', 'detail' => 'Project does not belong to this organization']],
-                ], 422);
-            }
+        try {
+            $result = $this->service->createToken(
+                $user,
+                $request->get('organization'),
+                $validated['name'],
+                OrganizationRole::from($validated['role']),
+                $validated['project_id'] ?? null,
+                $validated['expires_at'] ?? null,
+            );
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'errors' => [['status' => '422', 'title' => 'Validation Error', 'detail' => $e->getMessage()]],
+            ], 422);
         }
-
-        $result = $this->service->createToken(
-            $user,
-            $request->get('organization'),
-            $validated['name'],
-            $validated['role'],
-            $validated['project_id'] ?? null,
-            $validated['expires_at'] ?? null,
-        );
 
         return response()->json([
             'data' => [

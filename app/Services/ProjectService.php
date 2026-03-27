@@ -29,6 +29,11 @@ final readonly class ProjectService
         return $this->repository->findById($id);
     }
 
+    public function findByPublicSlug(string $slug): Project
+    {
+        return $this->repository->findByPublicSlug($slug);
+    }
+
     public function create(Organization $organization, CreateProjectData $data): Project
     {
         return $this->repository->create([
@@ -59,8 +64,6 @@ final readonly class ProjectService
             $data['public_slug'] = null;
         }
 
-        $project->update($data);
-
-        return $project->refresh();
+        return $this->repository->update($project, $data);
     }
 }

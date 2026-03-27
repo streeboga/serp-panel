@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\Enums\OrganizationRole;
 use App\Models\User;
 use App\Models\Organization;
 use Illuminate\Support\Collection;
@@ -12,10 +13,18 @@ use Laravel\Sanctum\PersonalAccessToken;
 
 final readonly class ApiTokenService
 {
+    /** @var array<string, string[]> */
     private const ROLE_ABILITIES = [
         'viewer' => ['read'],
         'analyst' => ['read', 'export'],
         'manager' => ['read', 'export', 'write'],
+    ];
+
+    private const ROLE_HIERARCHY = [
+        'admin' => 4,
+        'manager' => 3,
+        'analyst' => 2,
+        'viewer' => 1,
     ];
 
     /** @return Collection<int, PersonalAccessToken> */
@@ -26,16 +35,39 @@ final readonly class ApiTokenService
             ->get();
     }
 
-    /** @return array{token: NewAccessToken, abilities: string[]} */
+    /**
+     * @return array{token: NewAccessToken, abilities: string[]}
+     *
+     * @throws \InvalidArgumentException
+     */
     public function createToken(
         User $user,
         Organization $organization,
         string $name,
-        string $role,
+        OrganizationRole $tokenRole,
         ?int $projectId = null,
         ?string $expiresAt = null,
     ): array {
-        $abilities = self::ROLE_ABILITIES[$role] ?? ['read'];
+        // Validate: token role cannot exceed user's org role
+        $userRole = $organization->users()
+            ->where('user_id', $user->id)
+            ->first()
+            ?->pivot
+            ?->getAttribute('role');
+
+        $userLevel = self::ROLE_HIERARCHY[$userRole] ?? 0;
+        $tokenLevel = self::ROLE_HIERARCHY[$tokenRole->value] ?? 0;
+
+        if ($tokenLevel > $userLevel) {
+            throw new \InvalidArgumentException('Token role cannot exceed your role in the organization');
+        }
+
+        // Validate: project belongs to organization
+        if ($projectId !== null && !$organization->projects()->where('id', $projectId)->exists()) {
+            throw new \InvalidArgumentException('Project does not belong to this organization');
+        }
+
+        $abilities = self::ROLE_ABILITIES[$tokenRole->value] ?? ['read'];
 
         $scopedAbilities = [];
         foreach ($abilities as $ability) {
