@@ -202,3 +202,57 @@ test('cross-tenant project listing returns only own projects', function () {
     $response->assertOk()
         ->assertJsonCount(1, 'data');
 });
+
+// === Organization Create & Delete ===
+
+test('authenticated user can create organization', function () {
+    $user = User::factory()->create();
+
+    $response = $this->actingAs($user)
+        ->postJson('/api/v1/organizations', ['name' => 'New Org']);
+
+    $response->assertStatus(201)
+        ->assertJsonPath('data.type', 'organizations')
+        ->assertJsonPath('data.attributes.name', 'New Org');
+
+    $this->assertDatabaseHas('organizations', ['name' => 'New Org']);
+    // Creator should be admin
+    $orgId = $response->json('data.id');
+    $this->assertDatabaseHas('organization_user', [
+        'organization_id' => $orgId,
+        'user_id' => $user->id,
+        'role' => 'admin',
+    ]);
+});
+
+test('create organization requires name', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson('/api/v1/organizations', [])
+        ->assertStatus(422)
+        ->assertJsonValidationErrors(['name']);
+});
+
+test('unauthenticated user cannot create organization', function () {
+    $this->postJson('/api/v1/organizations', ['name' => 'Test'])
+        ->assertStatus(401);
+});
+
+test('admin can delete organization (soft delete)', function () {
+    $h = createUserWithOrg('admin');
+
+    $response = $this->actingAs($h['user'])
+        ->deleteJson('/api/v1/organization', [], orgHeaders($h['org']));
+
+    $response->assertStatus(204);
+    $this->assertSoftDeleted('organizations', ['id' => $h['org']->id]);
+});
+
+test('non-admin cannot delete organization', function () {
+    $h = createUserWithOrg('manager');
+
+    $this->actingAs($h['user'])
+        ->deleteJson('/api/v1/organization', [], orgHeaders($h['org']))
+        ->assertStatus(403);
+});
