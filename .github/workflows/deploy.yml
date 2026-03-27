@@ -1,53 +1,39 @@
-name: Deploy
+name: deploy
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  deploy-backend:
+  deploy:
     runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
     steps:
-      - name: Deploy backend via SSH
+      - name: Deploy to production
         uses: appleboy/ssh-action@v1
         with:
-          host: 85.198.101.184
-          username: root
+          host: equity.su
+          username: deploy
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /var/www/api-serp.equity.su
-            su deploy -s /bin/bash -c 'git pull origin main && composer install --no-dev --optimize-autoloader'
+
+            git pull origin main
+
+            composer install --no-dev --optimize-autoloader --no-interaction
+
+            cd frontend
+            npm install
+            npx vite build
+            rsync -a --delete dist/ /var/www/serp.equity.su/
+            cd ..
+
             php artisan migrate --force
             php artisan config:cache
             php artisan route:cache
             php artisan view:cache
-            supervisorctl restart serp-panel-worker:*
+            php artisan event:cache
 
-  deploy-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
-
-      - name: Install dependencies
-        run: cd frontend && npm ci
-
-      - name: Build frontend
-        run: cd frontend && npx vite build
-
-      - name: Deploy to server
-        uses: burnett01/rsync-deployments@7.0.1
-        with:
-          switches: -avz --delete
-          path: frontend/dist/
-          remote_path: /var/www/serp.equity.su/
-          remote_host: 85.198.101.184
-          remote_user: root
-          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
+            sudo supervisorctl restart serp-panel-worker:*
