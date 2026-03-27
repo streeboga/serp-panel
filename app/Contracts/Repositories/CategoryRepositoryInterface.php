@@ -12,6 +12,9 @@ interface CategoryRepositoryInterface
     /** @return Collection<int, Category> */
     public function allForDomain(int $domainId): Collection;
 
+    /** @return Collection<int, Category> */
+    public function allForProject(int $projectId): Collection;
+
     public function findById(int $id): Category;
 
     /** @param array<string, mixed> $data */

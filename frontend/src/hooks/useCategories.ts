@@ -12,6 +12,16 @@ export function useCategories(domainId: string) {
   })
 }
 
+export function useProjectCategories(projectId: string) {
+  return useQuery({
+    queryKey: queryKeys.categories.byProject(projectId),
+    queryFn: () =>
+      api.get(`/projects/${projectId}/categories`).then((r) => r.data),
+    enabled: !!projectId,
+    staleTime: 30_000,
+  })
+}
+
 export function useCategory(id: string) {
   return useQuery({
     queryKey: queryKeys.categories.detail(id),

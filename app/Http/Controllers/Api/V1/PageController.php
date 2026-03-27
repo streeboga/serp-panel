@@ -160,9 +160,17 @@ final class PageController extends Controller
     #[Response(422, description: 'Ошибка валидации')]
     public function attach(Request $request, Page $page): JsonResponse
     {
+        $this->authorizePageForOrganization($page, $request);
+
+        $tableMap = [
+            'keyword' => 'keywords',
+            'cluster' => 'clusters',
+            'category' => 'categories',
+        ];
+
         $validated = $request->validate([
             'pageable_type' => ['required', Rule::in(['keyword', 'cluster', 'category'])],
-            'pageable_id' => ['required', 'integer'],
+            'pageable_id' => ['required', 'integer', 'exists:' . $tableMap[$request->input('pageable_type', 'keyword')] . ',id'],
             'engine' => ['nullable', Rule::in(['google', 'yandex'])],
             'device' => ['nullable', Rule::in(['desktop', 'mobile'])],
             'priority' => ['nullable', 'integer', 'min:0'],
@@ -199,10 +207,18 @@ final class PageController extends Controller
     #[Response(422, description: 'Ошибка валидации')]
     public function bulkAttach(Request $request, Page $page): JsonResponse
     {
+        $this->authorizePageForOrganization($page, $request);
+
+        $tableMap = [
+            'keyword' => 'keywords',
+            'cluster' => 'clusters',
+            'category' => 'categories',
+        ];
+
         $validated = $request->validate([
             'pageable_type' => ['required', Rule::in(['keyword', 'cluster', 'category'])],
             'pageable_ids' => ['required', 'array'],
-            'pageable_ids.*' => ['integer'],
+            'pageable_ids.*' => ['integer', 'exists:' . $tableMap[$request->input('pageable_type', 'keyword')] . ',id'],
             'engine' => ['nullable', Rule::in(['google', 'yandex'])],
             'device' => ['nullable', Rule::in(['desktop', 'mobile'])],
             'priority' => ['nullable', 'integer', 'min:0'],
@@ -225,6 +241,58 @@ final class PageController extends Controller
         ], fn ($v) => $v !== null);
 
         $this->service->bulkAttach($page, $fullType, $validated['pageable_ids'], $pivotData);
+
+        return response()->json(null, 201);
+    }
+
+    /**
+     * Массовая привязка сущностей к нескольким страницам
+     *
+     * Привязывает ключевые слова, кластеры или категории к нескольким страницам за один запрос.
+     */
+    #[PathParameter('project', description: 'ID проекта', example: '1')]
+    #[Response(201, description: 'Привязки созданы')]
+    #[Response(422, description: 'Ошибка валидации')]
+    public function bulkAttachPages(Request $request, Project $project): JsonResponse
+    {
+        if ($project->organization_id !== $request->get('organization')->id) {
+            abort(404);
+        }
+
+        $tableMap = [
+            'keyword' => 'keywords',
+            'cluster' => 'clusters',
+            'category' => 'categories',
+        ];
+
+        $validated = $request->validate([
+            'page_ids' => ['required', 'array'],
+            'page_ids.*' => ['integer', 'exists:pages,id'],
+            'pageable_type' => ['required', Rule::in(['keyword', 'cluster', 'category'])],
+            'pageable_ids' => ['required', 'array'],
+            'pageable_ids.*' => ['integer', 'exists:' . $tableMap[$request->input('pageable_type', 'keyword')] . ',id'],
+            'engine' => ['nullable', Rule::in(['google', 'yandex'])],
+            'device' => ['nullable', Rule::in(['desktop', 'mobile'])],
+            'priority' => ['nullable', 'integer', 'min:0'],
+            'is_target' => ['nullable', 'boolean'],
+        ]);
+
+        $typeMap = [
+            'keyword' => Keyword::class,
+            'cluster' => Cluster::class,
+            'category' => Category::class,
+        ];
+
+        $fullType = $typeMap[$validated['pageable_type']];
+
+        $pivotData = array_filter([
+            'engine' => $validated['engine'] ?? null,
+            'device' => $validated['device'] ?? null,
+            'priority' => $validated['priority'] ?? null,
+            'is_target' => $validated['is_target'] ?? null,
+        ], fn ($v) => $v !== null);
+
+        $this->service->bulkAttachPages($project->id, $validated['page_ids'], $fullType, $validated['pageable_ids'], $pivotData);
 
         return response()->json(null, 201);
     }
@@ -379,5 +447,14 @@ final class PageController extends Controller
         $this->service->detach($pageable->id);
 
         return response()->json(null, 204);
+    }
+
+    private function authorizePageForOrganization(Page $page, Request $request): void
+    {
+        $page->loadMissing('project');
+
+        if ($page->project->organization_id !== $request->get('organization')->id) {
+            abort(404);
+        }
     }
 }

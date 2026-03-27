@@ -110,6 +110,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
 
         // Categories — read
         Route::get('domains/{domain}/categories', [CategoryController::class, 'index']);
+        Route::get('projects/{project}/categories', [CategoryController::class, 'byProject']);
         Route::get('categories/{category}', [CategoryController::class, 'show']);
 
         // Categories — write (manager+)
@@ -187,6 +188,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
             Route::patch('pages/{page}/tags', [PageController::class, 'syncTags']);
             Route::post('pages/{page}/attach', [PageController::class, 'attach']);
             Route::post('pages/{page}/bulk-attach', [PageController::class, 'bulkAttach']);
+            Route::post('projects/{project}/pages/bulk-attach', [PageController::class, 'bulkAttachPages']);
             Route::delete('pageables/{pageable}', [PageController::class, 'detachPageable']);
         });
 

@@ -9,6 +9,7 @@ use App\Http\Requests\Category\StoreCategoryRequest;
 use App\Http\Requests\Category\UpdateCategoryRequest;
 use App\Http\Resources\CategoryResource;
 use App\Models\Category;
+use App\Models\Project;
 use App\Services\CategoryService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
@@ -93,5 +94,17 @@ final class CategoryController extends Controller
         $this->service->delete($category);
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Список категорий проекта
+     *
+     * Возвращает все категории всех доменов указанного проекта.
+     */
+    #[PathParameter('project', description: 'ID проекта', example: '1')]
+    #[Response(200, description: 'Список категорий проекта')]
+    public function byProject(Project $project): AnonymousResourceCollection
+    {
+        return CategoryResource::collection($this->service->listForProject($project->id));
     }
 }

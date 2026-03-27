@@ -2,8 +2,8 @@ import { createLazyFileRoute, Link } from '@tanstack/react-router'
 import { useState, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useDomain, useDomains, useIndexDomain, useDomainIndexResults, useDomainKeywords } from '@/hooks/useDomains'
-import { usePages, useCreatePage, useImportPages, useBulkAttachPage } from '@/hooks/usePages'
-import { useCategories } from '@/hooks/useCategories'
+import { usePages, useCreatePage, useImportPages, useBulkAttachPages } from '@/hooks/usePages'
+import { useProjectCategories } from '@/hooks/useCategories'
 import { useKeywords, useProjectClusters } from '@/hooks/useKeywords'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Badge } from '@/components/ui/badge'
@@ -197,7 +197,7 @@ function PagesTab({
   const { t } = useTranslation()
   const { data: pagesData, isLoading } = usePages({ projectId, domain_id: domainId })
   const createPage = useCreatePage(projectId)
-  const bulkAttach = useBulkAttachPage()
+  const bulkAttach = useBulkAttachPages(projectId)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pages: any[] = useMemo(() => {
@@ -231,7 +231,7 @@ function PagesTab({
 
   // Data for bulk assign selectors
   const { data: keywordsData } = useKeywords({ projectId, per_page: 500 })
-  const { data: categoriesData } = useCategories(domainId)
+  const { data: categoriesData } = useProjectCategories(projectId)
   const { data: clustersData } = useProjectClusters(projectId)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -288,15 +288,11 @@ function PagesTab({
     if (selectedIds.size === 0 || bulkIds.size === 0) return
     setBulkError(null)
     try {
-      const ids = Array.from(bulkIds)
-      await Promise.all(
-        Array.from(selectedIds).map((pageId) =>
-          bulkAttach.mutateAsync({
-            pageId: String(pageId),
-            data: { pageable_type: bulkType, pageable_ids: ids },
-          }),
-        ),
-      )
+      await bulkAttach.mutateAsync({
+        page_ids: Array.from(selectedIds),
+        pageable_type: bulkType,
+        pageable_ids: Array.from(bulkIds),
+      })
       setBulkOpen(false)
       setBulkIds(new Set())
       setSelectedIds(new Set())

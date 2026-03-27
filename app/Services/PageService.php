@@ -73,6 +73,20 @@ final readonly class PageService
         $this->pageableRepository->bulkAttach($page->id, $type, $ids, $pivotData);
     }
 
+    /**
+     * @param array<int> $pageIds
+     * @param array<int> $pageableIds
+     * @param array<string, mixed> $pivotData
+     */
+    public function bulkAttachPages(int $projectId, array $pageIds, string $type, array $pageableIds, array $pivotData = []): void
+    {
+        $pages = Page::where('project_id', $projectId)->whereIn('id', $pageIds)->pluck('id');
+
+        foreach ($pages as $pageId) {
+            $this->pageableRepository->bulkAttach($pageId, $type, $pageableIds, $pivotData);
+        }
+    }
+
     public function findByUrl(int $projectId, string $url): ?Page
     {
         return $this->pageRepository->findByUrl($projectId, $url);

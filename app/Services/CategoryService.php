@@ -22,6 +22,12 @@ final readonly class CategoryService
         return $this->repository->allForDomain($domainId);
     }
 
+    /** @return Collection<int, Category> */
+    public function listForProject(int $projectId): Collection
+    {
+        return $this->repository->allForProject($projectId);
+    }
+
     public function findById(int $id): Category
     {
         return $this->repository->findById($id);

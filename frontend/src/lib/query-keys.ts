@@ -37,6 +37,8 @@ export const queryKeys = {
     all: ['categories'] as const,
     byDomain: (domainId: string) =>
       [...queryKeys.categories.all, 'domain', domainId] as const,
+    byProject: (projectId: string) =>
+      [...queryKeys.categories.all, 'project', projectId] as const,
     detail: (id: string) =>
       [...queryKeys.categories.all, id] as const,
   },

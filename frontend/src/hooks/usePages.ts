@@ -106,6 +106,18 @@ export function useBulkAttachPage() {
   })
 }
 
+export function useBulkAttachPages(projectId: string) {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: (data: { page_ids: number[]; pageable_type: string; pageable_ids: number[] }) =>
+      api.post(`/projects/${projectId}/pages/bulk-attach`, data).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.pages.all })
+      qc.invalidateQueries({ queryKey: queryKeys.keywords.all })
+    },
+  })
+}
+
 export function useDetachPageable() {
   const qc = useQueryClient()
   return useMutation({
