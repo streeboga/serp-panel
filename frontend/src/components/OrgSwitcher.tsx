@@ -36,7 +36,7 @@ export function OrgSwitcher() {
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute top-full left-0 right-0 mt-1 glass-card rounded-lg shadow-lg z-50 py-1">
+          <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg shadow-lg z-50 py-1">
             {orgs.map((org) => (
               <button
                 key={org.id}

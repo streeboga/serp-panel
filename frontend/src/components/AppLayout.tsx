@@ -20,8 +20,6 @@ import {
   Sun,
   Moon,
   LogOut,
-  ChevronDown,
-  ChevronRight,
   PanelLeftClose,
   PanelLeft,
 } from 'lucide-react'
@@ -44,7 +42,6 @@ const configNavItems: NavItem[] = [
   { labelKey: 'nav.schedules', to: '/schedules', icon: <CalendarClock className="size-4" />, prefetchKey: queryKeys.schedules.all },
   { labelKey: 'nav.wordstatSchedules', to: '/wordstat-schedules', icon: <BarChart3 className="size-4" />, prefetchKey: queryKeys.wordstatSchedules.all },
   { labelKey: 'nav.classification', to: '/classification', icon: <Tag className="size-4" />, prefetchKey: queryKeys.classification.rules },
-  { labelKey: 'nav.settings', to: '/settings', icon: <Settings className="size-4" />, prefetchKey: queryKeys.organization.members },
 ]
 
 const prefetchApis: Record<string, string> = {
@@ -67,11 +64,7 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
   const routerState = useRouterState()
   const currentPath = routerState.location.pathname
 
-  const isConfigRoute = useMemo(
-    () => configNavItems.some((item) => currentPath === item.to || currentPath.startsWith(item.to + '/')),
-    [currentPath],
-  )
-  const [configOpen, setConfigOpen] = useState(isConfigRoute)
+  void currentPath // used by nav active state
 
   const handleLogout = useCallback(() => {
     logout()
@@ -122,66 +115,64 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen flex">
-      <aside className={`${collapsed ? 'w-14' : 'w-56'} bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border transition-all duration-200 shrink-0`}>
-        {/* Header */}
-        <div className={`flex items-center border-b border-sidebar-border ${collapsed ? 'justify-center p-2' : 'justify-between p-3'}`}>
-          {!collapsed && (
-            <div className="min-w-0">
-              <h1 className="text-sm font-bold tracking-tight truncate">{t('app.name')}</h1>
-              <p className="text-[11px] text-muted-foreground truncate">{user?.name}</p>
-            </div>
+      <aside className={`${collapsed ? 'w-14' : 'w-52'} bg-sidebar text-sidebar-foreground flex flex-col border-r border-sidebar-border transition-all duration-200 shrink-0`}>
+        {/* Header — org switcher + collapse toggle */}
+        <div className={`border-b border-sidebar-border flex items-center gap-1 ${collapsed ? 'justify-center p-1.5' : 'p-2'}`}>
+          {!collapsed ? (
+            <>
+              <div className="flex-1 min-w-0">
+                <OrgSwitcher />
+              </div>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                onClick={() => setCollapsed(true)}
+                className="text-muted-foreground hover:text-foreground shrink-0"
+                title="Свернуть"
+              >
+                <PanelLeftClose className="size-3.5" />
+              </Button>
+            </>
+          ) : (
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={() => setCollapsed(false)}
+              className="text-muted-foreground hover:text-foreground"
+              title="Развернуть"
+            >
+              <PanelLeft className="size-3.5" />
+            </Button>
           )}
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={() => setCollapsed(!collapsed)}
-            className="text-muted-foreground hover:text-foreground shrink-0"
-          >
-            {collapsed ? <PanelLeft className="size-3.5" /> : <PanelLeftClose className="size-3.5" />}
-          </Button>
         </div>
-
-        {/* Org switcher */}
-        {!collapsed && (
-          <div className="px-2 pt-2">
-            <OrgSwitcher />
-          </div>
-        )}
 
         {/* Main nav */}
         <nav className={`flex-1 flex flex-col gap-0.5 ${collapsed ? 'px-1.5 py-2' : 'px-2 py-2'}`}>
           {mainNavItems.map(renderNavItem)}
 
-          {/* Config section */}
-          <div className="mt-3">
-            {!collapsed && (
-              <button
-                onClick={() => setConfigOpen(!configOpen)}
-                className="flex items-center gap-1.5 w-full px-2.5 py-1 text-[11px] font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
-              >
-                {configOpen ? <ChevronDown className="size-3" /> : <ChevronRight className="size-3" />}
-                Настройки
-              </button>
-            )}
-            {(collapsed || configOpen || isConfigRoute) && (
-              <div className="flex flex-col gap-0.5 mt-0.5">
-                {configNavItems.map(renderNavItem)}
-              </div>
-            )}
+          {/* Config items — always visible, no accordion */}
+          <div className="flex flex-col gap-0.5 mt-3">
+            {configNavItems.map(renderNavItem)}
           </div>
         </nav>
 
-        {/* Footer */}
-        <div className={`border-t border-sidebar-border flex ${collapsed ? 'flex-col items-center gap-1 p-1.5' : 'items-center gap-1 p-2'}`}>
-          <Button
-            variant="ghost"
-            size="icon-xs"
-            onClick={toggleTheme}
-            className="text-muted-foreground hover:text-foreground"
-            title={resolvedTheme === 'dark' ? t('settings.themeLight') : t('settings.themeDark')}
-          >
-            {resolvedTheme === 'dark' ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
-          </Button>
+        {/* Footer — theme + settings left, logout right */}
+        <div className={`border-t border-sidebar-border flex ${collapsed ? 'flex-col items-center gap-1 p-1.5' : 'items-center p-1.5'}`}>
+          <div className="flex items-center gap-0.5">
+            <Button
+              variant="ghost"
+              size="icon-xs"
+              onClick={toggleTheme}
+              className="text-muted-foreground hover:text-foreground"
+              title={resolvedTheme === 'dark' ? t('settings.themeLight') : t('settings.themeDark')}
+            >
+              {resolvedTheme === 'dark' ? <Sun className="size-3.5" /> : <Moon className="size-3.5" />}
+            </Button>
+            <Link to="/settings" className="inline-flex items-center justify-center size-6 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors" title={t('nav.settings')}>
+              <Settings className="size-3.5" />
+            </Link>
+          </div>
+          {!collapsed ? <div className="flex-1" /> : null}
           <Button
             variant="ghost"
             size="icon-xs"

@@ -99,36 +99,8 @@ function DomainDetailPage() {
   const [activeTab, setActiveTab] = useState('overview')
 
   return (
-    <div className="space-y-3">
-      {/* Compact header: breadcrumb + domain name + type in one line */}
-      <div className="flex items-center gap-2 text-sm">
-        <Link to="/projects/$projectId/domains" params={{ projectId }} className="text-muted-foreground hover:underline">
-          Домены
-        </Link>
-        <span className="text-muted-foreground">/</span>
-        <span className="font-semibold">{domain?.name ?? '...'}</span>
-        {domain ? (
-          <Badge
-            variant={typeCfg.variant}
-            className={`text-[10px] ${domain.type === 'own' ? 'bg-green-500 text-white hover:bg-green-600' : ''}`}
-          >
-            {typeCfg.label}
-          </Badge>
-        ) : null}
-        {domain?.tags?.map((tag) => (
-          <Badge key={tag.id} variant="outline" className="text-[10px]">{tag.name}</Badge>
-        ))}
-        {parentDomain ? (
-          <span className="text-xs text-muted-foreground">
-            ← <Link to="/projects/$projectId/domains/$domainId" params={{ projectId, domainId: String(parentDomain.id) }} className="hover:underline text-primary">{parentDomain.name}</Link>
-          </span>
-        ) : null}
-        {domain?.indexed_pages_count ? (
-          <span className="text-xs text-muted-foreground ml-auto">В индексе: {domain.indexed_pages_count}</span>
-        ) : null}
-      </div>
-
-      {/* Tabs */}
+    <div className="space-y-2">
+      {/* Tabs only — breadcrumbs handled by parent layout */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="overview">{t('domainDetail.overview')}</TabsTrigger>
