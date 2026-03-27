@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\PageController;
 use App\Http\Controllers\Api\V1\PositionMatrixController;
 use App\Http\Controllers\Api\V1\ProjectController;
+use App\Http\Controllers\Api\V1\PublicProjectController;
 use App\Http\Controllers\Api\V1\RegionController;
 use App\Http\Controllers\Api\V1\ScheduleController;
 use App\Http\Controllers\Api\V1\ScraperController;
@@ -32,6 +33,13 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('v1')->middleware('json-api')->group(function () {
     // Webhook — no auth required (uses secret)
     Route::post('/webhooks/serp', [WebhookController::class, 'serp'])->withoutMiddleware(['json-api']);
+
+    // Public project access (no auth)
+    Route::middleware('throttle:60,1')->group(function () {
+        Route::get('public/{slug}', [PublicProjectController::class, 'show']);
+        Route::get('public/{slug}/positions', [PublicProjectController::class, 'positions']);
+        Route::get('public/{slug}/domains', [PublicProjectController::class, 'domains']);
+    });
 
     Route::post('/auth/register', [AuthController::class, 'register']);
     Route::post('/auth/login', [AuthController::class, 'login']);
@@ -92,6 +100,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::middleware('org.role:manager')->group(function () {
             Route::post('projects', [ProjectController::class, 'store']);
             Route::patch('projects/{project}', [ProjectController::class, 'update']);
+            Route::patch('projects/{project}/public', [ProjectController::class, 'togglePublic']);
             Route::delete('projects/{project}', [ProjectController::class, 'destroy']);
         });
 

@@ -111,4 +111,26 @@ final class ProjectController extends Controller
 
         return response()->json(null, 204);
     }
+
+    /**
+     * Переключение публичного доступа
+     *
+     * Включает/выключает публичный доступ к проекту. При включении генерируется уникальная ссылка.
+     */
+    #[PathParameter('project', description: 'ID проекта', example: '1')]
+    #[Response(200, description: 'Статус обновлён')]
+    public function togglePublic(Request $request, Project $project): ProjectResource
+    {
+        if ($project->organization_id !== $request->get('organization')->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'is_public' => 'required|boolean',
+        ]);
+
+        $project = $this->service->togglePublic($project, $validated['is_public']);
+
+        return ProjectResource::make($project);
+    }
 }

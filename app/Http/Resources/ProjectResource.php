@@ -27,6 +27,11 @@ final class ProjectResource extends JsonApiResource
         return [
             'name' => $this->name,
             'description' => $this->description,
+            'is_public' => $this->is_public,
+            'public_slug' => $this->public_slug,
+            'public_url' => $this->is_public && $this->public_slug
+                ? url("/api/v1/public/{$this->public_slug}")
+                : null,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'domains_count' => $this->whenCounted('domains'),

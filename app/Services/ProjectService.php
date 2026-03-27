@@ -10,6 +10,7 @@ use App\DataTransferObjects\Project\UpdateProjectData;
 use App\Models\Organization;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Str;
 
 final readonly class ProjectService
 {
@@ -44,5 +45,22 @@ final readonly class ProjectService
     public function delete(Project $project): void
     {
         $this->repository->delete($project);
+    }
+
+    public function togglePublic(Project $project, bool $isPublic): Project
+    {
+        $data = ['is_public' => $isPublic];
+
+        if ($isPublic && !$project->public_slug) {
+            $data['public_slug'] = (string) Str::uuid();
+        }
+
+        if (!$isPublic) {
+            $data['public_slug'] = null;
+        }
+
+        $project->update($data);
+
+        return $project->refresh();
     }
 }
