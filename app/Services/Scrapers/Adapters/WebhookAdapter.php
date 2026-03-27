@@ -32,6 +32,11 @@ final class WebhookAdapter implements SerpScraperAdapter
         );
     }
 
+    public function scrapePage(ScrapeRequest $request, int $page): ScrapeResponse
+    {
+        throw new \BadMethodCallException('scrapePage is not supported by WebhookAdapter');
+    }
+
     public function supportedEngines(): array
     {
         return ['google', 'yandex'];

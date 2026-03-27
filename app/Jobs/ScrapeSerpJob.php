@@ -10,6 +10,7 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\RateLimitedWithRedis;
 use Illuminate\Queue\SerializesModels;
 
 class ScrapeSerpJob implements ShouldQueue
@@ -19,6 +20,12 @@ class ScrapeSerpJob implements ShouldQueue
     public int $tries = 3;
 
     public int $timeout = 300;
+
+    /** @return array<int, object> */
+    public function middleware(): array
+    {
+        return [new RateLimitedWithRedis('xmlriver')];
+    }
 
     public function __construct(
         public readonly int $scrapeJobId,

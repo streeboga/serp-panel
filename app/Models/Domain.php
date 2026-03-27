@@ -36,6 +36,7 @@ final class Domain extends Model
     protected $fillable = [
         'project_id', 'name', 'is_own',
         'type', 'parent_id', 'indexed_pages_count',
+        'index_batch_id',
     ];
 
     protected $casts = [
