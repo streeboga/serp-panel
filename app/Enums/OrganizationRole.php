@@ -25,4 +25,14 @@ enum OrganizationRole: string
     {
         return $this->level() >= $minimum->level();
     }
+
+    public function getLabel(): string
+    {
+        return match ($this) {
+            self::Admin => 'Администратор',
+            self::Manager => 'Менеджер',
+            self::Analyst => 'Аналитик',
+            self::Viewer => 'Наблюдатель',
+        };
+    }
 }

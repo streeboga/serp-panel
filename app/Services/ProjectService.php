@@ -10,6 +10,7 @@ use App\DataTransferObjects\Project\UpdateProjectData;
 use App\Models\Organization;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 final readonly class ProjectService
@@ -54,16 +55,18 @@ final readonly class ProjectService
 
     public function togglePublic(Project $project, bool $isPublic): Project
     {
-        $data = ['is_public' => $isPublic];
+        return DB::transaction(function () use ($project, $isPublic): Project {
+            $data = ['is_public' => $isPublic];
 
-        if ($isPublic && ! $project->public_slug) {
-            $data['public_slug'] = (string) Str::uuid();
-        }
+            if ($isPublic && ! $project->public_slug) {
+                $data['public_slug'] = (string) Str::uuid();
+            }
 
-        if (! $isPublic) {
-            $data['public_slug'] = null;
-        }
+            if (! $isPublic) {
+                $data['public_slug'] = null;
+            }
 
-        return $this->repository->update($project, $data);
+            return $this->repository->update($project, $data);
+        });
     }
 }

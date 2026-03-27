@@ -10,9 +10,9 @@ use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\ClassificationController;
 use App\Http\Controllers\Api\V1\ClusterController;
 use App\Http\Controllers\Api\V1\CompetitorController;
+use App\Http\Controllers\Api\V1\ConnectedAccountController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DomainController;
-use App\Http\Controllers\Api\V1\ConnectedAccountController;
 use App\Http\Controllers\Api\V1\ExportController;
 use App\Http\Controllers\Api\V1\KeywordController;
 use App\Http\Controllers\Api\V1\OrganizationController;
@@ -24,9 +24,9 @@ use App\Http\Controllers\Api\V1\RegionController;
 use App\Http\Controllers\Api\V1\ScheduleController;
 use App\Http\Controllers\Api\V1\ScraperController;
 use App\Http\Controllers\Api\V1\SerpController;
+use App\Http\Controllers\Api\V1\WebhookController;
 use App\Http\Controllers\Api\V1\WordstatController;
 use App\Http\Controllers\Api\V1\WordstatScheduleController;
-use App\Http\Controllers\Api\V1\WebhookController;
 use App\Http\Controllers\Api\V1\YandexOAuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -254,10 +254,12 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
             Route::delete('alerts/{alert}', [AlertController::class, 'destroy']);
         });
 
-        // API Tokens
-        Route::get('tokens', [ApiTokenController::class, 'index']);
-        Route::post('tokens', [ApiTokenController::class, 'store']);
-        Route::delete('tokens/{tokenId}', [ApiTokenController::class, 'destroy']);
+        // API Tokens (rate limited)
+        Route::middleware('throttle:30,1')->group(function () {
+            Route::get('tokens', [ApiTokenController::class, 'index']);
+            Route::post('tokens', [ApiTokenController::class, 'store']);
+            Route::delete('tokens/{tokenId}', [ApiTokenController::class, 'destroy']);
+        });
 
         // Export
         Route::get('export/keywords', [ExportController::class, 'keywords']);

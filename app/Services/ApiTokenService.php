@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services;
 
+use App\DataTransferObjects\ApiToken\CreateApiTokenData;
 use App\Enums\OrganizationRole;
 use App\Models\Organization;
 use App\Models\User;
@@ -36,10 +37,7 @@ final readonly class ApiTokenService
     public function createToken(
         User $user,
         Organization $organization,
-        string $name,
-        OrganizationRole $tokenRole,
-        ?int $projectId = null,
-        ?string $expiresAt = null,
+        CreateApiTokenData $data,
     ): array {
         // Validate: token role cannot exceed user's org role
         $userRoleValue = $organization->users()
@@ -50,32 +48,32 @@ final readonly class ApiTokenService
 
         $userRole = OrganizationRole::tryFrom($userRoleValue ?? '');
 
-        if (! $userRole || ! $userRole->isAtLeast($tokenRole)) {
+        if (! $userRole || ! $userRole->isAtLeast($data->role)) {
             throw new \InvalidArgumentException('Token role cannot exceed your role in the organization');
         }
 
         // Validate: project belongs to organization
-        if ($projectId !== null && ! $organization->projects()->where('id', $projectId)->exists()) {
+        if ($data->projectId !== null && ! $organization->projects()->where('id', $data->projectId)->exists()) {
             throw new \InvalidArgumentException('Project does not belong to this organization');
         }
 
-        $abilities = self::ROLE_ABILITIES[$tokenRole->value] ?? ['read'];
+        $abilities = self::ROLE_ABILITIES[$data->role->value] ?? ['read'];
 
         $scopedAbilities = [];
         foreach ($abilities as $ability) {
-            if ($projectId) {
-                $scopedAbilities[] = "org:{$organization->id}:project:{$projectId}:{$ability}";
+            if ($data->projectId) {
+                $scopedAbilities[] = "org:{$organization->id}:project:{$data->projectId}:{$ability}";
             } else {
                 $scopedAbilities[] = "org:{$organization->id}:{$ability}";
             }
         }
 
-        $tokenName = "api:org:{$organization->id}:{$name}";
+        $tokenName = "api:org:{$organization->id}:{$data->name}";
 
         $token = $user->createToken(
             $tokenName,
             $scopedAbilities,
-            $expiresAt ? new \DateTimeImmutable($expiresAt) : null,
+            $data->expiresAt ? new \DateTimeImmutable($data->expiresAt) : null,
         );
 
         return ['token' => $token, 'abilities' => $scopedAbilities];

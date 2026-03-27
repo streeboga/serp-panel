@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Http\Controllers\Api\V1;
 
+use App\DataTransferObjects\ApiToken\CreateApiTokenData;
 use App\Enums\OrganizationRole;
 use App\Http\Controllers\Controller;
 use App\Services\ApiTokenService;
@@ -62,13 +63,17 @@ final class ApiTokenController extends Controller
         ]);
 
         try {
+            $data = new CreateApiTokenData(
+                name: $validated['name'],
+                role: OrganizationRole::from($validated['role']),
+                projectId: $validated['project_id'] ?? null,
+                expiresAt: $validated['expires_at'] ?? null,
+            );
+
             $result = $this->service->createToken(
                 $user,
                 $request->get('organization'),
-                $validated['name'],
-                OrganizationRole::from($validated['role']),
-                $validated['project_id'] ?? null,
-                $validated['expires_at'] ?? null,
+                $data,
             );
         } catch (\InvalidArgumentException $e) {
             return response()->json([

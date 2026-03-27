@@ -50,11 +50,11 @@ final class OrganizationController extends Controller
      * Мягкое удаление организации. Доступно только администраторам.
      */
     #[Response(204, description: 'Организация удалена')]
-    public function destroy(Request $request): JsonResponse
+    public function destroy(Request $request): \Illuminate\Http\Response
     {
         $this->service->delete($request->get('organization'));
 
-        return response()->json(null, 204);
+        return response()->noContent();
     }
 
     /**
