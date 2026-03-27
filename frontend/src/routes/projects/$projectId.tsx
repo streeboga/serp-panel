@@ -1,9 +1,19 @@
 import { createFileRoute, redirect, Link, Outlet, useMatches } from '@tanstack/react-router'
-import { Suspense, useMemo } from 'react'
+import { Suspense, useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { AppLayout } from '@/components/AppLayout'
 import { PageSkeleton } from '@/components/PageSkeleton'
-import { useProject } from '@/hooks/useProjects'
+import { useProject, useTogglePublic } from '@/hooks/useProjects'
+import { useAuth } from '@/contexts/AuthContext'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Switch } from '@/components/ui/switch'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
 import {
   LayoutDashboard,
   Globe,
@@ -11,6 +21,9 @@ import {
   FolderTree,
   FileText,
   ChevronRight,
+  Settings,
+  Copy,
+  Check,
 } from 'lucide-react'
 
 export const Route = createFileRoute('/projects/$projectId')({
@@ -30,13 +43,33 @@ const tabs = [
   { labelKey: 'projects.pagesTab', to: '/projects/$projectId/pages' as const, icon: <FileText className="size-3.5" />, segment: 'pages' },
 ]
 
+const MANAGER_ROLES = ['admin', 'manager', 'owner']
+
 function ProjectDetailPage() {
   const { t } = useTranslation()
   const { projectId } = Route.useParams()
   const { data: project, isLoading } = useProject(projectId)
+  const { user, organizationId } = useAuth()
+  const togglePublic = useTogglePublic()
   const matches = useMatches()
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [copied, setCopied] = useState(false)
 
   const projectData = project?.data ?? project
+
+  const currentOrg = useMemo(
+    () => user?.organizations?.find((o) => o.id === organizationId),
+    [user, organizationId],
+  )
+  const canManage = MANAGER_ROLES.includes(currentOrg?.role ?? '')
+
+  const handleCopy = useCallback(() => {
+    if (projectData?.public_url) {
+      navigator.clipboard.writeText(projectData.public_url)
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    }
+  }, [projectData?.public_url])
 
   // Build breadcrumb from current route
   const breadcrumbItems = useMemo(() => {
@@ -83,6 +116,16 @@ function ProjectDetailPage() {
                   )}
                 </span>
               ))}
+              {canManage && (
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  className="ml-1"
+                  onClick={() => setSettingsOpen(true)}
+                >
+                  <Settings className="size-3" />
+                </Button>
+              )}
             </div>
 
             {/* Tabs — right side */}
@@ -107,6 +150,46 @@ function ProjectDetailPage() {
           <Suspense fallback={<PageSkeleton />}>
             <Outlet />
           </Suspense>
+
+          {/* Settings dialog */}
+          <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Настройки проекта</DialogTitle>
+              </DialogHeader>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-[12px] font-medium">Публичный доступ</p>
+                    <p className="text-[11px] text-muted-foreground">Позволяет просматривать данные без авторизации</p>
+                  </div>
+                  <Switch
+                    checked={projectData?.is_public ?? false}
+                    onCheckedChange={(checked) =>
+                      togglePublic.mutate({ projectId: Number(projectId), isPublic: checked })
+                    }
+                  />
+                </div>
+                {projectData?.is_public && projectData?.public_url && (
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex items-center gap-2 p-2 bg-muted rounded-md">
+                      <Input
+                        value={projectData.public_url}
+                        readOnly
+                        className="h-7 text-[11px] font-mono"
+                      />
+                      <Button variant="outline" size="xs" onClick={handleCopy}>
+                        {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                      </Button>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Любой с этой ссылкой сможет просматривать позиции проекта
+                    </p>
+                  </div>
+                )}
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       ) : (
         <p className="text-muted-foreground">{t('projects.notFound')}</p>

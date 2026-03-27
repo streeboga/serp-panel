@@ -66,3 +66,14 @@ export function useDeleteProject() {
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.projects.all }),
   })
 }
+
+export function useTogglePublic() {
+  const qc = useQueryClient()
+  return useMutation({
+    mutationFn: ({ projectId, isPublic }: { projectId: number; isPublic: boolean }) =>
+      api.patch(`/projects/${projectId}/public`, { is_public: isPublic }).then((r) => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.projects.all })
+    },
+  })
+}
