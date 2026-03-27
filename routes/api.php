@@ -41,6 +41,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::patch('/auth/profile', [AuthController::class, 'updateProfile']);
 
         Route::get('organizations', [OrganizationController::class, 'index']);
+        Route::post('organizations', [OrganizationController::class, 'store']);
 
         // Yandex OAuth
         Route::get('auth/yandex/redirect', [YandexOAuthController::class, 'redirect']);
@@ -59,6 +60,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         // Organization — admin-only write
         Route::middleware('org.role:admin')->group(function () {
             Route::patch('organization', [OrganizationController::class, 'update']);
+            Route::delete('organization', [OrganizationController::class, 'destroy']);
             Route::post('organization/invite', [OrganizationController::class, 'invite']);
             Route::delete('organization/members/{userId}', [OrganizationController::class, 'removeMember']);
             Route::patch('organization/members/{userId}/role', [OrganizationController::class, 'updateMemberRole']);

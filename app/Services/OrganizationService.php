@@ -23,6 +23,22 @@ final readonly class OrganizationService
         return $user->organizations()->get();
     }
 
+    public function create(User $user, string $name): Organization
+    {
+        $org = $this->organizationRepository->create([
+            'name' => $name,
+            'slug' => str($name)->slug()->toString(),
+        ]);
+        $org->users()->attach($user->id, ['role' => 'admin']);
+
+        return $org;
+    }
+
+    public function delete(Organization $organization): void
+    {
+        $this->organizationRepository->delete($organization);
+    }
+
     /** @param array<string, mixed> $data */
     public function update(Organization $organization, array $data): Organization
     {

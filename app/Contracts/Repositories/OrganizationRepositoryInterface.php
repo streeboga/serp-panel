@@ -15,4 +15,6 @@ interface OrganizationRepositoryInterface
 
     /** @param array<string, mixed> $data */
     public function update(Organization $organization, array $data): Organization;
+
+    public function delete(Organization $organization): void;
 }

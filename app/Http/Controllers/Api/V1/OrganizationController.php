@@ -24,6 +24,40 @@ final class OrganizationController extends Controller
     ) {}
 
     /**
+     * Создание организации
+     *
+     * Создаёт новую организацию. Текущий пользователь становится администратором.
+     */
+    #[Response(201, description: 'Организация создана')]
+    #[Response(422, description: 'Ошибка валидации')]
+    public function store(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $user = $request->user() ?? abort(401);
+        $org = $this->service->create($user, $validated['name']);
+
+        return OrganizationResource::make($org)
+            ->toResponse($request)
+            ->setStatusCode(201);
+    }
+
+    /**
+     * Удаление организации
+     *
+     * Мягкое удаление организации. Доступно только администраторам.
+     */
+    #[Response(204, description: 'Организация удалена')]
+    public function destroy(Request $request): JsonResponse
+    {
+        $this->service->delete($request->get('organization'));
+
+        return response()->json(null, 204);
+    }
+
+    /**
      * Список организаций пользователя
      *
      * Возвращает все организации, в которых состоит текущий пользователь.

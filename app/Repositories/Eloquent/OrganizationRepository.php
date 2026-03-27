@@ -27,4 +27,9 @@ final class OrganizationRepository implements OrganizationRepositoryInterface
 
         return $organization->refresh();
     }
+
+    public function delete(Organization $organization): void
+    {
+        $organization->delete();
+    }
 }

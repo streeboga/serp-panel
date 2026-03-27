@@ -7,6 +7,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Carbon;
 
 /**
@@ -20,9 +21,12 @@ use Illuminate\Support\Carbon;
  * @property string|null $yandex_token
  * @property Carbon $created_at
  * @property Carbon $updated_at
+ * @property Carbon|null $deleted_at
  */
 class Organization extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = ['name', 'slug', 'billing_tier', 'max_keywords', 'max_projects', 'max_scrapers', 'yandex_token'];
 
     protected function casts(): array
