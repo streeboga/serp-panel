@@ -71,4 +71,9 @@ final class DomainRepository implements DomainRepositoryInterface
             ->where('is_own', true)
             ->get();
     }
+
+    public function findWithProject(int $id): Domain
+    {
+        return Domain::with('project')->findOrFail($id);
+    }
 }

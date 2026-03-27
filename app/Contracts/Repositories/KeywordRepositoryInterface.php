@@ -54,4 +54,10 @@ interface KeywordRepositoryInterface
 
     /** @return Collection<int, Keyword> */
     public function getByProjectId(int $projectId): Collection;
+
+    /**
+     * @param array<int> $ids
+     * @return Collection<int, Keyword>
+     */
+    public function findByIdsWithRelations(array $ids): Collection;
 }

@@ -22,4 +22,10 @@ interface PageableRepositoryInterface
 
     /** @return Collection<int, Pageable> */
     public function forPageable(string $type, int $id): Collection;
+
+    /**
+     * @param array<int> $pageIds
+     * @return array<int>
+     */
+    public function keywordIdsForPages(array $pageIds): array;
 }

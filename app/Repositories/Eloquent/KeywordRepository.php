@@ -112,4 +112,15 @@ final class KeywordRepository implements KeywordRepositoryInterface
             ->whereHas('cluster.category.domain', fn ($q) => $q->where('project_id', $projectId))
             ->get();
     }
+
+    /**
+     * @param array<int> $ids
+     * @return Collection<int, Keyword>
+     */
+    public function findByIdsWithRelations(array $ids): Collection
+    {
+        return Keyword::whereIn('id', $ids)
+            ->with(['cluster.category', 'region'])
+            ->get();
+    }
 }

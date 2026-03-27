@@ -26,4 +26,6 @@ interface ScraperRepositoryInterface
 
     /** @return Collection<int, Scraper> */
     public function activeScrapers(): Collection;
+
+    public function findActiveForEngine(int $organizationId, string $engine): ?Scraper;
 }

@@ -48,4 +48,12 @@ final class ScraperRepository implements ScraperRepositoryInterface
     {
         return Scraper::where('is_active', true)->get();
     }
+
+    public function findActiveForEngine(int $organizationId, string $engine): ?Scraper
+    {
+        return Scraper::where('organization_id', $organizationId)
+            ->where('is_active', true)
+            ->whereJsonContains('supported_engines', $engine)
+            ->first();
+    }
 }

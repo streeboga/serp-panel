@@ -57,4 +57,18 @@ final class PageableRepository implements PageableRepositoryInterface
             ->with('page')
             ->get();
     }
+
+    /**
+     * @param array<int> $pageIds
+     * @return array<int>
+     */
+    public function keywordIdsForPages(array $pageIds): array
+    {
+        return Pageable::whereIn('page_id', $pageIds)
+            ->where('pageable_type', \App\Models\Keyword::class)
+            ->pluck('pageable_id')
+            ->unique()
+            ->values()
+            ->toArray();
+    }
 }

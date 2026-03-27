@@ -110,6 +110,11 @@ final class YandexXmlAdapter implements SerpScraperAdapter
         return $results;
     }
 
+    public function supportsPageScraping(): bool
+    {
+        return false;
+    }
+
     public function scrapePage(ScrapeRequest $request, int $page): ScrapeResponse
     {
         throw new \BadMethodCallException('scrapePage is not supported by YandexXmlAdapter');

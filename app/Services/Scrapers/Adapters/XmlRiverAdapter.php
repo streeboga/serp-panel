@@ -70,6 +70,11 @@ final class XmlRiverAdapter implements SerpScraperAdapter
         );
     }
 
+    public function supportsPageScraping(): bool
+    {
+        return true;
+    }
+
     public function scrapePage(ScrapeRequest $request, int $page): ScrapeResponse
     {
         $url = $this->buildUrl();

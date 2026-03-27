@@ -44,34 +44,4 @@ final class DomainIndexResult extends Model
         return $this->belongsTo(Domain::class);
     }
 
-    /**
-     * Batch upsert SERP index results. Updates last_position, last_seen_at, title, description
-     * for existing rows; sets first_seen_at only on insert.
-     *
-     * @param array<int, \App\Services\Scrapers\DTO\SerpResultItem> $results
-     */
-    public static function upsertFromScrape(int $domainId, string $engine, string $collectedAt, array $results): void
-    {
-        if (empty($results)) {
-            return;
-        }
-
-        $rows = array_map(fn ($item) => [
-            'domain_id' => $domainId,
-            'url' => mb_convert_encoding($item->url, 'UTF-8', 'UTF-8'),
-            'engine' => $engine,
-            'title' => $item->title ? mb_convert_encoding($item->title, 'UTF-8', 'UTF-8') : null,
-            'description' => $item->description ? mb_convert_encoding($item->description, 'UTF-8', 'UTF-8') : null,
-            'snippet_links' => null,
-            'last_position' => $item->position,
-            'first_seen_at' => $collectedAt,
-            'last_seen_at' => $collectedAt,
-        ], $results);
-
-        self::upsert(
-            $rows,
-            uniqueBy: ['domain_id', 'url', 'engine'],
-            update: ['title', 'description', 'last_position', 'last_seen_at'],
-        );
-    }
 }
