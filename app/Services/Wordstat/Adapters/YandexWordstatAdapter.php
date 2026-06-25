@@ -9,25 +9,60 @@ use App\Services\Wordstat\DTO\WordstatResult;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * Yandex Wordstat v2 adapter.
+ *
+ * Wordstat v2 is served by the Yandex Cloud Search API (same host/product as web
+ * search), under /v2/wordstat/*, authenticated with an `Api-Key` + `folderId`
+ * (NOT an OAuth token). Requires a service account with role
+ * `search-api.webSearch.user` and an API key scoped `yc.search-api.execute`.
+ *
+ * @see https://yandex.cloud/docs/search-api/
+ */
 final class YandexWordstatAdapter implements WordstatAdapter
 {
-    private const BASE_URL = 'https://api.wordstat.yandex.net/v1';
+    private const BASE_URL = 'https://searchapi.api.cloud.yandex.net/v2/wordstat';
 
     public function __construct(
-        private readonly string $token,
+        private readonly string $apiKey,
+        private readonly string $folderId,
     ) {}
 
     public function collect(string $keyword, int $regionId): WordstatResult
     {
-        $frequencies = $this->fetchTopRequests($keyword, $regionId);
-        $trends = $this->fetchDynamics($keyword, $regionId);
-        $suggestions = $frequencies['suggestions'];
+        $top = $this->fetchTopRequests($keyword, $regionId);
 
         return new WordstatResult(
-            frequencies: $frequencies['frequencies'],
-            trends: $trends,
-            suggestions: $suggestions,
+            frequencies: $top['frequencies'],
+            trends: $this->fetchDynamics($keyword, $regionId),
+            suggestions: $top['suggestions'],
         );
+    }
+
+    /**
+     * @param  array<string, mixed>  $body
+     * @return array<string, mixed>
+     */
+    private function request(string $endpoint, array $body): array
+    {
+        $response = Http::withHeaders([
+            'Authorization' => 'Api-Key '.$this->apiKey,
+            'Content-Type' => 'application/json; charset=utf-8',
+        ])->timeout(30)->post(self::BASE_URL.$endpoint, array_merge($body, [
+            'folderId' => $this->folderId,
+        ]));
+
+        if (! $response->successful()) {
+            Log::warning('Wordstat v2 request failed', [
+                'endpoint' => $endpoint,
+                'status' => $response->status(),
+                'body' => mb_substr($response->body(), 0, 500),
+            ]);
+
+            return [];
+        }
+
+        return $response->json() ?? [];
     }
 
     /**
@@ -35,50 +70,44 @@ final class YandexWordstatAdapter implements WordstatAdapter
      */
     private function fetchTopRequests(string $keyword, int $regionId): array
     {
-        $response = Http::withHeaders([
-            'Authorization' => 'Bearer ' . $this->token,
-            'Content-Type' => 'application/json; charset=utf-8',
-        ])->post(self::BASE_URL . '/topRequests', [
-            'phrase' => $keyword,
-            'regions' => [$regionId],
-        ]);
+        $body = ['phrase' => $keyword, 'numPhrases' => 50];
 
-        $data = $response->json();
+        if ($regionId > 0) {
+            $body['regions'] = [(string) $regionId];
+        }
 
-        Log::debug('Wordstat topRequests', [
-            'keyword' => $keyword,
-            'region' => $regionId,
-            'status' => $response->status(),
-            'response' => $response->body(),
-        ]);
+        $data = $this->request('/topRequests', $body);
 
-        $broad = 0;
-        $exact = 0;
-        $phrase = 0;
+        // totalCount = total impressions matching the phrase over the last 30 days (broad frequency).
+        $broad = $this->toInt($data['totalCount'] ?? 0);
+
         $suggestions = [];
+        foreach (($data['results'] ?? []) as $item) {
+            $phrase = (string) ($item['phrase'] ?? '');
+            $count = $this->toInt($item['count'] ?? 0);
 
-        $items = $data['topRequests'] ?? $data['data'] ?? [];
+            if (mb_strtolower(trim($phrase)) === mb_strtolower(trim($keyword))) {
+                if ($broad === 0) {
+                    $broad = $count;
+                }
 
-        foreach ($items as $item) {
-            $itemPhrase = $item['phrase'] ?? $item['text'] ?? '';
-            $count = (int) ($item['count'] ?? $item['shows'] ?? 0);
-
-            if (mb_strtolower(trim($itemPhrase)) === mb_strtolower(trim($keyword))) {
-                $broad = $count;
-            } else {
-                $suggestions[] = [
-                    'suggestion' => $itemPhrase,
-                    'frequency' => $count,
-                    'type' => 'suggestion',
-                ];
+                continue;
             }
+
+            $suggestions[] = ['suggestion' => $phrase, 'frequency' => $count, 'type' => 'top'];
         }
 
-        // Exact/phrase estimates from broad
-        if ($broad > 0) {
-            $exact = (int) round($broad * 0.3);
-            $phrase = (int) round($broad * 0.6);
+        foreach (($data['associations'] ?? []) as $item) {
+            $suggestions[] = [
+                'suggestion' => (string) ($item['phrase'] ?? ''),
+                'frequency' => $this->toInt($item['count'] ?? 0),
+                'type' => 'association',
+            ];
         }
+
+        // v2 topRequests reports only broad volume; exact/phrase are proportional estimates.
+        $exact = $broad > 0 ? (int) round($broad * 0.3) : 0;
+        $phrase = $broad > 0 ? (int) round($broad * 0.6) : 0;
 
         return [
             'frequencies' => ['exact' => $exact, 'broad' => $broad, 'phrase' => $phrase],
@@ -92,24 +121,31 @@ final class YandexWordstatAdapter implements WordstatAdapter
     private function fetchDynamics(string $keyword, int $regionId): array
     {
         try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->token,
-                'Content-Type' => 'application/json; charset=utf-8',
-            ])->post(self::BASE_URL . '/dynamics', [
+            // PERIOD_MONTHLY requires fromDate = first day of a month and
+            // toDate = last day of a month, as RFC3339 timestamps.
+            $to = now()->subMonthNoOverflow()->endOfMonth();
+            $from = $to->copy()->subMonths(11)->startOfMonth();
+
+            $body = [
                 'phrase' => $keyword,
-                'regions' => [$regionId],
-            ]);
+                'period' => 'PERIOD_MONTHLY',
+                'fromDate' => $from->format('Y-m-d\T00:00:00\Z'),
+                'toDate' => $to->format('Y-m-d\T00:00:00\Z'),
+            ];
 
-            $data = $response->json();
+            if ($regionId > 0) {
+                $body['regions'] = [(string) $regionId];
+            }
+
+            $data = $this->request('/dynamics', $body);
+
             $trends = [];
-
-            $items = $data['dynamics'] ?? $data['data'] ?? [];
-            foreach ($items as $item) {
-                $date = $item['date'] ?? $item['period'] ?? null;
-                $count = (int) ($item['count'] ?? $item['shows'] ?? $item['value'] ?? 0);
+            foreach (($data['results'] ?? $data['dynamics'] ?? []) as $item) {
+                $date = $item['date'] ?? $item['period'] ?? $item['fromDate'] ?? null;
+                $count = $this->toInt($item['count'] ?? $item['value'] ?? 0);
 
                 if ($date !== null) {
-                    $ts = strtotime($date);
+                    $ts = strtotime((string) $date);
                     if ($ts !== false) {
                         $trends[$ts] = $count;
                     }
@@ -117,8 +153,8 @@ final class YandexWordstatAdapter implements WordstatAdapter
             }
 
             return $trends;
-        } catch (\Exception $e) {
-            Log::warning('Wordstat dynamics failed', [
+        } catch (\Throwable $e) {
+            Log::warning('Wordstat v2 dynamics failed', [
                 'keyword' => $keyword,
                 'error' => $e->getMessage(),
             ]);
@@ -129,15 +165,34 @@ final class YandexWordstatAdapter implements WordstatAdapter
 
     public function healthCheck(): bool
     {
-        try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->token,
-                'Content-Type' => 'application/json; charset=utf-8',
-            ])->post(self::BASE_URL . '/userInfo', []);
-
-            return $response->ok();
-        } catch (\Exception) {
+        if ($this->apiKey === '' || $this->folderId === '') {
             return false;
         }
+
+        try {
+            $response = Http::withHeaders([
+                'Authorization' => 'Api-Key '.$this->apiKey,
+                'Content-Type' => 'application/json; charset=utf-8',
+            ])->timeout(15)->post(self::BASE_URL.'/getRegionsTree', [
+                'folderId' => $this->folderId,
+            ]);
+
+            return $response->successful();
+        } catch (\Throwable) {
+            return false;
+        }
+    }
+
+    private function toInt(mixed $value): int
+    {
+        if (is_int($value)) {
+            return $value;
+        }
+
+        if (is_string($value)) {
+            return (int) preg_replace('/[^0-9-]/', '', $value);
+        }
+
+        return (int) $value;
     }
 }

@@ -22,12 +22,18 @@ final class WordstatAdapterFactory
         }
 
         if ($preferredType === 'yandex' || $preferredType === null) {
-            $yandexAccount = ConnectedAccount::where('type', 'yandex')
+            $yandexAccount = ConnectedAccount::query()
+                ->whereIn('type', ['yandex_cloud', 'yandex'])
                 ->where('is_active', true)
-                ->first();
+                ->orderByRaw("CASE WHEN type = 'yandex_cloud' THEN 0 ELSE 1 END")
+                ->get()
+                ->first(static fn (ConnectedAccount $account): bool => isset($account->credentials['api_key'], $account->credentials['folder_id']));
 
-            if ($yandexAccount) {
-                return new YandexWordstatAdapter($yandexAccount->credentials['token'] ?? '');
+            if ($yandexAccount !== null) {
+                return new YandexWordstatAdapter(
+                    apiKey: $yandexAccount->credentials['api_key'],
+                    folderId: $yandexAccount->credentials['folder_id'],
+                );
             }
         }
 

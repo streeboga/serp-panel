@@ -42,6 +42,31 @@ import { parseApiError } from '@/lib/api'
 import type { Scraper } from '@/types/api'
 import { Bot, Plus, Pencil, FlaskConical, Trash2 } from 'lucide-react'
 
+// Credential fields required per scraper type (key + label + secret flag).
+const CREDENTIAL_FIELDS: Record<string, Array<{ key: string; label: string; secret?: boolean }>> = {
+  xmlriver: [
+    { key: 'user', label: 'User ID' },
+    { key: 'key', label: 'API Key', secret: true },
+  ],
+  yandex_xml: [
+    { key: 'user', label: 'User (логин)' },
+    { key: 'key', label: 'API Key', secret: true },
+  ],
+  yandex_cloud: [
+    { key: 'folder_id', label: 'Folder ID' },
+    { key: 'api_key', label: 'API Key (Api-Key)', secret: true },
+  ],
+  webhook: [{ key: 'webhook_secret', label: 'Webhook Secret', secret: true }],
+}
+
+// Suggested base_url per type, prefilled when the type is selected.
+const DEFAULT_BASE_URL: Record<string, string> = {
+  xmlriver: 'https://xmlriver.com/search/xml',
+  yandex_xml: 'https://yandex.ru/search/xml',
+  yandex_cloud: 'https://searchapi.api.cloud.yandex.net/v2/web/searchAsync',
+  webhook: 'https://api-serp.equity.su/api/v1/webhook',
+}
+
 export const Route = createFileRoute('/scrapers/')({
   beforeLoad: () => {
     if (!localStorage.getItem('token')) {
@@ -66,10 +91,19 @@ function ScrapersPage() {
 
   const [open, setOpen] = useState(false)
   const [name, setName] = useState('')
-  const [type, setType] = useState('xml_river')
+  const [type, setType] = useState('xmlriver')
   const [baseUrl, setBaseUrl] = useState('')
   const [engines, setEngines] = useState('google')
   const [rateLimit, setRateLimit] = useState('10')
+  const [creds, setCreds] = useState<Record<string, string>>({})
+
+  // Selecting a type prefills its base_url (if blank) and resets credential inputs.
+  const handleTypeChange = useCallback((v: string | null) => {
+    const next = v ?? 'xmlriver'
+    setType(next)
+    setBaseUrl((prev) => (prev ? prev : (DEFAULT_BASE_URL[next] ?? '')))
+    setCreds({})
+  }, [])
 
   const [editDialogOpen, setEditDialogOpen] = useState(false)
   const [editScraper, setEditScraper] = useState<Scraper | null>(null)
@@ -79,6 +113,7 @@ function ScrapersPage() {
   const [editEngines, setEditEngines] = useState('google')
   const [editRateLimit, setEditRateLimit] = useState('10')
   const [editIsActive, setEditIsActive] = useState(true)
+  const [editCreds, setEditCreds] = useState<Record<string, string>>({})
 
   const [formError, setFormError] = useState<string | null>(null)
   const [editFormError, setEditFormError] = useState<string | null>(null)
@@ -92,22 +127,27 @@ function ScrapersPage() {
       e.preventDefault()
       setFormError(null)
       try {
+        const credentials = Object.fromEntries(
+          Object.entries(creds).filter(([, v]) => v.trim() !== ''),
+        )
         await createScraper.mutateAsync({
           name,
           type,
           base_url: baseUrl,
-          supported_engines: engines.split(',').map((e) => e.trim()),
+          supported_engines: engines.split(',').map((e) => e.trim()).filter(Boolean),
+          ...(Object.keys(credentials).length > 0 ? { credentials } : {}),
           rate_limit: Number(rateLimit),
           is_active: true,
         })
         setName('')
         setBaseUrl('')
+        setCreds({})
         setOpen(false)
       } catch (err) {
         setFormError(parseApiError(err))
       }
     },
-    [name, type, baseUrl, engines, rateLimit, createScraper],
+    [name, type, baseUrl, engines, rateLimit, creds, createScraper],
   )
 
   const handleTest = useCallback(
@@ -138,7 +178,14 @@ function ScrapersPage() {
     setEditEngines((scraper.supported_engines ?? scraper.engines ?? []).join(', '))
     setEditRateLimit(String(scraper.rate_limit ?? 10))
     setEditIsActive(scraper.is_active)
+    setEditCreds({})
     setEditDialogOpen(true)
+  }, [])
+
+  const handleEditTypeChange = useCallback((v: string | null) => {
+    const next = v ?? 'xmlriver'
+    setEditType(next)
+    setEditCreds({})
   }, [])
 
   const handleEdit = useCallback(
@@ -147,22 +194,28 @@ function ScrapersPage() {
       if (!editScraper) return
       setEditFormError(null)
       try {
+        const credentials = Object.fromEntries(
+          Object.entries(editCreds).filter(([, v]) => v.trim() !== ''),
+        )
         await updateScraper.mutateAsync({
           id: editScraper.id,
           name: editName,
           type: editType,
           base_url: editBaseUrl,
-          supported_engines: editEngines.split(',').map((e) => e.trim()),
+          supported_engines: editEngines.split(',').map((e) => e.trim()).filter(Boolean),
+          // Only send credentials when the user actually entered values (avoids wiping stored secrets).
+          ...(Object.keys(credentials).length > 0 ? { credentials } : {}),
           rate_limit: Number(editRateLimit),
           is_active: editIsActive,
         })
         setEditDialogOpen(false)
         setEditScraper(null)
+        setEditCreds({})
       } catch (err) {
         setEditFormError(parseApiError(err))
       }
     },
-    [editScraper, editName, editType, editBaseUrl, editEngines, editRateLimit, editIsActive, updateScraper],
+    [editScraper, editName, editType, editBaseUrl, editEngines, editRateLimit, editIsActive, editCreds, updateScraper],
   )
 
   const handleToggleActive = useCallback(
@@ -208,18 +261,14 @@ function ScrapersPage() {
                 </div>
                 <div className="space-y-1">
                   <Label className="text-[11px]">{t('scrapers.type')}</Label>
-                  <Select
-                    value={type}
-                    onValueChange={(v: string | null) =>
-                      setType(v ?? 'xml_river')
-                    }
-                  >
+                  <Select value={type} onValueChange={handleTypeChange}>
                     <SelectTrigger className="w-full h-8">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="xmlriver" label="XMLRiver (Яндекс + Google)">XMLRiver (Яндекс + Google)</SelectItem>
                       <SelectItem value="yandex_xml" label="Яндекс XML (прямой)">Яндекс XML (прямой)</SelectItem>
+                      <SelectItem value="yandex_cloud" label="Яндекс Облако (Search API)">Яндекс Облако (Search API)</SelectItem>
                       <SelectItem value="webhook" label="Webhook / API (входящий)">Webhook / API (входящий)</SelectItem>
                     </SelectContent>
                   </Select>
@@ -234,6 +283,20 @@ function ScrapersPage() {
                     required
                   />
                 </div>
+                {(CREDENTIAL_FIELDS[type] ?? []).map((field) => (
+                  <div className="space-y-1" key={field.key}>
+                    <Label className="text-[11px]">{field.label}</Label>
+                    <Input
+                      className="h-8"
+                      type={field.secret ? 'password' : 'text'}
+                      autoComplete="off"
+                      value={creds[field.key] ?? ''}
+                      onChange={(e) =>
+                        setCreds((prev) => ({ ...prev, [field.key]: e.target.value }))
+                      }
+                    />
+                  </div>
+                ))}
                 <div className="space-y-1">
                   <Label className="text-[11px]">{t('scrapers.enginesComma')}</Label>
                   <Input
@@ -381,19 +444,15 @@ function ScrapersPage() {
               </div>
               <div className="space-y-1">
                 <Label className="text-[11px]">{t('scrapers.type')}</Label>
-                <Select
-                  value={editType}
-                  onValueChange={(v: string | null) =>
-                    setEditType(v ?? 'xml_river')
-                  }
-                >
+                <Select value={editType} onValueChange={handleEditTypeChange}>
                   <SelectTrigger className="w-full h-8">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="xml_river" label="XML River">XML River</SelectItem>
-                    <SelectItem value="serp_api" label="SERP API">SERP API</SelectItem>
-                    <SelectItem value="custom" label="Custom">Custom</SelectItem>
+                    <SelectItem value="xmlriver" label="XMLRiver (Яндекс + Google)">XMLRiver (Яндекс + Google)</SelectItem>
+                    <SelectItem value="yandex_xml" label="Яндекс XML (прямой)">Яндекс XML (прямой)</SelectItem>
+                    <SelectItem value="yandex_cloud" label="Яндекс Облако (Search API)">Яндекс Облако (Search API)</SelectItem>
+                    <SelectItem value="webhook" label="Webhook / API (входящий)">Webhook / API (входящий)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -407,6 +466,21 @@ function ScrapersPage() {
                   required
                 />
               </div>
+              {(CREDENTIAL_FIELDS[editType] ?? []).map((field) => (
+                <div className="space-y-1" key={field.key}>
+                  <Label className="text-[11px]">{field.label}</Label>
+                  <Input
+                    className="h-8"
+                    type={field.secret ? 'password' : 'text'}
+                    autoComplete="off"
+                    placeholder={field.secret ? '•••••• (оставьте пустым, чтобы не менять)' : ''}
+                    value={editCreds[field.key] ?? ''}
+                    onChange={(e) =>
+                      setEditCreds((prev) => ({ ...prev, [field.key]: e.target.value }))
+                    }
+                  />
+                </div>
+              ))}
               <div className="space-y-1">
                 <Label className="text-[11px]">{t('scrapers.enginesComma')}</Label>
                 <Input

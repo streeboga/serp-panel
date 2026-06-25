@@ -18,7 +18,7 @@ final class StoreScraperRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'type' => 'required|string|in:xmlriver,yandex_xml,openserp,camoufox,custom',
+            'type' => 'required|string|in:xmlriver,yandex_xml,yandex_cloud,webhook,openserp,camoufox,custom',
             'name' => 'required|string|max:255',
             'base_url' => 'required|url',
             'credentials' => 'nullable|array',

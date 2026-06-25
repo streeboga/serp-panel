@@ -17,7 +17,8 @@ export function useCreateScraper() {
       name: string
       type: string
       base_url: string
-      engines: string[]
+      supported_engines?: string[]
+      credentials?: Record<string, string>
       rate_limit?: number
       is_active?: boolean
     }) => api.post('/scrapers', data).then((r) => r.data),
@@ -37,7 +38,8 @@ export function useUpdateScraper() {
       name?: string
       type?: string
       base_url?: string
-      engines?: string[]
+      supported_engines?: string[]
+      credentials?: Record<string, string>
       rate_limit?: number
       is_active?: boolean
     }) => api.patch(`/scrapers/${id}`, data).then((r) => r.data),
