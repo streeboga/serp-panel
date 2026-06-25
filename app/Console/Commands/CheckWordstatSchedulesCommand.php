@@ -46,6 +46,13 @@ class CheckWordstatSchedulesCommand extends Command
                 );
                 $dispatched++;
             }
+
+            // Advance the schedule so the per-15-min cron does not re-dispatch
+            // every keyword on every tick while the schedule stays "due".
+            $schedule->update([
+                'last_run_at' => now(),
+                'next_run_at' => now()->addDays($schedule->frequency_days),
+            ]);
         }
 
         $this->info("Dispatched {$dispatched} wordstat jobs.");
