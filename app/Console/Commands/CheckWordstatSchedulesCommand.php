@@ -66,17 +66,23 @@ class CheckWordstatSchedulesCommand extends Command
         if ($schedule->keyword_id) {
             return collect([Keyword::findOrFail($schedule->keyword_id)]);
         }
+
+        // Prefer the Yandex row so the de-dup below keeps it over a Google twin.
+        $query = Keyword::query()->orderByRaw("CASE WHEN engine = 'yandex' THEN 0 ELSE 1 END");
+
         if ($schedule->cluster_id) {
-            return Keyword::where('cluster_id', $schedule->cluster_id)->get();
-        }
-        if ($schedule->project_id) {
+            $query->where('cluster_id', $schedule->cluster_id);
+        } elseif ($schedule->project_id) {
             $domainIds = Domain::where('project_id', $schedule->project_id)->pluck('id');
             $categoryIds = Category::whereIn('domain_id', $domainIds)->pluck('id');
             $clusterIds = Cluster::whereIn('category_id', $categoryIds)->pluck('id');
-
-            return Keyword::whereIn('cluster_id', $clusterIds)->get();
+            $query->whereIn('cluster_id', $clusterIds);
+        } else {
+            return collect();
         }
 
-        return collect();
+        // Wordstat frequency is per phrase, not per engine — collect each distinct
+        // keyword text once (the Yandex row) so Google twins don't double the quota.
+        return $query->get()->unique('keyword')->values();
     }
 }
