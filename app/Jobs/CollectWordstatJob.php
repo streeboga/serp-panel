@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Contracts\Repositories\KeywordRepositoryInterface;
+use App\Contracts\Repositories\RegionRepositoryInterface;
 use App\Contracts\Repositories\WordstatFrequencyRepositoryInterface;
 use App\Contracts\Repositories\WordstatScheduleRepositoryInterface;
 use App\Contracts\Repositories\WordstatSuggestionRepositoryInterface;
@@ -41,6 +42,7 @@ class CollectWordstatJob implements ShouldQueue
         WordstatTrendRepositoryInterface $trendRepository,
         WordstatSuggestionRepositoryInterface $suggestionRepository,
         WordstatScheduleRepositoryInterface $scheduleRepository,
+        RegionRepositoryInterface $regionRepository,
     ): void {
         $schedule = $scheduleRepository->findById($this->scheduleId);
         $adapter = WordstatAdapterFactory::make($schedule->adapter_type);
@@ -49,7 +51,9 @@ class CollectWordstatJob implements ShouldQueue
         $collectedAt = now()->toDateString();
 
         foreach ($this->regionIds as $regionId) {
-            $result = $adapter->collect($keyword->keyword, $regionId);
+            // region_id is a regions PK; the Wordstat API needs the Yandex lr geo code.
+            $yandexLr = $regionRepository->findById($regionId)?->yandex_lr;
+            $result = $adapter->collect($keyword->keyword, $yandexLr ?? $regionId);
 
             $frequencyRepository->create([
                 'keyword_id' => $keyword->id,
@@ -78,7 +82,9 @@ class CollectWordstatJob implements ShouldQueue
         }
 
         if ($this->collectSuggestions) {
-            $result = $adapter->collect($keyword->keyword, $this->regionIds[0] ?? $keyword->region_id);
+            $suggestionRegionId = $this->regionIds[0] ?? $keyword->region_id;
+            $suggestionLr = $regionRepository->findById($suggestionRegionId)?->yandex_lr;
+            $result = $adapter->collect($keyword->keyword, $suggestionLr ?? $suggestionRegionId);
 
             foreach ($result->suggestions as $suggestion) {
                 $suggestionRepository->updateOrCreate(
