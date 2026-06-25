@@ -52,6 +52,12 @@ final class YandexWordstatAdapter implements WordstatAdapter
             'folderId' => $this->folderId,
         ]));
 
+        if ($response->status() === 429) {
+            // Quota exhausted (100 req/hour). Throw so the job is retried later
+            // within its retryUntil window instead of recording a zero frequency.
+            throw new \RuntimeException('Wordstat v2 rate limit reached (429)');
+        }
+
         if (! $response->successful()) {
             Log::warning('Wordstat v2 request failed', [
                 'endpoint' => $endpoint,
