@@ -38,7 +38,9 @@ class CollectWordstatJob implements ShouldQueue
 
     public function retryUntil(): \DateTimeInterface
     {
-        return now()->addHours(26);
+        // A full project run can exceed a day at 45 jobs/hour; give released
+        // (rate-limited) jobs enough of a window to all complete in one pass.
+        return now()->addHours(32);
     }
 
     /** @param array<int, int> $regionIds */
