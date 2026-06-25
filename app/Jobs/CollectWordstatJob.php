@@ -15,15 +15,31 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
+use Illuminate\Queue\Middleware\RateLimitedWithRedis;
 use Illuminate\Queue\SerializesModels;
 
 class CollectWordstatJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 3;
-
     public int $timeout = 300;
+
+    /**
+     * Throttle to the Yandex Cloud Wordstat 100-requests/hour quota. When the
+     * limiter is hit the job is released back to the queue, so use a time-based
+     * retry window instead of a fixed attempt count.
+     *
+     * @return array<int, object>
+     */
+    public function middleware(): array
+    {
+        return [new RateLimitedWithRedis('wordstat')];
+    }
+
+    public function retryUntil(): \DateTimeInterface
+    {
+        return now()->addHours(26);
+    }
 
     /** @param array<int, int> $regionIds */
     public function __construct(
