@@ -12,4 +12,6 @@ Schedule::command('schedules:check')->everyMinute();
 Schedule::command('scrape-jobs:dispatch')->everyMinute();
 Schedule::command('partitions:create')->daily();
 Schedule::command('cleanup:raw-responses')->daily();
-Schedule::command('wordstat:check')->everyFifteenMinutes();
+// Drip Wordstat collection so it stays within the 100 req/hour quota and always
+// works the stalest phrases first (wordstat:check remains for manual full runs).
+Schedule::command('wordstat:drip')->everyFifteenMinutes();
