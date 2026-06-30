@@ -57,6 +57,10 @@ test('wordstat:drip collects stale phrases and skips ones still within frequency
     Queue::assertPushed(CollectWordstatJob::class, fn (CollectWordstatJob $j) => $j->keywordId === $never->id);
     Queue::assertPushed(CollectWordstatJob::class, fn (CollectWordstatJob $j) => $j->keywordId === $old->id);
     Queue::assertNotPushed(CollectWordstatJob::class, fn (CollectWordstatJob $j) => $j->keywordId === $fresh->id);
+
+    // A second run must not re-dispatch phrases already in flight.
+    $this->artisan('wordstat:drip', ['--limit' => 11])->assertSuccessful();
+    Queue::assertPushed(CollectWordstatJob::class, 2);
 });
 
 test('wordstat:drip respects the per-run limit, never-collected first', function () {

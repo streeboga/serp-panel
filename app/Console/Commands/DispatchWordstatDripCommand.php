@@ -8,6 +8,7 @@ use App\Jobs\CollectWordstatJob;
 use App\Models\WordstatSchedule;
 use App\Services\Wordstat\WordstatScheduleService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class DispatchWordstatDripCommand extends Command
@@ -69,10 +70,15 @@ class DispatchWordstatDripCommand extends Command
 
         $stale = [];
         foreach ($candidates as $candidate) {
-            $lastAt = $lastCollected[$candidate['keywordId'].':'.$candidate['regionId']] ?? null;
+            $pairKey = $candidate['keywordId'].':'.$candidate['regionId'];
+            $lastAt = $lastCollected[$pairKey] ?? null;
 
-            if ($lastAt === null || $lastAt < $candidate['threshold']) {
+            // Skip phrases already dispatched but not yet collected (in flight),
+            // otherwise they look stale again and get queued every run.
+            if (($lastAt === null || $lastAt < $candidate['threshold'])
+                && ! Cache::has(self::inflightKey($pairKey))) {
                 $candidate['lastAt'] = $lastAt;
+                $candidate['pairKey'] = $pairKey;
                 $stale[] = $candidate;
             }
         }
@@ -85,6 +91,10 @@ class DispatchWordstatDripCommand extends Command
         $batch = array_slice($stale, 0, $limit);
 
         foreach ($batch as $item) {
+            // Mark in flight until ~collection time; if the job never lands the
+            // marker expires and the phrase becomes eligible again.
+            Cache::put(self::inflightKey($item['pairKey']), true, now()->addHours(2));
+
             CollectWordstatJob::dispatch(
                 $item['keywordId'],
                 $item['schedule']->id,
@@ -97,5 +107,10 @@ class DispatchWordstatDripCommand extends Command
         $this->info(sprintf('Dispatched %d of %d stale wordstat phrases.', count($batch), count($stale)));
 
         return self::SUCCESS;
+    }
+
+    private static function inflightKey(string $pairKey): string
+    {
+        return 'wordstat:inflight:'.$pairKey;
     }
 }
