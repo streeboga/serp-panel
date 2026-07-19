@@ -100,7 +100,7 @@ final class YandexWordstatAdapter implements WordstatAdapter
                 continue;
             }
 
-            $suggestions[] = ['suggestion' => $phrase, 'frequency' => $count, 'type' => 'top'];
+            $suggestions[] = ['suggestion' => $phrase, 'frequency' => $count, 'type' => 'suggestion'];
         }
 
         foreach (($data['associations'] ?? []) as $item) {
