@@ -15,7 +15,6 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\Middleware\RateLimitedWithRedis;
 use Illuminate\Queue\SerializesModels;
 
 class CollectWordstatJob implements ShouldQueue
@@ -24,24 +23,11 @@ class CollectWordstatJob implements ShouldQueue
 
     public int $timeout = 300;
 
-    /**
-     * Throttle to the Yandex Cloud Wordstat 100-requests/hour quota. When the
-     * limiter is hit the job is released back to the queue, so use a time-based
-     * retry window instead of a fixed attempt count.
-     *
-     * @return array<int, object>
-     */
-    public function middleware(): array
-    {
-        return [new RateLimitedWithRedis('wordstat')];
-    }
+    // ponytail: wordstat:drip paces dispatch to ~44/hour, so no queue rate-limiter.
+    // A few retries cover a transient 429; a persistent one just gets re-picked next drip cycle.
+    public int $tries = 3;
 
-    public function retryUntil(): \DateTimeInterface
-    {
-        // A full project run can exceed a day at 45 jobs/hour; give released
-        // (rate-limited) jobs enough of a window to all complete in one pass.
-        return now()->addHours(32);
-    }
+    public int $backoff = 300;
 
     /** @param array<int, int> $regionIds */
     public function __construct(
