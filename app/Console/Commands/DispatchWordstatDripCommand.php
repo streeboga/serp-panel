@@ -83,12 +83,30 @@ class DispatchWordstatDripCommand extends Command
             }
         }
 
-        // Never-collected first, then oldest collection first.
-        usort($stale, static function (array $a, array $b): int {
-            return [$a['lastAt'] !== null, $a['lastAt']] <=> [$b['lastAt'] !== null, $b['lastAt']];
-        });
+        // Stalest-first within each schedule (never-collected first, then oldest)...
+        $bySchedule = [];
+        foreach ($stale as $item) {
+            $bySchedule[$item['schedule']->id][] = $item;
+        }
+        foreach ($bySchedule as &$group) {
+            usort($group, static fn (array $a, array $b): int => [$a['lastAt'] !== null, $a['lastAt']] <=> [$b['lastAt'] !== null, $b['lastAt']]);
+        }
+        unset($group);
 
-        $batch = array_slice($stale, 0, $limit);
+        // ...then round-robin across schedules so a big project can't starve a small one.
+        $batch = [];
+        while (count($batch) < $limit && $bySchedule !== []) {
+            foreach ($bySchedule as $sid => &$group) {
+                $batch[] = array_shift($group);
+                if ($group === []) {
+                    unset($bySchedule[$sid]);
+                }
+                if (count($batch) >= $limit) {
+                    break;
+                }
+            }
+            unset($group);
+        }
 
         foreach ($batch as $item) {
             // Mark in flight until ~collection time; if the job never lands the

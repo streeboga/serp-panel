@@ -92,3 +92,36 @@ test('wordstat:drip respects the per-run limit, never-collected first', function
 
     Queue::assertPushed(CollectWordstatJob::class, 2);
 });
+
+test('wordstat:drip shares the batch across schedules (a big project cannot starve a small one)', function () {
+    Queue::fake();
+
+    $mkProject = function (int $keywordCount): array {
+        $s = createFullStack();
+        $ids = [];
+        for ($i = 0; $i < $keywordCount; $i++) {
+            $ids[] = Keyword::create([
+                'cluster_id' => $s['cluster']->id,
+                'keyword' => "kw-{$s['project']->id}-{$i}",
+                'engine' => 'yandex',
+                'device' => 'desktop',
+                'region_id' => $s['region']->id,
+            ])->id;
+        }
+        WordstatSchedule::create([
+            'project_id' => $s['project']->id, 'frequency_days' => 7,
+            'collect_trends' => false, 'collect_suggestions' => false,
+            'regions' => [$s['region']->id], 'is_active' => true, 'adapter_type' => 'yandex',
+        ]);
+
+        return $ids;
+    };
+
+    $big = $mkProject(20);
+    $small = $mkProject(2);
+
+    // Limit smaller than the big project alone — round-robin must still reach the small one.
+    $this->artisan('wordstat:drip', ['--limit' => 6])->assertSuccessful();
+
+    Queue::assertPushed(CollectWordstatJob::class, fn (CollectWordstatJob $j) => in_array($j->keywordId, $small, true));
+});
