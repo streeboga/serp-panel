@@ -14,7 +14,7 @@ jobs:
       - name: Deploy to production
         uses: appleboy/ssh-action@v1
         with:
-          host: equity.su
+          host: 85.198.101.184
           username: deploy
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
