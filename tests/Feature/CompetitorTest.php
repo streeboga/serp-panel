@@ -183,3 +183,33 @@ test('competitor pages can be filtered to one domain', function () {
     expect($response->json('data'))->toHaveCount(1)
         ->and($response->json('data.0.domain'))->toBe('b.ru');
 });
+
+test('competitors cover every keyword, not just one snapshot per day', function () {
+    $h = createFullStack();
+    $today = now()->toDateString();
+
+    // Two keywords collected the same day — both must be in scope.
+    foreach ([['kw one', 'alpha.ru'], ['kw two', 'beta.ru']] as [$phrase, $domain]) {
+        $kw = Keyword::create([
+            'keyword' => $phrase, 'cluster_id' => $h['cluster']->id,
+            'engine' => 'yandex', 'device' => 'desktop', 'region_id' => $h['region']->id,
+        ]);
+        $snap = SerpSnapshot::create([
+            'keyword_id' => $kw->id, 'collected_at' => $today, 'search_engine' => 'yandex',
+            'device' => 'desktop', 'region_id' => $h['region']->id, 'total_results' => 100,
+        ]);
+        SerpResult::insert([[
+            'snapshot_id' => $snap->id, 'collected_at' => $today, 'position' => 1,
+            'url' => "https://{$domain}/p", 'domain' => $domain,
+            'title' => 'T', 'description' => '', 'snippet_type' => 'organic', 'is_ads' => false,
+        ]]);
+    }
+
+    $domains = collect(
+        $this->actingAs($h['user'])
+            ->getJson('/api/v1/serp/competitors?project_id='.$h['project']->id, orgHeaders($h['org']))
+            ->json('data')
+    )->pluck('domain');
+
+    expect($domains)->toContain('alpha.ru')->toContain('beta.ru');
+});

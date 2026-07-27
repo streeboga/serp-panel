@@ -100,7 +100,7 @@ final class SerpSnapshotRepository implements SerpSnapshotRepositoryInterface
 
     /**
      * @param  \Illuminate\Support\Collection<int, array{keyword_id: int, collected_at: string}>  $conditions
-     * @return \Illuminate\Support\Collection<string, int>
+     * @return \Illuminate\Support\Collection<int, int>
      */
     public function getSnapshotIdsForConditions(\Illuminate\Support\Collection $conditions): \Illuminate\Support\Collection
     {
@@ -111,7 +111,9 @@ final class SerpSnapshotRepository implements SerpSnapshotRepositoryInterface
                         ->where('collected_at', $cond['collected_at']);
                 });
             }
-        })->pluck('id', 'collected_at');
+            // Keying by collected_at would collapse every snapshot of the same day
+            // into one entry, leaving a whole project scoped to a single keyword.
+        })->pluck('id');
     }
 
     /**
@@ -130,7 +132,7 @@ final class SerpSnapshotRepository implements SerpSnapshotRepositoryInterface
             ->toArray();
     }
 
-    /** @inheritDoc */
+    /** {@inheritDoc} */
     public function getMonitoredPairs(array $keywordIds, array $dates): array
     {
         if ($keywordIds === [] || $dates === []) {
@@ -145,7 +147,7 @@ final class SerpSnapshotRepository implements SerpSnapshotRepositoryInterface
 
         $result = [];
         foreach ($pairs as $p) {
-            $result[$p->keyword_id . ':' . $p->date] = true;
+            $result[$p->keyword_id.':'.$p->date] = true;
         }
 
         return $result;

@@ -34,7 +34,7 @@ interface SerpSnapshotRepositoryInterface
 
     /**
      * @param  \Illuminate\Support\Collection<int, array{keyword_id: int, collected_at: string}>  $conditions
-     * @return \Illuminate\Support\Collection<string, int>
+     * @return \Illuminate\Support\Collection<int, int>
      */
     public function getSnapshotIdsForConditions(\Illuminate\Support\Collection $conditions): \Illuminate\Support\Collection;
 
@@ -51,7 +51,7 @@ interface SerpSnapshotRepositoryInterface
     /**
      * @param  array<int>  $keywordIds
      * @param  array<int, string>  $dates
-     * @return array<string, true>  Keys are "keywordId:date"
+     * @return array<string, true> Keys are "keywordId:date"
      */
     public function getMonitoredPairs(array $keywordIds, array $dates): array;
 }
