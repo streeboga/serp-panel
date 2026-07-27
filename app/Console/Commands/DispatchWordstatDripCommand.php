@@ -57,14 +57,21 @@ class DispatchWordstatDripCommand extends Command
 
         // Most recent collection per (keyword, region), as a 'Y-m-d' string.
         $lastCollected = [];
+        $precise = (bool) config('serp.wordstat_precise', false);
         $rows = DB::table('wordstat_frequencies')
             ->whereIn('keyword_id', array_keys($keywordIds))
             ->whereIn('region_id', array_keys($regionIds))
-            ->selectRaw('keyword_id, region_id, MAX(collected_at)::date::text as last_at')
+            ->selectRaw('keyword_id, region_id, MAX(collected_at)::date::text as last_at, count(frequency_exact) as precise_rows')
             ->groupBy('keyword_id', 'region_id')
             ->get();
 
         foreach ($rows as $row) {
+            // With precise collection on, a phrase that only ever got broad volume
+            // still needs measuring — otherwise it would wait out a whole cycle.
+            if ($precise && (int) $row->precise_rows === 0) {
+                continue;
+            }
+
             $lastCollected[$row->keyword_id.':'.$row->region_id] = $row->last_at;
         }
 

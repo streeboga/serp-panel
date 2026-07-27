@@ -125,3 +125,29 @@ test('wordstat:drip shares the batch across schedules (a big project cannot star
 
     Queue::assertPushed(CollectWordstatJob::class, fn (CollectWordstatJob $j) => in_array($j->keywordId, $small, true));
 });
+
+test('with precise collection on, phrases lacking exact/phrase volume count as stale', function () {
+    config(['serp.wordstat_precise' => true]);
+    Queue::fake();
+
+    $s = createFullStack();
+    $kw = Keyword::create([
+        'cluster_id' => $s['cluster']->id, 'keyword' => 'поддержка laravel',
+        'engine' => 'yandex', 'device' => 'desktop', 'region_id' => $s['region']->id,
+    ]);
+    // Collected today, but broad-only — precise mode still needs to measure it.
+    WordstatFrequency::create([
+        'keyword_id' => $kw->id, 'region_id' => $s['region']->id,
+        'frequency_broad' => 500, 'frequency_exact' => null, 'frequency_phrase' => null,
+        'collected_at' => now()->toDateString(),
+    ]);
+    WordstatSchedule::create([
+        'project_id' => $s['project']->id, 'frequency_days' => 7,
+        'collect_trends' => false, 'collect_suggestions' => false,
+        'regions' => [$s['region']->id], 'is_active' => true, 'adapter_type' => 'yandex',
+    ]);
+
+    $this->artisan('wordstat:drip')->assertSuccessful();
+
+    Queue::assertPushed(CollectWordstatJob::class, fn (CollectWordstatJob $j) => $j->keywordId === $kw->id);
+});
