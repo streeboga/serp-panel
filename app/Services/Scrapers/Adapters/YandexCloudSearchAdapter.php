@@ -27,7 +27,7 @@ final class YandexCloudSearchAdapter implements SerpScraperAdapter
 
     private const OPERATION_URL = 'https://operation.api.cloud.yandex.net/operations/';
 
-    private const RESULTS_PER_PAGE = 10;
+    private const MAX_GROUPS_ON_PAGE = 100;
 
     private const DEFAULT_REGION = 213; // Moscow
 
@@ -42,7 +42,7 @@ final class YandexCloudSearchAdapter implements SerpScraperAdapter
     public function scrape(ScrapeRequest $request): ScrapeResponse
     {
         $maxResults = $request->limit;
-        $maxPages = (int) ceil($maxResults / self::RESULTS_PER_PAGE);
+        $maxPages = (int) ceil($maxResults / $this->groupsOnPage($maxResults));
 
         $allResults = [];
         $seen = [];
@@ -100,6 +100,12 @@ final class YandexCloudSearchAdapter implements SerpScraperAdapter
                     'responseFormat' => 'FORMAT_XML',
                     'region' => (string) $region,
                     'l10n' => 'LOCALIZATION_RU',
+                    // The API serves up to 100 results in one response, so the whole
+                    // top-100 is a single async round-trip instead of ten.
+                    'groupSpec' => [
+                        'groupsOnPage' => (string) $this->groupsOnPage($request->limit),
+                        'docsInGroup' => '1',
+                    ],
                 ]);
 
             if (! $submit->successful()) {
@@ -173,7 +179,12 @@ final class YandexCloudSearchAdapter implements SerpScraperAdapter
         return null;
     }
 
-    /** @return SerpResultItem[] */
+    /** Results per request; the API caps this at 100. */
+    private function groupsOnPage(int $limit): int
+    {
+        return max(1, min($limit, self::MAX_GROUPS_ON_PAGE));
+    }
+
     /**
      * @param  SerpResultItem[]  $items
      * @return SerpResultItem[]
