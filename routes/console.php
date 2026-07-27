@@ -14,6 +14,7 @@ Schedule::command('partitions:create')->daily();
 Schedule::command('cleanup:raw-responses')->daily();
 // Keep the project's Domains section populated with the competitors we actually meet in the SERP.
 Schedule::command('competitors:sync')->dailyAt('04:30');
+Schedule::command('domains:classify')->dailyAt('05:00');
 // Drip Wordstat collection so it stays within the 100 req/hour quota and always
 // works the stalest phrases first (wordstat:check remains for manual full runs).
 Schedule::command('wordstat:drip')->everyFifteenMinutes();
