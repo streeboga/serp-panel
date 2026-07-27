@@ -85,7 +85,9 @@
     "type": "Тип",
     "actions": "Действия",
     "noParent": "Без родителя",
-    "tagsPlaceholder": "тег1, тег2, тег3"
+    "tagsPlaceholder": "тег1, тег2, тег3",
+    "siteType": "Тип сайта",
+    "siteTypeNotSet": "Не задан"
   },
   "keywords": {
     "title": "Ключевые слова",

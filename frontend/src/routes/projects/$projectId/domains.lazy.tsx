@@ -9,6 +9,7 @@ import {
   useIndexDomain,
 } from '@/hooks/useDomains'
 import { useCompetitors } from '@/hooks/useCompetitors'
+import { useSiteTypes } from '@/hooks/useClassification'
 import {
   useReactTable,
   getCoreRowModel,
@@ -104,6 +105,10 @@ function DomainsTable() {
   const [editType, setEditType] = useState<string>('competitor')
   const [editParentId, setEditParentId] = useState<string>('')
   const [editTags, setEditTags] = useState('')
+  const [editSiteTypeId, setEditSiteTypeId] = useState<string>('')
+  const { data: siteTypesData } = useSiteTypes()
+  const siteTypes: Array<{ id: number; name: string }> =
+    siteTypesData?.data ?? siteTypesData ?? []
 
   // Indexing state
   const [indexingDomainId, setIndexingDomainId] = useState<number | null>(null)
@@ -247,6 +252,9 @@ function DomainsTable() {
                   setEditTags(
                     domain.tags?.map((tag) => tag.name).join(', ') ?? ''
                   )
+                  setEditSiteTypeId(
+                    domain.site_type_id ? String(domain.site_type_id) : ''
+                  )
                   setEditOpen(true)
                 }}
               >
@@ -317,11 +325,12 @@ function DomainsTable() {
         type: editType,
         is_own: editType === 'own',
         parent_id: editParentId ? Number(editParentId) : null,
+        site_type_id: editSiteTypeId ? Number(editSiteTypeId) : undefined,
         tags: tags.length > 0 ? tags : undefined,
       })
       setEditOpen(false)
     },
-    [editId, editName, editType, editParentId, editTags, updateDomain],
+    [editId, editName, editType, editParentId, editTags, editSiteTypeId, updateDomain],
   )
 
   return (
@@ -463,6 +472,27 @@ function DomainsTable() {
                   <SelectItem value="own" label={t('domains.own')}>{t('domains.own')}</SelectItem>
                   <SelectItem value="competitor" label={t('domains.competitor')}>{t('domains.competitor')}</SelectItem>
                   <SelectItem value="satellite" label={t('domains.satellite')}>{t('domains.satellite')}</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{t('domains.siteType')}</Label>
+              <Select value={editSiteTypeId} onValueChange={(v) => setEditSiteTypeId(v)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue
+                    placeholder={t('domains.siteTypeNotSet')}
+                    labels={Object.fromEntries(siteTypes.map((s) => [String(s.id), s.name]))}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="" label={t('domains.siteTypeNotSet')}>
+                    {t('domains.siteTypeNotSet')}
+                  </SelectItem>
+                  {siteTypes.map((s) => (
+                    <SelectItem key={s.id} value={String(s.id)} label={s.name}>
+                      {s.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>

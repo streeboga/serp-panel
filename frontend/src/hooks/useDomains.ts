@@ -29,6 +29,7 @@ export function useCreateDomain(projectId: string) {
       is_own: boolean
       type?: string
       parent_id?: number | null
+      site_type_id?: number
       tags?: string[]
     }) =>
       api
@@ -51,6 +52,7 @@ export function useUpdateDomain() {
       is_own?: boolean
       type?: string
       parent_id?: number | null
+      site_type_id?: number
       tags?: string[]
     }) => api.patch(`/domains/${id}`, data).then((r) => r.data),
     onMutate: async (variables) => {

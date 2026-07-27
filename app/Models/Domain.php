@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use Spatie\Tags\HasTags;
 
@@ -66,6 +67,17 @@ final class Domain extends Model
     public function children(): HasMany
     {
         return $this->hasMany(self::class, 'parent_id');
+    }
+
+    /**
+     * Site type (инфосайт / маркетплейс / …) lives per organization in
+     * domain_classifications, keyed by host — constrain by organization when loading.
+     *
+     * @return HasOne<DomainClassification, $this>
+     */
+    public function classification(): HasOne
+    {
+        return $this->hasOne(DomainClassification::class, 'domain', 'name');
     }
 
     /** @return HasMany<DomainIndexResult, $this> */

@@ -14,7 +14,12 @@ final class DomainRepository implements DomainRepositoryInterface
     /** @return Collection<int, Domain> */
     public function allForProject(Project $project): Collection
     {
-        return $project->domains()->get();
+        return $project->domains()
+            ->with([
+                'tags',
+                'classification' => fn ($q) => $q->where('organization_id', $project->organization_id)->with('siteType'),
+            ])
+            ->get();
     }
 
     public function findById(int $id): Domain

@@ -9,7 +9,9 @@ use App\Contracts\Repositories\KeywordRepositoryInterface;
 use App\Contracts\Repositories\PageableRepositoryInterface;
 use App\DataTransferObjects\Domain\CreateDomainData;
 use App\DataTransferObjects\Domain\UpdateDomainData;
+use App\Enums\ClassifiedBy;
 use App\Models\Domain;
+use App\Models\DomainClassification;
 use App\Models\Keyword;
 use App\Models\Project;
 use Illuminate\Database\Eloquent\Collection;
@@ -36,7 +38,27 @@ final readonly class DomainService
 
     public function update(Domain $domain, UpdateDomainData $data): Domain
     {
-        return $this->repository->update($domain, $data->toArray());
+        $attributes = array_filter(
+            $data->toArray(),
+            static fn (string $key): bool => in_array($key, ['name', 'is_own', 'type', 'parent_id'], true),
+            ARRAY_FILTER_USE_KEY,
+        );
+
+        $domain = $this->repository->update($domain, $attributes);
+
+        if ($data->tags !== null) {
+            $domain->syncTags($data->tags);
+        }
+
+        // Site type lives per organization in domain_classifications, keyed by host.
+        if ($data->site_type_id !== null) {
+            DomainClassification::updateOrCreate(
+                ['domain' => $domain->name, 'organization_id' => $domain->project->organization_id],
+                ['site_type_id' => $data->site_type_id, 'classified_by' => ClassifiedBy::Manual, 'rule_id' => null],
+            );
+        }
+
+        return $domain;
     }
 
     public function delete(Domain $domain): void

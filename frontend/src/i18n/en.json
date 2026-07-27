@@ -85,7 +85,9 @@
     "type": "Type",
     "actions": "Actions",
     "noParent": "No parent",
-    "tagsPlaceholder": "tag1, tag2, tag3"
+    "tagsPlaceholder": "tag1, tag2, tag3",
+    "siteType": "Site type",
+    "siteTypeNotSet": "Not set"
   },
   "keywords": {
     "title": "Keywords",

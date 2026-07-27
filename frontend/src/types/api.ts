@@ -81,6 +81,8 @@ export interface Domain {
   parent?: Domain
   indexed_pages_count: number | null
   tags: Array<{ id: number; name: string; type: string }>
+  site_type_id?: number | null
+  site_type?: string | null
   created_at: string
   updated_at: string
 }
