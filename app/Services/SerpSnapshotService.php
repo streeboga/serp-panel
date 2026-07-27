@@ -39,9 +39,17 @@ final readonly class SerpSnapshotService
             yandexLr: $region?->yandex_lr,
             googleGl: $region?->google_gl,
             googleHl: $region?->google_hl,
+            limit: (int) config('serp.depth', 100),
         );
 
         $response = $adapter->scrape($request);
+
+        // An empty result set means the provider failed (XMLRiver returns a transient
+        // "Выполните перезапрос" error), not that the site ranks nowhere. Storing it
+        // would record every tracked keyword as "not in top" for the day.
+        if ($response->results === []) {
+            throw new \RuntimeException("SERP provider returned no results for keyword {$keyword->id}");
+        }
 
         $collectedAt = now()->toDateString();
 

@@ -45,6 +45,7 @@ final class YandexCloudSearchAdapter implements SerpScraperAdapter
         $maxPages = (int) ceil($maxResults / self::RESULTS_PER_PAGE);
 
         $allResults = [];
+        $seen = [];
         $rawPages = [];
 
         for ($page = 0; $page < $maxPages; $page++) {
@@ -55,21 +56,26 @@ final class YandexCloudSearchAdapter implements SerpScraperAdapter
             }
 
             $rawPages[] = $xml;
-            $pageResults = $this->parseXml($xml, count($allResults));
 
-            if (empty($pageResults)) {
-                break;
+            // Pages can come back short (9 of 10) without meaning the SERP ended —
+            // keep paging while genuinely new URLs arrive.
+            $new = 0;
+            foreach ($this->parseXml($xml) as $item) {
+                if (isset($seen[$item->url])) {
+                    continue;
+                }
+                $seen[$item->url] = true;
+                $allResults[] = $item;
+                $new++;
             }
 
-            $allResults = array_merge($allResults, $pageResults);
-
-            if (count($pageResults) < self::RESULTS_PER_PAGE) {
+            if ($new === 0) {
                 break;
             }
         }
 
         return new ScrapeResponse(
-            results: array_slice($allResults, 0, $maxResults),
+            results: $this->renumber(array_slice($allResults, 0, $maxResults)),
             totalResults: count($allResults),
             rawResponse: implode("\n", $rawPages),
         );
@@ -165,6 +171,30 @@ final class YandexCloudSearchAdapter implements SerpScraperAdapter
         Log::warning('YandexCloudSearch operation timed out', ['operation' => $operationId]);
 
         return null;
+    }
+
+    /** @return SerpResultItem[] */
+    /**
+     * @param  SerpResultItem[]  $items
+     * @return SerpResultItem[]
+     */
+    private function renumber(array $items): array
+    {
+        $out = [];
+
+        foreach ($items as $item) {
+            $out[] = new SerpResultItem(
+                position: count($out) + 1,
+                url: $item->url,
+                domain: $item->domain,
+                title: $item->title,
+                description: $item->description,
+                snippetType: $item->snippetType,
+                isAds: $item->isAds,
+            );
+        }
+
+        return $out;
     }
 
     /** @return SerpResultItem[] */

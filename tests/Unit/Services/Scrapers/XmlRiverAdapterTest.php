@@ -30,14 +30,15 @@ function makeRequest(string $engine = 'yandex'): ScrapeRequest
     );
 }
 
-function buildXmlResponse(int $resultsCount = 10, int $totalFound = 350): string
+function buildXmlResponse(int $resultsCount = 10, int $totalFound = 350, int $urlOffset = 0): string
 {
     $groups = '';
     for ($i = 1; $i <= $resultsCount; $i++) {
+        $n = $i + $urlOffset;
         $groups .= <<<XML
                 <group>
                     <doc>
-                        <url>https://example.com/page-{$i}</url>
+                        <url>https://example.com/page-{$n}</url>
                         <title>Page {$i}</title>
                         <passages><passage>Description {$i}</passage></passages>
                         <contenttype>organic</contenttype>
@@ -113,11 +114,13 @@ test('scrape page returns zero total on empty response', function () {
 });
 
 test('scrape returns total found from xml', function () {
-    // First page returns 10 results with totalFound=350, second page returns < 10 to stop pagination
+    // Distinct URLs per page: page 1 = 1..10, page 2 = 11..15, then the sequence
+    // repeats page 2 so pagination stops on a page with no new URLs.
     Http::fake([
         'xmlriver.com/*' => Http::sequence()
             ->push(buildXmlResponse(10, 350))
-            ->push(buildXmlResponse(5, 350)),
+            ->push(buildXmlResponse(5, 350, 10))
+            ->push(buildXmlResponse(5, 350, 10)),
     ]);
 
     $adapter = makeAdapter();
@@ -134,4 +137,32 @@ test('scrape returns total found from xml', function () {
 
     expect($response->totalResults)->toBe(350);
     expect($response->results)->toHaveCount(15);
+});
+
+test('a short page (9 of 10) does not stop pagination', function () {
+    // XMLRiver commonly returns 9 results on a page; the old code treated that as
+    // "end of SERP" and only ever collected the first page, so anything below the
+    // top ~9 was reported as not ranking.
+    Http::fake([
+        'xmlriver.com/*' => Http::sequence()
+            ->push(buildXmlResponse(9, 350))
+            ->push(buildXmlResponse(9, 350, 9))
+            ->push(buildXmlResponse(9, 350, 18))
+            ->push(buildXmlResponse(9, 350, 18)),
+    ]);
+
+    $response = makeAdapter()->scrape(new ScrapeRequest(
+        keyword: 'поддержка laravel', engine: 'yandex', device: 'desktop',
+        regionId: 213, limit: 100, yandexLr: 213,
+    ));
+
+    expect($response->results)->toHaveCount(27)
+        ->and($response->results[26]->position)->toBe(27);
+});
+
+test('a transient provider error yields no results instead of a fake empty SERP', function () {
+    $error = '<yandexsearch><response><error code="500">Выполните перезапрос.</error></response></yandexsearch>';
+    Http::fake(['xmlriver.com/*' => Http::response($error)]);
+
+    expect(makeAdapter()->scrape(makeRequest())->results)->toBeEmpty();
 });

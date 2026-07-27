@@ -15,6 +15,10 @@ final class XmlRiverAdapter implements SerpScraperAdapter
 {
     private const RESULTS_PER_PAGE = 10;
 
+    private const MAX_PAGES = 15;
+
+    private const MAX_ATTEMPTS = 3;
+
     /** @param array<string, mixed> $credentials */
     public function __construct(
         private readonly string $baseUrl,
@@ -27,47 +31,112 @@ final class XmlRiverAdapter implements SerpScraperAdapter
         $baseParams = $this->buildParams($request);
         $firstPage = $request->engine === 'yandex' ? 0 : 1;
 
-        $allResults = [];
+        $collected = [];
+        $seen = [];
         $page = $firstPage;
         $maxResults = $request->limit;
         $totalFound = 0;
+        $lastPage = $firstPage + self::MAX_PAGES;
 
-        while (count($allResults) < $maxResults) {
-            try {
-                $response = Http::timeout(60)->get($url, array_merge($baseParams, ['page' => $page]));
-                $xml = $response->body();
+        while (count($collected) < $maxResults && $page < $lastPage) {
+            $xml = $this->fetchPageXml($url, array_merge($baseParams, ['page' => $page]));
 
-                if ($page === $firstPage) {
-                    $totalFound = $this->parseTotalFound($xml);
-                }
-
-                $pageResults = $this->parseXmlResponse($xml, count($allResults));
-
-                if (empty($pageResults)) {
-                    break;
-                }
-
-                $allResults = array_merge($allResults, $pageResults);
-
-                if (count($pageResults) < self::RESULTS_PER_PAGE) {
-                    break;
-                }
-
-                $page++;
-            } catch (\Exception $e) {
-                Log::warning('XMLRiver page fetch failed', [
-                    'page' => $page,
-                    'error' => $e->getMessage(),
-                ]);
+            if ($xml === null) {
                 break;
             }
+
+            if ($page === $firstPage) {
+                $totalFound = $this->parseTotalFound($xml);
+            }
+
+            // A page that repeats the previous one means the provider stopped
+            // paginating — keep going only while genuinely new URLs arrive.
+            $new = 0;
+            foreach ($this->parseXmlResponse($xml) as $item) {
+                if (isset($seen[$item->url])) {
+                    continue;
+                }
+                $seen[$item->url] = true;
+                $collected[] = $item;
+                $new++;
+            }
+
+            if ($new === 0) {
+                break;
+            }
+
+            $page++;
         }
 
         return new ScrapeResponse(
-            results: $allResults,
-            totalResults: $totalFound ?: count($allResults),
+            results: $this->renumber(array_slice($collected, 0, $maxResults)),
+            totalResults: $totalFound ?: count($collected),
             rawResponse: '',
         );
+    }
+
+    /**
+     * XMLRiver answers HTTP 200 with `<error code="500">Выполните перезапрос</error>`
+     * when the search engine did not answer — that is a retry request, not an
+     * empty SERP. Returns null once retries are exhausted.
+     *
+     * @param  array<string, mixed>  $params
+     */
+    private function fetchPageXml(string $url, array $params): ?string
+    {
+        for ($attempt = 1; $attempt <= self::MAX_ATTEMPTS; $attempt++) {
+            try {
+                $xml = Http::timeout(60)->get($url, $params)->body();
+
+                if (! $this->hasError($xml)) {
+                    return $xml;
+                }
+            } catch (\Exception $e) {
+                Log::warning('XMLRiver page fetch failed', [
+                    'page' => $params['page'] ?? null,
+                    'attempt' => $attempt,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+
+            if ($attempt < self::MAX_ATTEMPTS) {
+                sleep($attempt);
+            }
+        }
+
+        return null;
+    }
+
+    private function hasError(string $xml): bool
+    {
+        try {
+            return isset((new \SimpleXMLElement($xml))->response->error);
+        } catch (\Exception) {
+            return true;
+        }
+    }
+
+    /**
+     * @param  SerpResultItem[]  $items
+     * @return SerpResultItem[]
+     */
+    private function renumber(array $items): array
+    {
+        $out = [];
+
+        foreach ($items as $item) {
+            $out[] = new SerpResultItem(
+                position: count($out) + 1,
+                url: $item->url,
+                domain: $item->domain,
+                title: $item->title,
+                description: $item->description,
+                snippetType: $item->snippetType,
+                isAds: $item->isAds,
+            );
+        }
+
+        return $out;
     }
 
     public function supportsPageScraping(): bool
