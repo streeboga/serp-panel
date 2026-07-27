@@ -147,7 +147,10 @@
     "domain": "Domain",
     "siteType": "Site Type",
     "totalKeywords": "Total Keywords",
-    "noData": "No competitor data found"
+    "noData": "No competitor data found",
+    "page": "Page",
+    "keyword": "Query",
+    "noPages": "No ranking pages"
   },
   "classification": {
     "title": "Classification Rules",

@@ -7,6 +7,7 @@ namespace App\Repositories\Eloquent;
 use App\Contracts\Repositories\SerpResultRepositoryInterface;
 use App\Models\SerpResult;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
 
 final class SerpResultRepository implements SerpResultRepositoryInterface
@@ -69,6 +70,40 @@ final class SerpResultRepository implements SerpResultRepositoryInterface
             ->groupBy('serp_results.domain')
             ->orderByDesc('top10')
             ->limit(100)
+            ->get();
+    }
+
+    /**
+     * Every ranking page of every domain across the given snapshots — the competitor
+     * URLs that show up for our phrases, whether or not we rank for them ourselves.
+     *
+     * @param  array<int, int>  $snapshotIds
+     * @param  array<int, int>  $keywordIds
+     * @return SupportCollection<int, \stdClass>
+     */
+    public function getCompetitorPages(array $snapshotIds, array $keywordIds, ?string $domain = null, int $limit = 1000): SupportCollection
+    {
+        return DB::table('serp_results')
+            ->join('serp_snapshots', function ($join) use ($keywordIds) {
+                $join->on('serp_results.snapshot_id', '=', 'serp_snapshots.id')
+                    ->on('serp_results.collected_at', '=', 'serp_snapshots.collected_at')
+                    ->whereIn('serp_snapshots.keyword_id', $keywordIds);
+            })
+            ->join('keywords', 'keywords.id', '=', 'serp_snapshots.keyword_id')
+            ->whereIn('serp_snapshots.id', $snapshotIds)
+            ->when($domain !== null, fn ($q) => $q->where('serp_results.domain', $domain))
+            ->select(
+                'serp_results.domain',
+                'serp_results.url',
+                'serp_results.title',
+                'serp_results.position',
+                'serp_snapshots.keyword_id',
+                'keywords.keyword',
+                'serp_snapshots.search_engine',
+            )
+            ->orderBy('serp_results.domain')
+            ->orderBy('serp_results.position')
+            ->limit($limit)
             ->get();
     }
 

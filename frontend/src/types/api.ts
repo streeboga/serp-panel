@@ -327,3 +327,14 @@ export interface TargetReportRow {
   actual_position: number | null
   match: boolean
 }
+
+export interface CompetitorPage {
+  domain: string
+  url: string
+  title: string | null
+  position: number
+  keyword_id: number
+  keyword: string
+  engine: string
+  is_own: boolean
+}

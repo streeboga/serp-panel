@@ -57,6 +57,8 @@ export const queryKeys = {
     all: ['competitors'] as const,
     list: (projectId: string) =>
       [...queryKeys.competitors.all, projectId] as const,
+    pages: (projectId: string, domain: string) =>
+      [...queryKeys.competitors.all, projectId, 'pages', domain] as const,
   },
 
   classification: {

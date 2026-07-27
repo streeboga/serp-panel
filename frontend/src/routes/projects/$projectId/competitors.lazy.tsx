@@ -1,7 +1,7 @@
 import { createLazyFileRoute } from '@tanstack/react-router'
-import { useMemo, useCallback } from 'react'
+import { useMemo, useCallback, useState, Fragment } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useCompetitors } from '@/hooks/useCompetitors'
+import { useCompetitors, useCompetitorPages } from '@/hooks/useCompetitors'
 import {
   useReactTable,
   getCoreRowModel,
@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import type { Competitor } from '@/types/api'
+import type { Competitor, CompetitorPage } from '@/types/api'
 
 export const Route = createLazyFileRoute('/projects/$projectId/competitors')({
   component: CompetitorsPage,
@@ -33,6 +33,12 @@ function CompetitorsPage() {
   const { t } = useTranslation()
   const { projectId } = Route.useParams()
   const { data, isLoading } = useCompetitors(projectId)
+  const [openDomain, setOpenDomain] = useState<string | null>(null)
+  const { data: pagesData, isLoading: pagesLoading } = useCompetitorPages(
+    projectId,
+    openDomain,
+  )
+  const pages: CompetitorPage[] = pagesData?.data ?? pagesData ?? []
 
   const competitors: Competitor[] = useMemo(() => {
     const raw: Competitor[] = data?.data ?? data ?? []
@@ -151,19 +157,82 @@ function CompetitorsPage() {
           </TableHeader>
           <TableBody>
             {table.getRowModel().rows.map((row) => (
-              <TableRow
-                key={row.id}
-                className={row.original.is_own ? 'bg-success/5' : undefined}
-              >
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(
-                      cell.column.columnDef.cell,
-                      cell.getContext(),
-                    )}
-                  </TableCell>
-                ))}
-              </TableRow>
+              <Fragment key={row.id}>
+                <TableRow
+                  className={`cursor-pointer ${row.original.is_own ? 'bg-success/5' : ''}`}
+                  onClick={() =>
+                    setOpenDomain(
+                      openDomain === row.original.domain
+                        ? null
+                        : row.original.domain,
+                    )
+                  }
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id}>
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
+                  ))}
+                </TableRow>
+                {openDomain === row.original.domain && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={row.getVisibleCells().length}
+                      className="bg-muted/30 p-0"
+                    >
+                      {pagesLoading ? (
+                        <div className="p-3 text-xs text-muted-foreground">
+                          {t('common.loading')}
+                        </div>
+                      ) : pages.length === 0 ? (
+                        <div className="p-3 text-xs text-muted-foreground">
+                          {t('competitors.noPages')}
+                        </div>
+                      ) : (
+                        <div className="max-h-80 overflow-auto p-2">
+                          <table className="w-full text-xs">
+                            <thead className="text-muted-foreground">
+                              <tr>
+                                <th className="w-12 p-1 text-left">#</th>
+                                <th className="p-1 text-left">
+                                  {t('competitors.keyword')}
+                                </th>
+                                <th className="p-1 text-left">
+                                  {t('competitors.page')}
+                                </th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {pages.map((p, i) => (
+                                <tr key={`${p.url}-${p.keyword_id}-${i}`}>
+                                  <td className="p-1 tabular-nums">
+                                    {p.position}
+                                  </td>
+                                  <td className="p-1">{p.keyword}</td>
+                                  <td className="p-1">
+                                    <a
+                                      href={p.url}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      className="text-primary hover:underline"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {p.url}
+                                    </a>
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                )}
+              </Fragment>
             ))}
           </TableBody>
         </Table>

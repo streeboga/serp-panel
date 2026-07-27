@@ -32,34 +32,13 @@ final readonly class CompetitorService
      */
     public function getCompetitors(int $projectId, int $organizationId, ?array $keywordIds = null): array
     {
-        if (empty($keywordIds)) {
-            $domainIds = $this->domainRepository->domainIdsForProject($projectId);
-            $categoryIds = $this->categoryRepository->categoryIdsForDomains($domainIds);
-            $clusterIds = $this->clusterRepository->clusterIdsForCategories($categoryIds);
-            $keywordIds = $this->keywordRepository->keywordIdsForClusters($clusterIds);
-        }
+        [$snapshotIds, $keywordIds] = $this->latestSnapshotScope($projectId, $keywordIds);
 
-        if (empty($keywordIds)) {
+        if ($snapshotIds === []) {
             return [];
         }
 
-        $latestSnapshots = $this->snapshotRepository->latestSnapshotsPerKeyword($keywordIds);
-
-        if ($latestSnapshots->isEmpty()) {
-            return [];
-        }
-
-        $snapshotConditions = $latestSnapshots->map(fn (SerpSnapshot $s) => [
-            'keyword_id' => $s->keyword_id,
-            'collected_at' => (string) $s->latest_date,
-        ]);
-
-        $snapshotIds = $this->snapshotRepository->getSnapshotIdsForConditions($snapshotConditions);
-
-        $competitors = $this->resultRepository->getCompetitorStats(
-            $snapshotIds->values()->toArray(),
-            $keywordIds,
-        );
+        $competitors = $this->resultRepository->getCompetitorStats($snapshotIds, $keywordIds);
 
         $domains = $competitors->pluck('domain')->toArray();
         $classifications = $this->classificationRepository
@@ -79,5 +58,73 @@ final readonly class CompetitorService
             'is_own' => in_array($c->domain, $ownDomains),
             'site_type' => $classifications->get($c->domain)?->siteType,
         ])->toArray();
+    }
+
+    /**
+     * Competitor pages: which URL of which site ranks for each of our phrases.
+     * Covers every tracked phrase, including those we do not rank for ourselves.
+     *
+     * @param  array<int, int>|null  $keywordIds
+     * @return array<int, array<string, mixed>>
+     */
+    public function getCompetitorPages(int $projectId, int $organizationId, ?string $domain = null, ?array $keywordIds = null): array
+    {
+        [$snapshotIds, $keywordIds] = $this->latestSnapshotScope($projectId, $keywordIds);
+
+        if ($snapshotIds === []) {
+            return [];
+        }
+
+        $ownDomains = $this->domainRepository->ownDomainsForProject($projectId)
+            ->pluck('name')
+            ->toArray();
+
+        return $this->resultRepository->getCompetitorPages($snapshotIds, $keywordIds, $domain)
+            ->map(fn (\stdClass $r): array => [
+                'domain' => $r->domain,
+                'url' => $r->url,
+                'title' => $r->title,
+                'position' => $r->position,
+                'keyword_id' => $r->keyword_id,
+                'keyword' => $r->keyword,
+                'engine' => $r->search_engine,
+                'is_own' => in_array($r->domain, $ownDomains, true),
+            ])->toArray();
+    }
+
+    /**
+     * Latest snapshot per keyword for the project (or the given keywords).
+     *
+     * @param  array<int, int>|null  $keywordIds
+     * @return array{0: array<int, int>, 1: array<int, int>}
+     */
+    private function latestSnapshotScope(int $projectId, ?array $keywordIds): array
+    {
+        if (empty($keywordIds)) {
+            $domainIds = $this->domainRepository->domainIdsForProject($projectId);
+            $categoryIds = $this->categoryRepository->categoryIdsForDomains($domainIds);
+            $clusterIds = $this->clusterRepository->clusterIdsForCategories($categoryIds);
+            $keywordIds = $this->keywordRepository->keywordIdsForClusters($clusterIds);
+        }
+
+        if (empty($keywordIds)) {
+            return [[], []];
+        }
+
+        $latestSnapshots = $this->snapshotRepository->latestSnapshotsPerKeyword($keywordIds);
+
+        if ($latestSnapshots->isEmpty()) {
+            return [[], $keywordIds];
+        }
+
+        $conditions = $latestSnapshots->map(fn (SerpSnapshot $s) => [
+            'keyword_id' => $s->keyword_id,
+            'collected_at' => (string) $s->latest_date,
+        ]);
+
+        return [
+            $this->snapshotRepository->getSnapshotIdsForConditions($conditions)->values()->toArray(),
+            $keywordIds,
+        ];
     }
 }

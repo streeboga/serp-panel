@@ -6,6 +6,7 @@ namespace App\Contracts\Repositories;
 
 use App\Models\SerpResult;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection as SupportCollection;
 
 interface SerpResultRepositoryInterface
 {
@@ -28,6 +29,13 @@ interface SerpResultRepositoryInterface
      * @return Collection<int, SerpResult>
      */
     public function getCompetitorStats(array $snapshotIds, array $keywordIds): Collection;
+
+    /**
+     * @param  array<int, int>  $snapshotIds
+     * @param  array<int, int>  $keywordIds
+     * @return SupportCollection<int, \stdClass>
+     */
+    public function getCompetitorPages(array $snapshotIds, array $keywordIds, ?string $domain = null, int $limit = 1000): SupportCollection;
 
     /**
      * @param  array<int>  $keywordIds
