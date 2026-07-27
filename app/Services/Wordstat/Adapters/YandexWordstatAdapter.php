@@ -111,14 +111,50 @@ final class YandexWordstatAdapter implements WordstatAdapter
             ];
         }
 
-        // v2 topRequests reports only broad volume; exact/phrase are proportional estimates.
-        $exact = $broad > 0 ? (int) round($broad * 0.3) : 0;
-        $phrase = $broad > 0 ? (int) round($broad * 0.6) : 0;
+        // v2 topRequests reports broad volume only. Phrase/exact need their own
+        // queries with Wordstat operators, which cost extra quota — so they are
+        // measured only when enabled, and left null (unknown) otherwise. They must
+        // never be derived from broad: an invented number reads as a measured one.
+        [$phrase, $exact] = $this->measurePhraseAndExact($keyword, $regionId, $broad);
 
         return [
             'frequencies' => ['exact' => $exact, 'broad' => $broad, 'phrase' => $phrase],
             'suggestions' => $suggestions,
         ];
+    }
+
+    /**
+     * Real phrase ("phrase") and exact ("!word !word") volumes, each an extra
+     * Wordstat call. Returns [null, null] when precise collection is disabled.
+     *
+     * @return array{0: int|null, 1: int|null}
+     */
+    private function measurePhraseAndExact(string $keyword, int $regionId, int $broad): array
+    {
+        if ($broad === 0 || ! config('serp.wordstat_precise', false)) {
+            return [null, null];
+        }
+
+        $words = preg_split('/\s+/', trim($keyword)) ?: [];
+        $exactQuery = '"'.implode(' ', array_map(static fn (string $w): string => '!'.$w, $words)).'"';
+
+        return [
+            $this->fetchPhraseVolume('"'.$keyword.'"', $regionId),
+            $this->fetchPhraseVolume($exactQuery, $regionId),
+        ];
+    }
+
+    private function fetchPhraseVolume(string $query, int $regionId): ?int
+    {
+        $body = ['phrase' => $query, 'numPhrases' => 1];
+
+        if ($regionId > 0) {
+            $body['regions'] = [(string) $regionId];
+        }
+
+        $data = $this->request('/topRequests', $body);
+
+        return $data === [] ? null : $this->toInt($data['totalCount'] ?? 0);
     }
 
     /**

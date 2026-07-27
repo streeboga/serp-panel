@@ -62,9 +62,9 @@ class CollectWordstatJob implements ShouldQueue
             $frequencyRepository->create([
                 'keyword_id' => $keyword->id,
                 'region_id' => $regionId,
-                'frequency_exact' => $result->frequencies['exact'] ?? 0,
+                'frequency_exact' => $result->frequencies['exact'] ?? null,
                 'frequency_broad' => $result->frequencies['broad'] ?? 0,
-                'frequency_phrase' => $result->frequencies['phrase'] ?? 0,
+                'frequency_phrase' => $result->frequencies['phrase'] ?? null,
                 'collected_at' => $collectedAt,
             ]);
 

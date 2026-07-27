@@ -35,8 +35,10 @@ test('collect parses topRequests frequencies, suggestions and dynamics trends', 
     $result = makeWordstatAdapter()->collect('купить квартиру', 213);
 
     expect($result->frequencies['broad'])->toBe(878846);
-    expect($result->frequencies['phrase'])->toBe((int) round(878846 * 0.6));
-    expect($result->frequencies['exact'])->toBe((int) round(878846 * 0.3));
+    // Phrase/exact are separate measurements, never derived from broad — unknown
+    // until precise collection is enabled.
+    expect($result->frequencies['phrase'])->toBeNull();
+    expect($result->frequencies['exact'])->toBeNull();
 
     // exact-match phrase excluded from suggestions; one top + one association remain
     expect($result->suggestions)->toHaveCount(2);
@@ -64,12 +66,12 @@ test('collect sends Api-Key auth and folderId + region in body', function () {
     });
 });
 
-test('collect returns zero frequencies on API error', function () {
+test('collect returns no frequencies on API error', function () {
     Http::fake(['*' => Http::response(['message' => 'forbidden'], 403)]);
 
     $result = makeWordstatAdapter()->collect('тест', 213);
 
-    expect($result->frequencies)->toBe(['exact' => 0, 'broad' => 0, 'phrase' => 0]);
+    expect($result->frequencies)->toBe(['exact' => null, 'broad' => 0, 'phrase' => null]);
     expect($result->suggestions)->toBeEmpty();
 });
 
