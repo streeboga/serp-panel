@@ -19,13 +19,13 @@ class DispatchWordstatDripCommand extends Command
      * picking the stalest phrases first. Over time it collects everything, then
      * keeps each phrase refreshed within its schedule's frequency_days.
      */
-    protected $signature = 'wordstat:drip {--limit=11 : Phrases to dispatch this run (~2 API calls each)}';
+    protected $signature = 'wordstat:drip {--limit= : Phrases to dispatch this run (default derives from the API quota)}';
 
     protected $description = 'Gradually collect Wordstat frequencies for the stalest phrases within the API quota';
 
     public function handle(WordstatScheduleService $service): int
     {
-        $limit = max(1, (int) $this->option('limit'));
+        $limit = max(1, (int) ($this->option('limit') ?: $this->quotaBudget()));
 
         /** @var array<int, array{schedule: WordstatSchedule, keywordId: int, regionId: int, threshold: string}> $candidates */
         $candidates = [];
@@ -130,5 +130,18 @@ class DispatchWordstatDripCommand extends Command
     private static function inflightKey(string $pairKey): string
     {
         return 'wordstat:inflight:'.$pairKey;
+    }
+
+    /**
+     * Phrases per run that keep the hourly API quota intact. A phrase costs one
+     * call for broad volume plus one for trends, and two more when precise
+     * (phrase + exact) collection is on. Runs every 15 minutes.
+     */
+    private function quotaBudget(): int
+    {
+        $callsPerPhrase = config('serp.wordstat_precise', false) ? 4 : 2;
+        $runsPerHour = 4;
+
+        return max(1, (int) floor((int) config('serp.wordstat_quota_per_hour', 100) / $callsPerPhrase / $runsPerHour));
     }
 }

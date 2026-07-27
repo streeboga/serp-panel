@@ -14,4 +14,10 @@ return [
      * costs 3 API calls instead of 1, against a 100 req/hour quota.
      */
     'wordstat_precise' => (bool) env('WORDSTAT_PRECISE', false),
+
+    /*
+     * Yandex Wordstat API hourly quota. The drip sizes each run from this so the
+     * quota is never exceeded, whether or not precise collection is on.
+     */
+    'wordstat_quota_per_hour' => (int) env('WORDSTAT_QUOTA_PER_HOUR', 100),
 ];
