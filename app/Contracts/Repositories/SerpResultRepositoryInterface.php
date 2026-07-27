@@ -35,7 +35,7 @@ interface SerpResultRepositoryInterface
      * @param  array<int, int>  $keywordIds
      * @return SupportCollection<int, \stdClass>
      */
-    public function getCompetitorPages(array $snapshotIds, array $keywordIds, ?string $domain = null, int $limit = 1000): SupportCollection;
+    public function getCompetitorPages(array $snapshotIds, array $keywordIds, ?string $domain = null, int $limit = 5000): SupportCollection;
 
     /**
      * @param  array<int>  $keywordIds
