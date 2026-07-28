@@ -7,8 +7,10 @@ namespace App\Repositories\Eloquent;
 use App\Contracts\Repositories\SerpResultRepositoryInterface;
 use App\Models\SerpResult;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\LazyCollection;
 
 final class SerpResultRepository implements SerpResultRepositoryInterface
 {
@@ -83,6 +85,28 @@ final class SerpResultRepository implements SerpResultRepositoryInterface
      */
     public function getCompetitorPages(array $snapshotIds, array $keywordIds, ?string $domain = null, int $limit = 5000): SupportCollection
     {
+        return $this->competitorPagesQuery($snapshotIds, $keywordIds, $domain)->limit($limit)->get();
+    }
+
+    /**
+     * Streaming variant: rows arrive in batches instead of one big array, so a
+     * project-wide sync does not hold every competitor URL in memory at once.
+     *
+     * @param  array<int, int>  $snapshotIds
+     * @param  array<int, int>  $keywordIds
+     * @return LazyCollection<int, \stdClass>
+     */
+    public function lazyCompetitorPages(array $snapshotIds, array $keywordIds, ?string $domain = null): LazyCollection
+    {
+        return $this->competitorPagesQuery($snapshotIds, $keywordIds, $domain)->lazy(500);
+    }
+
+    /**
+     * @param  array<int, int>  $snapshotIds
+     * @param  array<int, int>  $keywordIds
+     */
+    private function competitorPagesQuery(array $snapshotIds, array $keywordIds, ?string $domain): Builder
+    {
         return DB::table('serp_results')
             ->join('serp_snapshots', function ($join) use ($keywordIds) {
                 $join->on('serp_results.snapshot_id', '=', 'serp_snapshots.id')
@@ -102,9 +126,7 @@ final class SerpResultRepository implements SerpResultRepositoryInterface
                 'serp_snapshots.search_engine',
             )
             ->orderBy('serp_results.domain')
-            ->orderBy('serp_results.position')
-            ->limit($limit)
-            ->get();
+            ->orderBy('serp_results.position');
     }
 
     /**

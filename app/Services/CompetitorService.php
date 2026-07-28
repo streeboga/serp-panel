@@ -13,6 +13,7 @@ use App\Contracts\Repositories\SerpResultRepositoryInterface;
 use App\Contracts\Repositories\SerpSnapshotRepositoryInterface;
 use App\Models\SerpResult;
 use App\Models\SerpSnapshot;
+use Illuminate\Support\LazyCollection;
 
 final readonly class CompetitorService
 {
@@ -90,6 +91,23 @@ final readonly class CompetitorService
                 'engine' => $r->search_engine,
                 'is_own' => in_array($r->domain, $ownDomains, true),
             ])->toArray();
+    }
+
+    /**
+     * Streaming variant of getCompetitorPages for bulk jobs — raw rows, no array
+     * of the whole project held in memory.
+     *
+     * @return LazyCollection<int, \stdClass>
+     */
+    public function lazyCompetitorPages(int $projectId, ?string $domain = null): LazyCollection
+    {
+        [$snapshotIds, $keywordIds] = $this->latestSnapshotScope($projectId, null);
+
+        if ($snapshotIds === []) {
+            return LazyCollection::empty();
+        }
+
+        return $this->resultRepository->lazyCompetitorPages($snapshotIds, $keywordIds, $domain);
     }
 
     /**

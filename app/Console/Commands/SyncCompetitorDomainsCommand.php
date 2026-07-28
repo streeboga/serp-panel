@@ -49,7 +49,7 @@ class SyncCompetitorDomainsCommand extends Command
                     $newDomains++;
                 }
 
-                $newPages += $this->syncPages($service, $project->id, $project->organization_id, $domain);
+                $newPages += $this->syncPages($service, $project->id, $domain);
             }
         }
 
@@ -58,32 +58,53 @@ class SyncCompetitorDomainsCommand extends Command
         return self::SUCCESS;
     }
 
-    /** Store each URL of this domain that ranks for one of our phrases. */
-    private function syncPages(CompetitorService $service, int $projectId, int $organizationId, Domain $domain): int
+    /**
+     * Store each URL of this domain that ranks for one of our phrases. Rows are
+     * streamed and written in batches — a project-wide sync used to materialise
+     * every competitor URL at once, which is what exhausted memory on the box.
+     */
+    private function syncPages(CompetitorService $service, int $projectId, Domain $domain): int
     {
-        $rows = collect($service->getCompetitorPages($projectId, $organizationId, $domain->name))
-            ->unique('url')
-            ->map(fn (array $p): array => [
+        $written = 0;
+        $batch = [];
+        $seen = [];
+
+        foreach ($service->lazyCompetitorPages($projectId, $domain->name) as $row) {
+            // Postgres rejects a batch that touches the same conflict key twice.
+            if (isset($seen[$row->url])) {
+                continue;
+            }
+            $seen[$row->url] = true;
+
+            $batch[] = [
                 'project_id' => $projectId,
                 'domain_id' => $domain->id,
-                'url' => $p['url'],
+                'url' => $row->url,
                 // Page::boot() normalises this on save; bulk upsert bypasses the model.
-                'path' => parse_url((string) $p['url'], PHP_URL_PATH) ?: '/',
-                'title' => $p['title'],
+                'path' => parse_url((string) $row->url, PHP_URL_PATH) ?: '/',
+                'title' => $row->title,
                 'created_at' => now(),
                 'updated_at' => now(),
-            ])
-            ->values()
-            ->all();
+            ];
 
-        if ($rows === []) {
-            return 0;
+            if (count($batch) >= 200) {
+                $this->flush($batch);
+                $written += count($batch);
+                $batch = [];
+            }
         }
 
-        foreach (array_chunk($rows, 200) as $chunk) {
-            DB::table('pages')->upsert($chunk, ['project_id', 'url'], ['domain_id', 'path', 'title', 'updated_at']);
+        if ($batch !== []) {
+            $this->flush($batch);
+            $written += count($batch);
         }
 
-        return count($rows);
+        return $written;
+    }
+
+    /** @param array<int, array<string, mixed>> $batch */
+    private function flush(array $batch): void
+    {
+        DB::table('pages')->upsert($batch, ['project_id', 'url'], ['domain_id', 'path', 'title', 'updated_at']);
     }
 }

@@ -7,6 +7,7 @@ namespace App\Contracts\Repositories;
 use App\Models\SerpResult;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Collection as SupportCollection;
+use Illuminate\Support\LazyCollection;
 
 interface SerpResultRepositoryInterface
 {
@@ -36,6 +37,13 @@ interface SerpResultRepositoryInterface
      * @return SupportCollection<int, \stdClass>
      */
     public function getCompetitorPages(array $snapshotIds, array $keywordIds, ?string $domain = null, int $limit = 5000): SupportCollection;
+
+    /**
+     * @param  array<int, int>  $snapshotIds
+     * @param  array<int, int>  $keywordIds
+     * @return LazyCollection<int, \stdClass>
+     */
+    public function lazyCompetitorPages(array $snapshotIds, array $keywordIds, ?string $domain = null): LazyCollection;
 
     /**
      * @param  array<int>  $keywordIds
