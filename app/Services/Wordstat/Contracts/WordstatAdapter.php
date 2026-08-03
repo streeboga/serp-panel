@@ -8,7 +8,7 @@ use App\Services\Wordstat\DTO\WordstatResult;
 
 interface WordstatAdapter
 {
-    public function collect(string $keyword, int $regionId): WordstatResult;
+    public function collect(string $keyword, int $regionId, bool $withTrends = true): WordstatResult;
 
     public function healthCheck(): bool;
 }

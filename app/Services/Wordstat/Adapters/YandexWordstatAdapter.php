@@ -28,13 +28,15 @@ final class YandexWordstatAdapter implements WordstatAdapter
         private readonly string $folderId,
     ) {}
 
-    public function collect(string $keyword, int $regionId): WordstatResult
+    public function collect(string $keyword, int $regionId, bool $withTrends = true): WordstatResult
     {
+        // topRequests already carries the suggestions, so one call covers both —
+        // and dynamics is a separate billed request, skipped when not needed.
         $top = $this->fetchTopRequests($keyword, $regionId);
 
         return new WordstatResult(
             frequencies: $top['frequencies'],
-            trends: $this->fetchDynamics($keyword, $regionId),
+            trends: $withTrends ? $this->fetchDynamics($keyword, $regionId) : [],
             suggestions: $top['suggestions'],
         );
     }

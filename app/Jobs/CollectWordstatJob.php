@@ -53,11 +53,13 @@ class CollectWordstatJob implements ShouldQueue
 
         $keyword = $keywordRepository->findById($this->keywordId);
         $collectedAt = now()->toDateString();
+        $firstResult = null;
 
         foreach ($this->regionIds as $regionId) {
             // region_id is a regions PK; the Wordstat API needs the Yandex lr geo code.
             $yandexLr = $regionRepository->findById($regionId)?->yandex_lr;
-            $result = $adapter->collect($keyword->keyword, $yandexLr ?? $regionId);
+            $result = $adapter->collect($keyword->keyword, $yandexLr ?? $regionId, $this->collectTrends);
+            $firstResult ??= $result;
 
             $frequencyRepository->create([
                 'keyword_id' => $keyword->id,
@@ -85,12 +87,10 @@ class CollectWordstatJob implements ShouldQueue
             }
         }
 
-        if ($this->collectSuggestions) {
-            $suggestionRegionId = $this->regionIds[0] ?? $keyword->region_id;
-            $suggestionLr = $regionRepository->findById($suggestionRegionId)?->yandex_lr;
-            $result = $adapter->collect($keyword->keyword, $suggestionLr ?? $suggestionRegionId);
-
-            foreach ($result->suggestions as $suggestion) {
+        // Suggestions arrive with the frequency response — collecting again would
+        // re-run every billed request for data we already hold.
+        if ($this->collectSuggestions && $firstResult !== null) {
+            foreach ($firstResult->suggestions as $suggestion) {
                 $suggestionRepository->updateOrCreate(
                     [
                         'keyword_id' => $keyword->id,

@@ -17,7 +17,7 @@ final class XmlRiverWordstatAdapter implements WordstatAdapter
         private readonly string $baseUrl = 'http://xmlriver.com/wordstat/json',
     ) {}
 
-    public function collect(string $keyword, int $regionId): WordstatResult
+    public function collect(string $keyword, int $regionId, bool $withTrends = true): WordstatResult
     {
         $response = Http::timeout(60)->get($this->baseUrl, [
             'user' => $this->user,
