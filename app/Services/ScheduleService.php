@@ -11,6 +11,7 @@ use App\DataTransferObjects\ScrapeSchedule\CreateScrapeScheduleData;
 use App\DataTransferObjects\ScrapeSchedule\UpdateScrapeScheduleData;
 use App\Jobs\ScrapeSerpJob;
 use App\Models\ScrapeSchedule;
+use App\Services\Scrapers\EngineScraperRouter;
 use Illuminate\Database\Eloquent\Collection;
 
 final readonly class ScheduleService
@@ -19,6 +20,7 @@ final readonly class ScheduleService
         private ScrapeScheduleRepositoryInterface $repository,
         private KeywordRepositoryInterface $keywordRepository,
         private ScrapeJobRepositoryInterface $scrapeJobRepository,
+        private EngineScraperRouter $engineRouter,
     ) {}
 
     /** @return Collection<int, ScrapeSchedule> */
@@ -62,10 +64,18 @@ final readonly class ScheduleService
             $keywords = collect();
         }
 
+        $organizationId = $schedule->scraper->organization_id;
+
         foreach ($keywords as $kw) {
             $job = $this->scrapeJobRepository->create([
                 'keyword_id' => $kw->id,
-                'scraper_id' => $schedule->scraper_id,
+                // Route by engine, same as the scheduled run — otherwise a Google
+                // keyword goes to a Yandex-only scraper and stores Yandex results.
+                'scraper_id' => $this->engineRouter->scraperIdFor(
+                    $organizationId,
+                    $schedule->scraper_id,
+                    $kw->engine->value,
+                ),
                 'engine' => $kw->engine,
                 'device' => $kw->device,
                 'region_id' => $kw->region_id,
