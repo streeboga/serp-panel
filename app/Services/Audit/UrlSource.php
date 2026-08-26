@@ -28,7 +28,7 @@ final readonly class UrlSource
      * @param  array<int, string>  $sitemapUrls
      * @return array<int, array{url: string, page_id: int|null}>
      */
-    public function resolve(SiteAudit $audit, array $sitemapUrls, RobotsTxt $robots): array
+    public function resolve(SiteAudit $audit, array $sitemapUrls, RobotsTxt $robots, ?string $origin = null): array
     {
         $pageIds = $audit->scope === AuditScope::Pages
             ? array_map(intval(...), $audit->input['page_ids'] ?? [])
@@ -60,7 +60,14 @@ final readonly class UrlSource
             }
         }
 
-        return $this->clean($candidates, $robots, $projectPages->pluck('id', 'path')->all());
+        // Реестр Page держит и страницы конкурентов — их пишет туда MatchPagesFromSerpListener.
+        // Аудит сайта обязан остаться на своём хосте: чужие домены и проверять незачем,
+        // и ходить по ним нашим краулером нельзя.
+        $host = $audit->scope === AuditScope::Site && $origin !== null
+            ? $this->host($origin)
+            : null;
+
+        return $this->clean($candidates, $robots, $projectPages->pluck('id', 'path')->all(), $host);
     }
 
     /** @return array<int, string> */
@@ -89,9 +96,10 @@ final readonly class UrlSource
      *
      * @param  array<int, array{url: string, page_id: int|null}>  $candidates
      * @param  array<string, int>  $pageIdsByPath
+     * @param  string|null  $host  ограничение по хосту; null — не ограничивать
      * @return array<int, array{url: string, page_id: int|null}>
      */
-    private function clean(array $candidates, RobotsTxt $robots, array $pageIdsByPath): array
+    private function clean(array $candidates, RobotsTxt $robots, array $pageIdsByPath, ?string $host = null): array
     {
         $respectRobots = (bool) config('audit.respect_robots');
         $limit = (int) config('audit.max_pages');
@@ -110,6 +118,10 @@ final readonly class UrlSource
             $key = $this->normalize($url);
 
             if ($key === null || isset($seen[$key])) {
+                continue;
+            }
+
+            if ($host !== null && $this->host($url) !== $host) {
                 continue;
             }
 
@@ -132,6 +144,18 @@ final readonly class UrlSource
         }
 
         return $result;
+    }
+
+    /** Хост без www и регистра — по нему решаем, наш это адрес или чужой. */
+    private function host(string $url): ?string
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+
+        if (! is_string($host)) {
+            return null;
+        }
+
+        return preg_replace('/^www\./i', '', mb_strtolower($host));
     }
 
     private function normalize(string $url): ?string

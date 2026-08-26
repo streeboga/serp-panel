@@ -269,3 +269,44 @@ test('потерянные страницы не выдаются за успе�
 
     expect($audit->refresh()->error)->toContain('10 из 10');
 });
+
+test('аудит сайта не уходит на чужие домены', function () {
+    Http::fake([
+        'test.com/robots.txt' => Http::response('', 404),
+        'test.com/sitemap.xml' => Http::response('', 404),
+        '*' => Http::response(goodPage(), 200, ['Content-Type' => 'text/html']),
+    ]);
+
+    $h = createFullStack();
+
+    // Реестр Page держит и конкурентов — их пишет туда MatchPagesFromSerpListener.
+    Page::create(['project_id' => $h['project']->id, 'url' => 'https://test.com/services/']);
+    Page::create(['project_id' => $h['project']->id, 'url' => 'https://www.reddit.com/r/seo/comments/x/']);
+
+    $this->actingAs($h['user'])->postJson(
+        "/api/v1/projects/{$h['project']->id}/audits",
+        ['scope' => 'site', 'domain_id' => $h['domain']->id],
+        orgHeaders($h['org']),
+    )->assertStatus(201);
+
+    $urls = SiteAudit::latest('id')->firstOrFail()->results()->pluck('url')->all();
+
+    expect($urls)->toContain('https://test.com/services/')
+        ->and($urls)->not->toContain('https://www.reddit.com/r/seo/comments/x/');
+});
+
+test('явно выбранные страницы проверяются даже на чужом хосте', function () {
+    Http::fake(['*' => Http::response(goodPage(), 200, ['Content-Type' => 'text/html'])]);
+
+    $h = createFullStack();
+    $page = Page::create(['project_id' => $h['project']->id, 'url' => 'https://competitor.example/x/']);
+
+    $this->actingAs($h['user'])->postJson(
+        "/api/v1/projects/{$h['project']->id}/audits",
+        ['scope' => 'pages', 'page_ids' => [$page->id]],
+        orgHeaders($h['org']),
+    )->assertStatus(201);
+
+    expect(SiteAudit::latest('id')->firstOrFail()->results()->pluck('url')->all())
+        ->toContain('https://competitor.example/x/');
+});

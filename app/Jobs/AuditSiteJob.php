@@ -70,7 +70,7 @@ final class AuditSiteJob implements ShouldQueue
 
         $summary = PageAuditor::summarize($site['findings']);
 
-        $urls = $urlSource->resolve($audit, $site['sitemap_urls'], $site['robots']);
+        $urls = $urlSource->resolve($audit, $site['sitemap_urls'], $site['robots'], $origin);
 
         $audits->update($audit, [
             'findings' => $summary['findings'],
