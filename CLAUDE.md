@@ -98,8 +98,9 @@ Organization → Project → Domain → Category → Cluster → Keyword
 - `classification`: ClassifyDomainsJob — classifies domains from SERP
 - `audit`: AuditSiteJob (orchestrator) + AuditPageJob (page worker) + CheckResourcesJob + FinalizeSiteAuditJob
 - `audit-assets`: CheckResourceJob — обход ссылок и картинок за кодом ответа и размером, по одному запросу на уникальный URL
+- `audit-browser`: BrowserAuditJob — замеры в Chromium, один воркер, один замер за раз
 - `default`: SendPositionAlertJob — sends Telegram/Email alerts on position changes
-- Run: `php artisan queue:work --queue=serp-scrape,indexing,wordstat,classification,audit,audit-assets,default`
+- Run: `php artisan queue:work --queue=serp-scrape,indexing,wordstat,classification,audit,audit-assets,audit-browser,default`
 
 ## Events
 
@@ -142,6 +143,11 @@ Unified registry of tracked pages (own + competitors) with polymorphic attachmen
   `ON CONFLICT`, счётчик `reference_count`. Второй этап (`CheckResourcesJob` →
   батч `CheckResourceJob` на очереди `audit-assets`) даёт битые ссылки и вес картинок
 - **Кросс-страничное**: дубли title и description считает `FinalizeSiteAuditJob`
+- **Браузер**: `services/browser-audit` — Playwright в Docker, отдаёт CLS с виновниками,
+  контраст по вычисленным стилям, LCP/FCP и мелкий шрифт. Третий этап
+  (`RunBrowserStageJob` → батч `BrowserAuditJob` на очереди `audit-browser`) по выборке
+  страниц, сначала страницы проекта. Выключен, пока не задан `AUDIT_BROWSER_ENABLED`;
+  недоступный сервис оставляет страницу «не проверенной», а не «чистой»
 - **Вежливость**: `User-Agent` из конфига, лимит `audit.requests_per_second` (RateLimitedWithRedis)
   общий для обоих этапов — вежливость считается на сайт, а не на очередь,
   уважение `Disallow`, потолок `audit.max_pages`
