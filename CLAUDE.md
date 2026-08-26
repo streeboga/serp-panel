@@ -124,7 +124,8 @@ Unified registry of tracked pages (own + competitors) with polymorphic attachmen
 - **SiteAudit**: `site_audits` — прогон (scope site/pages/url, статус, batch_id, оценка, находки уровня сайта)
 - **PageAuditResult**: `page_audit_results` — результат по одному URL (findings + metrics в JSONB)
 - **Проверки**: пакет `packages/serp-audit` (`streeboga/serp-audit`, подключён как path-репозиторий).
-  По классу на проверку, 18 штук в 5 категориях. Один разбор DOM на страницу,
+  По классу на проверку, 31 штука в 7 категориях (technical, meta, content, links,
+  images, a11y, legal). Один разбор DOM на страницу,
   каждая проверка возвращает `Finding[]` и метрики
 - **Реестр**: `SerpAudit\CheckRegistry` — пакеты кладут туда свои проверки из сервис-провайдера,
   приложение только выбирает. Новый набор = новый пакет, кода в приложении менять не нужно
