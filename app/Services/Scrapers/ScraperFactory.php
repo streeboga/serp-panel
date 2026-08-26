@@ -11,7 +11,7 @@ use App\Services\Scrapers\Adapters\YandexCloudSearchAdapter;
 use App\Services\Scrapers\Adapters\YandexXmlAdapter;
 use App\Services\Scrapers\Contracts\SerpScraperAdapter;
 
-final class ScraperFactory
+class ScraperFactory
 {
     /**
      * Available scraper types with metadata for the frontend.

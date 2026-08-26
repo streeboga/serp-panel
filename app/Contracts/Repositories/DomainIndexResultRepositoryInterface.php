@@ -17,7 +17,7 @@ interface DomainIndexResultRepositoryInterface
     /**
      * @return Collection<int, \App\Models\DomainIndexResult>
      */
-    public function getForDomain(int $domainId, string $engine, int $limit = 100): Collection;
+    public function getForDomain(int $domainId, string $engine): Collection;
 
     public function countForDomain(int $domainId, string $engine): int;
 

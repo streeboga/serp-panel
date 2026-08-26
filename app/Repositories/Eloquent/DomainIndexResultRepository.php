@@ -42,12 +42,11 @@ final class DomainIndexResultRepository implements DomainIndexResultRepositoryIn
     /**
      * @return Collection<int, DomainIndexResult>
      */
-    public function getForDomain(int $domainId, string $engine, int $limit = 100): Collection
+    public function getForDomain(int $domainId, string $engine): Collection
     {
         return DomainIndexResult::where('domain_id', $domainId)
             ->where('engine', $engine)
             ->orderBy('last_position')
-            ->limit($limit)
             ->get();
     }
 

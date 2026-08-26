@@ -163,14 +163,14 @@ function fmtFreq(n: number | null | undefined): string {
 }
 
 function PositionCell({ position, delta, monitored }: { position: number | null; delta: number | null; monitored?: boolean }) {
-  if (position === null && !monitored) return <span className="text-muted-foreground/30 text-[10px]" title="Мониторинг не проводился">—</span>
+  if (position === null && !monitored) return <span className="text-muted-foreground/50 text-[10px]" title="Мониторинг не проводился">—</span>
   if (position === null) return <span className="text-muted-foreground/50 text-[10px]" title="Не в ТОП-100">&gt;100</span>
   const posColor = position <= 3 ? 'text-success font-semibold' : position <= 10 ? 'text-accent-blue font-medium' : position <= 30 ? 'text-foreground' : 'text-muted-foreground'
   return (
-    <div className="text-center leading-tight">
+    <div className="text-center leading-none py-px">
       <span className={`tabular-nums text-[11px] ${posColor}`}>{position}</span>
       {delta !== null && delta !== 0 && (
-        <div className={`text-[9px] tabular-nums ${delta > 0 ? 'text-success' : 'text-destructive'}`}>
+        <div className={`text-[8px] leading-none tabular-nums mt-px ${delta > 0 ? 'text-success' : 'text-destructive'}`}>
           {delta > 0 ? `+${delta}` : delta}
         </div>
       )}
@@ -591,14 +591,14 @@ function KeywordsTable() {
           <table className="w-full compact-table">
             <thead>
               <tr className="border-b border-border">
-                <th className="sticky left-0 z-30 bg-card px-1.5 py-2 w-7">
+                <th className="sticky left-0 z-30 bg-card px-1 py-1 w-7">
                   <input type="checkbox" checked={mergedRows.length > 0 && selectedIds.size === mergedRows.length} onChange={() => selectedIds.size === mergedRows.length ? setSelectedIds(new Set()) : setSelectedIds(new Set(mergedRows.map((k) => k.keyword_id)))} className="rounded accent-accent-blue" />
                 </th>
-                <th className="sticky left-7 z-30 bg-card px-2 py-2 text-left font-medium text-[10px] uppercase tracking-wider min-w-[200px] cursor-pointer select-none text-muted-foreground" onClick={() => toggleSort('keyword')}>
+                <th className="sticky left-7 z-30 bg-card px-1.5 py-1 text-left font-semibold text-[10px] uppercase tracking-wider min-w-[200px] cursor-pointer select-none text-foreground/70" onClick={() => toggleSort('keyword')}>
                   {t('keywords.keyword')}{sortIcon('keyword')}
                 </th>
-                <th className="px-1 py-2 text-left font-medium text-[10px] uppercase tracking-wider w-24 text-muted-foreground">Цель</th>
-                <th className="px-0.5 py-2 text-center font-medium text-[10px] uppercase tracking-wider w-20 text-muted-foreground" colSpan={3}>
+                <th className="px-0.5 py-1 text-left font-semibold text-[10px] uppercase tracking-wider w-24 text-foreground/70">Цель</th>
+                <th className="px-0.5 py-1 text-center font-semibold text-[10px] uppercase tracking-wider w-20 text-foreground/70" colSpan={3}>
                   <div className="flex">
                     <div className="flex-1 cursor-pointer select-none" title="Exact" onClick={() => toggleSort('frequency_exact')}>!{sortIcon('frequency_exact')}</div>
                     <div className="flex-1 cursor-pointer select-none" title="Phrase" onClick={() => toggleSort('frequency_phrase')}>&laquo;&raquo;{sortIcon('frequency_phrase')}</div>
@@ -606,12 +606,12 @@ function KeywordsTable() {
                   </div>
                 </th>
                 {dates.map((date, idx) => (
-                  <th key={date} className="px-0.5 py-1.5 text-center font-medium border-l border-border" colSpan={visibleEngines.length}>
+                  <th key={date} className="px-0.5 py-1 text-center font-semibold border-l border-border" colSpan={visibleEngines.length}>
                     <div className={`text-[10px] leading-tight text-muted-foreground ${idx === 0 ? 'cursor-pointer select-none' : ''}`} onClick={idx === 0 ? () => toggleSort('position') : undefined}>
                       {formatDate(date)}{idx === 0 && sortIcon('position')}
                     </div>
                     {visibleEngines.length > 1 && (
-                      <div className="flex">{visibleEngines.map((e) => (<div key={e} className="flex-1 text-[8px] text-muted-foreground/60 font-normal">{e === 'google' ? 'G' : 'Я'}</div>))}</div>
+                      <div className="flex">{visibleEngines.map((e) => (<div key={e} className="flex-1 text-[8px] text-muted-foreground font-normal">{e === 'google' ? 'G' : 'Я'}</div>))}</div>
                     )}
                   </th>
                 ))}
@@ -626,7 +626,7 @@ function KeywordsTable() {
         </div>
       )}
 
-      <p className="text-[10px] text-muted-foreground/60 tabular-nums">{mergedRows.length} запросов ({filtered.length} строк)</p>
+      <p className="text-[10px] text-muted-foreground tabular-nums">{mergedRows.length} запросов ({filtered.length} строк)</p>
     </div>
   )
 }
@@ -649,10 +649,10 @@ function GroupSection({ label, rows, dates, engines, totalCols, projectId, selec
       )}
       {!collapsed && rows.map((kw) => (
         <tr key={kw.keyword_id} className="border-t border-border/50 hover:bg-muted/30 transition-colors">
-          <td className="sticky left-0 bg-card z-10 px-1.5 py-0.5">
+          <td className="sticky left-0 bg-card z-10 px-1 py-0">
             <input type="checkbox" checked={selectedIds.has(kw.keyword_id)} onChange={() => setSelectedIds((p) => { const n = new Set(p); n.has(kw.keyword_id) ? n.delete(kw.keyword_id) : n.add(kw.keyword_id); return n })} className="rounded accent-accent-blue" />
           </td>
-          <td className="sticky left-7 bg-card z-10 px-2 py-0.5">
+          <td className="sticky left-7 bg-card z-10 px-1.5 py-0">
             <div className="flex items-center gap-1">
               {kw.our_url && (
                 <a href={kw.our_url} target="_blank" rel="noopener noreferrer" className="text-success hover:text-success/80 shrink-0" title={kw.our_url}>
@@ -661,16 +661,16 @@ function GroupSection({ label, rows, dates, engines, totalCols, projectId, selec
               )}
               <Link to="/projects/$projectId/keywords/$keywordId" params={{ projectId, keywordId: String(kw.keyword_id) }} className="text-foreground hover:text-accent-blue transition-colors truncate text-[12px]">{kw.keyword}</Link>
             </div>
-            {kw.cluster && <div className="text-[9px] text-muted-foreground/60 truncate">{kw.category ? `${kw.category} / ` : ''}{kw.cluster}</div>}
+            {kw.cluster && <div className="text-[9px] text-muted-foreground truncate">{kw.category ? `${kw.category} / ` : ''}{kw.cluster}</div>}
           </td>
-          <td className="px-1 py-0.5">
+          <td className="px-0.5 py-0">
             <TargetMatchIndicator status={kw.target_match_status ?? null} targetUrl={kw.effective_target_url} />
           </td>
-          <td className="px-0.5 py-0.5 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_exact?.toLocaleString()}>{fmtFreq(kw.frequency_exact)}</td>
-          <td className="px-0.5 py-0.5 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_phrase?.toLocaleString()}>{fmtFreq(kw.frequency_phrase)}</td>
-          <td className="px-0.5 py-0.5 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_broad?.toLocaleString()}>{fmtFreq(kw.frequency_broad)}</td>
+          <td className="px-0.5 py-0 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_exact?.toLocaleString()}>{fmtFreq(kw.frequency_exact)}</td>
+          <td className="px-0.5 py-0 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_phrase?.toLocaleString()}>{fmtFreq(kw.frequency_phrase)}</td>
+          <td className="px-0.5 py-0 text-right tabular-nums text-muted-foreground text-[10px]" title={kw.frequency_broad?.toLocaleString()}>{fmtFreq(kw.frequency_broad)}</td>
           {dates.map((date) => engines.map((eng) => (
-            <td key={`${date}-${eng}`} className="px-0.5 py-0.5 border-l border-border/30 w-9">
+            <td key={`${date}-${eng}`} className="px-0 py-0 border-l border-border/30 w-8">
               <PositionCell position={kw.engines[eng]?.[date]?.position ?? null} delta={kw.engines[eng]?.[date]?.delta ?? null} monitored={kw.engines[eng]?.[date]?.monitored} />
             </td>
           )))}

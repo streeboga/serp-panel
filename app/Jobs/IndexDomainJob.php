@@ -10,7 +10,6 @@ use App\Contracts\Repositories\ScraperRepositoryInterface;
 use App\Enums\Device;
 use App\Enums\Engine;
 use App\Models\Domain;
-use App\Services\Scrapers\Contracts\SerpScraperAdapter;
 use App\Services\Scrapers\DTO\ScrapeRequest;
 use App\Services\Scrapers\ScraperFactory;
 use Illuminate\Bus\Queueable;
@@ -35,7 +34,6 @@ final class IndexDomainJob implements ShouldQueue
     public function __construct(
         public readonly int $domainId,
         public readonly string $engine = 'google',
-        public readonly int $limit = 100,
     ) {
         $this->onQueue('indexing');
     }
@@ -94,7 +92,6 @@ final class IndexDomainJob implements ShouldQueue
             engine: $engineEnum->value,
             device: Device::Desktop->value,
             regionId: 0,
-            limit: $this->limit,
         );
 
         $firstResponse = $adapter->scrapePage($request, $firstPage);
@@ -110,9 +107,17 @@ final class IndexDomainJob implements ShouldQueue
             return;
         }
 
+        // Fetch all pages reported by search engine, safety cap at 100 pages (1000 URLs).
+        // If totalFound is suspiciously low but first page was full, use a generous fallback.
+        $resultsPerPage = 10;
+        $effectiveTotal = $totalFound;
+
+        if ($effectiveTotal <= $resultsPerPage && count($firstResponse->results) >= $resultsPerPage) {
+            $effectiveTotal = 1000;
+        }
+
         $maxPages = min(
-            (int) ceil($totalFound / 10),
-            (int) ceil($this->limit / 10),
+            (int) ceil($effectiveTotal / $resultsPerPage),
             100,
         );
 

@@ -19,17 +19,11 @@ final class StartIndexingRequest extends FormRequest
     {
         return [
             'engine' => 'sometimes|string|in:google,yandex',
-            'limit' => 'sometimes|integer|min:10|max:1000',
         ];
     }
 
     public function engine(): Engine
     {
         return Engine::from($this->input('engine', 'google'));
-    }
-
-    public function limit(): int
-    {
-        return (int) $this->input('limit', 100);
     }
 }

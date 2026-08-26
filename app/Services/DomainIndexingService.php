@@ -20,9 +20,9 @@ final readonly class DomainIndexingService
         private DomainIndexResultRepositoryInterface $indexResultRepository,
     ) {}
 
-    public function startIndexing(Domain $domain, Engine $engine, int $limit = 100): void
+    public function startIndexing(Domain $domain, Engine $engine): void
     {
-        IndexDomainJob::dispatch($domain->id, $engine->value, $limit);
+        IndexDomainJob::dispatch($domain->id, $engine->value);
     }
 
     /**
@@ -87,8 +87,8 @@ final readonly class DomainIndexingService
     /**
      * @return Collection<int, \App\Models\DomainIndexResult>
      */
-    public function getIndexResults(Domain $domain, string $engine, int $limit = 100): Collection
+    public function getIndexResults(Domain $domain, string $engine): Collection
     {
-        return $this->indexResultRepository->getForDomain($domain->id, $engine, $limit);
+        return $this->indexResultRepository->getForDomain($domain->id, $engine);
     }
 }

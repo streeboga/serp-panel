@@ -137,7 +137,7 @@ final class DomainController extends Controller
             abort(404);
         }
 
-        $this->indexingService->startIndexing($domain, $request->engine(), $request->limit());
+        $this->indexingService->startIndexing($domain, $request->engine());
 
         return response()->json(['data' => ['message' => 'Индексация запущена']]);
     }
@@ -204,7 +204,6 @@ final class DomainController extends Controller
      */
     #[PathParameter('domain', description: 'ID домена', example: '1')]
     #[QueryParameter('engine', type: 'string', description: 'Поисковая система', enum: ['google', 'yandex'])]
-    #[QueryParameter('limit', type: 'integer', description: 'Максимум записей', example: 100)]
     #[Response(200, description: 'Список проиндексированных страниц')]
     public function indexResults(Request $request, Domain $domain): AnonymousResourceCollection
     {
@@ -213,9 +212,8 @@ final class DomainController extends Controller
         }
 
         $engine = $request->input('engine', 'google');
-        $limit = (int) $request->input('limit', 100);
 
-        $results = $this->indexingService->getIndexResults($domain, $engine, $limit);
+        $results = $this->indexingService->getIndexResults($domain, $engine);
 
         return DomainIndexResultResource::collection($results);
     }

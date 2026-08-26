@@ -78,8 +78,8 @@ export function useDeleteDomain() {
 export function useIndexDomain() {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: ({ domainId, engine, limit }: { domainId: string; engine?: string; limit?: number }) =>
-      api.post(`/domains/${domainId}/index`, { engine, limit }).then((r) => r.data),
+    mutationFn: ({ domainId, engine }: { domainId: string; engine?: string }) =>
+      api.post(`/domains/${domainId}/index`, { engine }).then((r) => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['domains'] })
     },
@@ -95,11 +95,11 @@ export function useDomainKeywords(domainId: string) {
   })
 }
 
-export function useDomainIndexResults(domainId: string, limit = 100) {
+export function useDomainIndexResults(domainId: string) {
   return useQuery({
-    queryKey: ['domain-index', domainId, limit],
+    queryKey: ['domain-index', domainId],
     queryFn: () =>
-      api.get(`/domains/${domainId}/index-results`, { params: { limit } }).then((r) => r.data),
+      api.get(`/domains/${domainId}/index-results`).then((r) => r.data),
     enabled: !!domainId,
     staleTime: 60_000,
   })

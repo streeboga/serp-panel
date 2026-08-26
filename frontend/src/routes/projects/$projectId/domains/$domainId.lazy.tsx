@@ -625,8 +625,7 @@ function PagesTab({
 
 function IndexTab({ domainId, projectId }: { domainId: string; projectId: string }) {
   const { t } = useTranslation()
-  const [limit, setLimit] = useState(100)
-  const { data: indexData, isLoading } = useDomainIndexResults(domainId, limit)
+  const { data: indexData, isLoading } = useDomainIndexResults(domainId)
   const indexDomain = useIndexDomain()
   const importPages = useImportPages(projectId)
 
@@ -636,24 +635,11 @@ function IndexTab({ domainId, projectId }: { domainId: string; projectId: string
   }, [indexData])
 
   const handleIndexGoogle = useCallback(() => {
-    indexDomain.mutate({ domainId, engine: 'google', limit: 100 })
+    indexDomain.mutate({ domainId, engine: 'google' })
   }, [indexDomain, domainId])
 
   const handleIndexYandex = useCallback(() => {
-    indexDomain.mutate({ domainId, engine: 'yandex', limit: 100 })
-  }, [indexDomain, domainId])
-
-  const handleLoadMore = useCallback(() => {
-    // Re-index with current + 100 more
-    const newLimit = results.length + 100
-    indexDomain.mutate({ domainId, engine: 'google', limit: newLimit })
-    setLimit(newLimit)
-  }, [indexDomain, domainId, results.length])
-
-  const handleLoadAll = useCallback(() => {
-    // Index ALL pages — limit 1000 (100 pages × 10 results)
-    indexDomain.mutate({ domainId, engine: 'google', limit: 1000 })
-    setLimit(10000)
+    indexDomain.mutate({ domainId, engine: 'yandex' })
   }, [indexDomain, domainId])
 
   const formatDate = useCallback((dateStr: string) => {
@@ -682,20 +668,6 @@ function IndexTab({ domainId, projectId }: { domainId: string; projectId: string
         {indexDomain.isSuccess ? (
           <Badge variant="secondary" className="text-[10px]">✓ Задача в очереди</Badge>
         ) : null}
-        <Button
-          className="h-8 text-xs"
-          variant="outline"
-          onClick={handleLoadMore}
-        >
-          {t('domainDetail.loadMore')}
-        </Button>
-        <Button
-          className="h-8 text-xs"
-          variant="outline"
-          onClick={handleLoadAll}
-        >
-          {t('domainDetail.loadAll')}
-        </Button>
         {results.length > 0 ? (
           <Button
             className="h-8 text-xs"
