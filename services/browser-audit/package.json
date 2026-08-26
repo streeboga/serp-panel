@@ -1,0 +1,14 @@
+{
+  "name": "serp-browser-audit",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Браузерные замеры для аудита: CLS с виновниками, контраст по вычисленным стилям, метрики отрисовки",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "playwright-core": "^1.49.0"
+  }
+}

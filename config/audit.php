@@ -26,6 +26,22 @@ return [
     'max_resources' => (int) env('AUDIT_MAX_RESOURCES', 2000),
 
     /*
+     * Третий этап — браузер. Настоящий ответ по контрасту и сдвигам вёрстки даёт
+     * только он: каскад CSS в PHP не воспроизвести. Выключен, пока не поднят сервис;
+     * без него страницы остаются «не проверенными», а не «чистыми».
+     *
+     * Гоняется по выборке: полминуты на страницу означает, что весь сайт это часы.
+     */
+    'browser' => [
+        'enabled' => (bool) env('AUDIT_BROWSER_ENABLED', false),
+        'url' => env('AUDIT_BROWSER_URL'),
+        'token' => env('AUDIT_BROWSER_TOKEN'),
+        'timeout' => (int) env('AUDIT_BROWSER_TIMEOUT', 90),
+        'max_pages' => (int) env('AUDIT_BROWSER_MAX_PAGES', 20),
+        'viewport' => env('AUDIT_BROWSER_VIEWPORT', 'mobile'),
+    ],
+
+    /*
      * Проверки живут в пакетах и регистрируются в CheckRegistry их
      * сервис-провайдерами — список здесь держать больше негде и незачем.
      *

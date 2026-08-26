@@ -241,6 +241,15 @@ return [
                 'tries' => 3,
                 'timeout' => 300,
             ],
+            'audit-browser-supervisor' => [
+                'connection' => 'redis',
+                'queue' => ['audit-browser'],
+                'balance' => 'auto',
+                'minProcesses' => 1,
+                'maxProcesses' => 1,
+                'tries' => 1,
+                'timeout' => 150,
+            ],
             'audit-assets-supervisor' => [
                 'connection' => 'redis',
                 'queue' => ['audit-assets'],
@@ -281,7 +290,7 @@ return [
         'local' => [
             'default-supervisor' => [
                 'connection' => 'redis',
-                'queue' => ['serp-scrape', 'indexing', 'wordstat', 'classification', 'audit', 'audit-assets', 'default'],
+                'queue' => ['serp-scrape', 'indexing', 'wordstat', 'classification', 'audit', 'audit-assets', 'audit-browser', 'default'],
                 'balance' => 'auto',
                 'minProcesses' => 1,
                 'maxProcesses' => 3,

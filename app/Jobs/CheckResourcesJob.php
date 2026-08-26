@@ -41,7 +41,7 @@ final class CheckResourcesJob implements ShouldQueue
         $audit = $audits->findById($this->auditId);
 
         if (! (bool) config('audit.check_resources')) {
-            FinalizeSiteAuditJob::dispatch($audit->id);
+            RunBrowserStageJob::dispatch($audit->id);
 
             return;
         }
@@ -50,7 +50,7 @@ final class CheckResourcesJob implements ShouldQueue
         $pending = $resources->pending($audit->id, $limit);
 
         if ($pending->isEmpty()) {
-            FinalizeSiteAuditJob::dispatch($audit->id);
+            RunBrowserStageJob::dispatch($audit->id);
 
             return;
         }
@@ -65,7 +65,7 @@ final class CheckResourcesJob implements ShouldQueue
             ->name("audit-resources:{$auditId}")
             ->onQueue('audit-assets')
             ->allowFailures()
-            ->finally(fn () => FinalizeSiteAuditJob::dispatch($auditId))
+            ->finally(fn () => RunBrowserStageJob::dispatch($auditId))
             ->dispatch();
 
         $audits->update($audit, ['batch_id' => $batch->id]);
