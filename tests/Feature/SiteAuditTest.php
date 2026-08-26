@@ -2,8 +2,12 @@
 
 declare(strict_types=1);
 
+use App\Contracts\Repositories\PageAuditResultRepositoryInterface;
+use App\Contracts\Repositories\SiteAuditRepositoryInterface;
 use App\Enums\AuditStatus;
 use App\Http\Controllers\Api\V1\AuditController;
+use App\Jobs\AuditPageJob;
+use App\Jobs\FinalizeSiteAuditJob;
 use App\Models\Keyword;
 use App\Models\Page;
 use App\Models\SiteAudit;
@@ -238,7 +242,7 @@ test('проверки уровня сайта ловят отсутствие r
 test('джоба страницы ограничена временем, а не числом попыток', function () {
     // Лимитер вежливости отпускает джобу обратно в очередь, и каждый отпуск съедает
     // попытку. С фиксированным $tries батч выкашивало целиком.
-    $job = new App\Jobs\AuditPageJob(auditId: 1, url: 'https://test.com/');
+    $job = new AuditPageJob(auditId: 1, url: 'https://test.com/');
 
     expect($job->tries)->toBe(0)
         ->and($job->retryUntil())->toBeInstanceOf(DateTimeInterface::class)
@@ -258,9 +262,9 @@ test('потерянные страницы не выдаются за успе�
     ]);
 
     // Ни одна страница не записалась — батч отработал, результатов нет.
-    (new App\Jobs\FinalizeSiteAuditJob($audit->id))->handle(
-        app(App\Contracts\Repositories\SiteAuditRepositoryInterface::class),
-        app(App\Contracts\Repositories\PageAuditResultRepositoryInterface::class),
+    (new FinalizeSiteAuditJob($audit->id))->handle(
+        app(SiteAuditRepositoryInterface::class),
+        app(PageAuditResultRepositoryInterface::class),
     );
 
     expect($audit->refresh()->error)->toContain('10 из 10');
