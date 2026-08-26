@@ -22,3 +22,6 @@
 Homestead.json
 Homestead.yaml
 Thumbs.db
+
+# Зависимости браузерного сервиса ставятся при сборке образа
+/services/*/node_modules
