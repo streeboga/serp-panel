@@ -16,6 +16,12 @@ final class PageContext
 
     private ?string $base = null;
 
+    /** @var array<int, array{url: string, anchor: string, internal: bool, nofollow: bool}>|null */
+    private ?array $links = null;
+
+    /** @var array<int, array{url: string, alt: string|null, internal: bool, sized: bool}>|null */
+    private ?array $images = null;
+
     /**
      * @param  array<int, string>  $targetKeywords  Целевые ключи страницы: релевантность считаем
      *                                              против реальных ключей, а не против слов самой
@@ -26,6 +32,79 @@ final class PageContext
         public readonly FetchedPage $response,
         public readonly array $targetKeywords = [],
     ) {}
+
+    /**
+     * Ссылки страницы. Живут здесь, а не в проверке: тот же разбор нужен и джобе,
+     * которая потом ходит по ним за кодом ответа.
+     *
+     * @return array<int, array{url: string, anchor: string, internal: bool, nofollow: bool}>
+     */
+    public function links(): array
+    {
+        if ($this->links !== null) {
+            return $this->links;
+        }
+
+        $links = [];
+
+        foreach ($this->query('//a[@href]') as $node) {
+            if (! $node instanceof \DOMElement) {
+                continue;
+            }
+
+            $url = $this->absolute($node->getAttribute('href'));
+
+            if ($url === null) {
+                continue;
+            }
+
+            $anchor = trim($node->textContent);
+
+            if ($anchor === '') {
+                $anchor = trim($node->getAttribute('aria-label') ?: $node->getAttribute('title'));
+            }
+
+            $links[] = [
+                'url' => $url,
+                'anchor' => $anchor,
+                'internal' => $this->isInternal($url),
+                'nofollow' => str_contains(mb_strtolower($node->getAttribute('rel')), 'nofollow'),
+            ];
+        }
+
+        return $this->links = $links;
+    }
+
+    /**
+     * @return array<int, array{url: string, alt: string|null, internal: bool, sized: bool}>
+     */
+    public function images(): array
+    {
+        if ($this->images !== null) {
+            return $this->images;
+        }
+
+        $images = [];
+
+        foreach ($this->query('//img') as $node) {
+            if (! $node instanceof \DOMElement) {
+                continue;
+            }
+
+            $source = $node->getAttribute('src') ?: $node->getAttribute('data-src');
+            $url = $source === '' ? null : $this->absolute($source);
+
+            $images[] = [
+                'url' => $url ?? '',
+                'alt' => $node->hasAttribute('alt') ? trim($node->getAttribute('alt')) : null,
+                'internal' => $url === null || $this->isInternal($url),
+                'sized' => ($node->hasAttribute('width') && $node->hasAttribute('height'))
+                    || str_contains($node->getAttribute('style'), 'aspect-ratio'),
+            ];
+        }
+
+        return $this->images = $images;
+    }
 
     /** Содержимое <title>. */
     public function title(): ?string
@@ -125,7 +204,7 @@ final class PageContext
             $host = preg_replace('/^www\./i', '', mb_strtolower($parts['host'] ?? ''));
             $path = rtrim($parts['path'] ?? '/', '/');
 
-            return $host . ($path === '' ? '/' : $path);
+            return $host.($path === '' ? '/' : $path);
         };
 
         return $normalize($a) === $normalize($b);

@@ -12,8 +12,6 @@ use SerpAudit\Severity;
 
 final class AltCheck extends Check
 {
-    use ReadsImages;
-
     public function code(): string
     {
         return 'images.alt';
@@ -32,7 +30,7 @@ final class AltCheck extends Check
     /** @return array<int, Finding> */
     public function run(PageContext $context): array
     {
-        $images = $this->images($context);
+        $images = $context->images();
         $findings = [];
 
         $missing = array_filter($images, static fn (array $image): bool => $image['alt'] === null);
@@ -57,7 +55,7 @@ final class AltCheck extends Check
     /** @return array<string, mixed> */
     public function metrics(PageContext $context): array
     {
-        $images = $this->images($context);
+        $images = $context->images();
 
         return [
             'images_total' => count($images),

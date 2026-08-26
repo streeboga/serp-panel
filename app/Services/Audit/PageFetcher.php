@@ -96,6 +96,55 @@ final class PageFetcher
         ];
     }
 
+    /**
+     * Код ответа и размер ресурса без скачивания тела.
+     *
+     * HEAD поддерживают не все: если сервер отвечает 405 или не сообщает размер,
+     * добираем GET с Range на первый байт — это дешевле полной загрузки картинки.
+     *
+     * @return array{status: int|null, bytes: int|null, content_type: string|null, error: string|null}
+     */
+    public function probe(string $url): array
+    {
+        $client = Http::withHeaders(['User-Agent' => (string) config('audit.user_agent')])
+            ->withOptions(['allow_redirects' => ['max' => 3], 'verify' => false])
+            ->timeout((int) config('audit.timeout'));
+
+        try {
+            $response = $client->head($url);
+
+            $length = $response->header('Content-Length');
+
+            // header() возвращает пустую строку, а не null, когда заголовка нет.
+            if ($response->status() === 405 || $length === '') {
+                $response = $client->withHeaders(['Range' => 'bytes=0-0'])->get($url);
+                $length = $this->lengthFromRange($response->header('Content-Range'))
+                    ?? $response->header('Content-Length');
+            }
+
+            return [
+                'status' => $response->status(),
+                'bytes' => is_numeric($length) ? (int) $length : null,
+                'content_type' => $response->header('Content-Type') ?: null,
+                'error' => null,
+            ];
+        } catch (ConnectionException $exception) {
+            return ['status' => null, 'bytes' => null, 'content_type' => null, 'error' => $exception->getMessage()];
+        }
+    }
+
+    /** `bytes 0-0/12345` → 12345 */
+    private function lengthFromRange(string $contentRange): ?string
+    {
+        if (! str_contains($contentRange, '/')) {
+            return null;
+        }
+
+        $total = trim(explode('/', $contentRange)[1]);
+
+        return is_numeric($total) ? $total : null;
+    }
+
     /** Тело текстового ресурса (robots.txt, sitemap.xml) или null, если недоступен. */
     public function text(string $url): ?string
     {

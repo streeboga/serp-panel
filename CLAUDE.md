@@ -96,9 +96,10 @@ Organization → Project → Domain → Category → Cluster → Keyword
 - `indexing`: IndexDomainJob (orchestrator) + FetchIndexPageJob (page worker) — domain index via site: query, batch processing with Bus::batch()
 - `wordstat`: CollectWordstatJob — collects Wordstat frequencies
 - `classification`: ClassifyDomainsJob — classifies domains from SERP
-- `audit`: AuditSiteJob (orchestrator) + AuditPageJob (page worker) + FinalizeSiteAuditJob — проверка качества сайта
+- `audit`: AuditSiteJob (orchestrator) + AuditPageJob (page worker) + CheckResourcesJob + FinalizeSiteAuditJob
+- `audit-assets`: CheckResourceJob — обход ссылок и картинок за кодом ответа и размером, по одному запросу на уникальный URL
 - `default`: SendPositionAlertJob — sends Telegram/Email alerts on position changes
-- Run: `php artisan queue:work --queue=serp-scrape,indexing,wordstat,classification,audit,default`
+- Run: `php artisan queue:work --queue=serp-scrape,indexing,wordstat,classification,audit,audit-assets,default`
 
 ## Events
 

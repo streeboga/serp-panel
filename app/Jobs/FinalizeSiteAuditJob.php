@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Contracts\Repositories\AuditResourceRepositoryInterface;
 use App\Contracts\Repositories\PageAuditResultRepositoryInterface;
 use App\Contracts\Repositories\SiteAuditRepositoryInterface;
 use App\Enums\AuditStatus;
@@ -31,6 +32,7 @@ final class FinalizeSiteAuditJob implements ShouldQueue
     public function handle(
         SiteAuditRepositoryInterface $audits,
         PageAuditResultRepositoryInterface $results,
+        AuditResourceRepositoryInterface $resources,
     ): void {
         $audit = $audits->findById($this->auditId);
         $aggregate = $results->aggregate($audit->id);
@@ -44,7 +46,22 @@ final class FinalizeSiteAuditJob implements ShouldQueue
 
         // Считаем от находок, а не от накопленных счётчиков: джоб может быть
         // перезапущен, и складывать одно и то же второй раз нельзя.
-        $site = $this->countBySeverity($audit->findings ?? []);
+        // Находки уровня сайта с первого этапа плюс те, что видны только теперь:
+        // битые ссылки, тяжёлые картинки и дубли между страницами. Свои прошлые
+        // отбрасываем — джоб может быть перезапущен, дублировать их нельзя.
+        $siteFindings = array_values(array_filter(
+            $audit->findings ?? [],
+            static fn (array $f): bool => ! str_starts_with((string) ($f['check'] ?? ''), 'site.resources')
+                && ! str_starts_with((string) ($f['check'] ?? ''), 'site.duplicate'),
+        ));
+
+        $siteFindings = [
+            ...$siteFindings,
+            ...$this->resourceFindings($resources, $audit->id),
+            ...$this->duplicateFindings($results, $audit->id),
+        ];
+
+        $site = $this->countBySeverity($siteFindings);
 
         // Оценка сайта — находки уровня сайта и средняя по страницам в равных долях.
         $siteScore = max(0, 100 - $site['critical'] * 10 - $site['warning'] * 3 - $site['notice']);
@@ -58,6 +75,8 @@ final class FinalizeSiteAuditJob implements ShouldQueue
         $dropped = max(0, $audit->pages_total - $aggregate['pages']);
 
         $audits->update($audit, [
+            'findings' => $siteFindings,
+            'metrics' => [...($audit->metrics ?? []), 'resources' => $resources->summary($audit->id)],
             'status' => $status,
             'error' => $dropped > 0
                 ? "Не удалось проверить {$dropped} из {$audit->pages_total} страниц — смотрите failed_jobs."
@@ -72,6 +91,81 @@ final class FinalizeSiteAuditJob implements ShouldQueue
         ]);
 
         Log::info("AuditSiteJob batch complete: audit {$audit->id} — {$aggregate['pages']} страниц, оценка {$score}");
+    }
+
+    /**
+     * Битые ссылки и тяжёлые картинки — видны только после второго этапа.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function resourceFindings(AuditResourceRepositoryInterface $resources, int $auditId): array
+    {
+        $summary = $resources->summary($auditId);
+        $findings = [];
+
+        if ($summary['broken'] > 0) {
+            $findings[] = [
+                'check' => 'site.resources.broken',
+                'code' => 'site.resources.broken',
+                'category' => 'technical',
+                'severity' => 'critical',
+                'message' => 'Внутренние ссылки и файлы, которые не открываются',
+                'value' => $resources->broken($auditId)->take(20)->map(fn ($r): array => [
+                    'url' => $r->url,
+                    'status' => $r->status,
+                    'refs' => $r->reference_count,
+                ])->all(),
+                'expected' => 0,
+            ];
+        }
+
+        if ($summary['heaviest'] !== []) {
+            $findings[] = [
+                'check' => 'site.resources.heavy_images',
+                'code' => 'site.resources.heavy_images',
+                'category' => 'images',
+                'severity' => 'warning',
+                'message' => 'Тяжёлые изображения — их стоит пережать',
+                'value' => array_map(static fn (array $i): array => [
+                    'url' => $i['url'],
+                    'kb' => (int) round($i['bytes'] / 1024),
+                ], $summary['heaviest']),
+                'expected' => 'до 300 KB',
+            ];
+        }
+
+        return $findings;
+    }
+
+    /**
+     * Дубли title и description между страницами: постраничный аудитор их
+     * не видит принципиально.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function duplicateFindings(PageAuditResultRepositoryInterface $results, int $auditId): array
+    {
+        $findings = [];
+
+        foreach (['title', 'description'] as $metric) {
+            $duplicates = $results->duplicatesByMetric($auditId, $metric);
+
+            if ($duplicates === []) {
+                continue;
+            }
+
+            $findings[] = [
+                'check' => "site.duplicate.{$metric}",
+                'code' => "site.duplicate.{$metric}",
+                'category' => 'meta',
+                'severity' => 'warning',
+                'message' => "Одинаковый {$metric} на разных страницах",
+                'value' => $duplicates,
+                'expected' => 'уникальный на каждой странице',
+            ];
+        }
+
+        return $findings;
     }
 
     /**

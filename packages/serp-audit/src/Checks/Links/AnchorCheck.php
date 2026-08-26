@@ -12,8 +12,6 @@ use SerpAudit\Severity;
 
 final class AnchorCheck extends Check
 {
-    use ReadsLinks;
-
     public function code(): string
     {
         return 'links.anchor';
@@ -32,7 +30,7 @@ final class AnchorCheck extends Check
     /** @return array<int, Finding> */
     public function run(PageContext $context): array
     {
-        $links = $this->links($context);
+        $links = $context->links();
         $findings = [];
 
         $empty = array_filter($links, static fn (array $link): bool => $link['anchor'] === '');

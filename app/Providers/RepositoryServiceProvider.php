@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Providers;
 
+use App\Contracts\Repositories\AuditResourceRepositoryInterface;
 use App\Contracts\Repositories\CategoryRepositoryInterface;
 use App\Contracts\Repositories\ClassificationRuleRepositoryInterface;
 use App\Contracts\Repositories\ClusterRepositoryInterface;
@@ -32,6 +33,7 @@ use App\Contracts\Repositories\WordstatFrequencyRepositoryInterface;
 use App\Contracts\Repositories\WordstatScheduleRepositoryInterface;
 use App\Contracts\Repositories\WordstatSuggestionRepositoryInterface;
 use App\Contracts\Repositories\WordstatTrendRepositoryInterface;
+use App\Repositories\Eloquent\AuditResourceRepository;
 use App\Repositories\Eloquent\CategoryRepository;
 use App\Repositories\Eloquent\ClassificationRuleRepository;
 use App\Repositories\Eloquent\ClusterRepository;
@@ -94,5 +96,6 @@ final class RepositoryServiceProvider extends ServiceProvider
         DomainIndexResultRepositoryInterface::class => DomainIndexResultRepository::class,
         SiteAuditRepositoryInterface::class => SiteAuditRepository::class,
         PageAuditResultRepositoryInterface::class => PageAuditResultRepository::class,
+        AuditResourceRepositoryInterface::class => AuditResourceRepository::class,
     ];
 }

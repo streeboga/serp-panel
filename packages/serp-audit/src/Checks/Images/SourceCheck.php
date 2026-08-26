@@ -12,8 +12,6 @@ use SerpAudit\Severity;
 
 final class SourceCheck extends Check
 {
-    use ReadsImages;
-
     public function code(): string
     {
         return 'images.source';
@@ -32,7 +30,7 @@ final class SourceCheck extends Check
     /** @return array<int, Finding> */
     public function run(PageContext $context): array
     {
-        $images = $this->images($context);
+        $images = $context->images();
         $findings = [];
 
         $noSize = array_filter($images, static fn (array $image): bool => ! $image['sized']);
@@ -55,7 +53,7 @@ final class SourceCheck extends Check
     /** @return array<string, mixed> */
     public function metrics(PageContext $context): array
     {
-        $images = $this->images($context);
+        $images = $context->images();
 
         return [
             'images_external' => count(array_filter($images, static fn (array $i): bool => ! $i['internal'])),

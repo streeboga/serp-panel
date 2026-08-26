@@ -7,17 +7,18 @@ namespace App\Repositories\Eloquent;
 use App\Contracts\Repositories\PageAuditResultRepositoryInterface;
 use App\Models\PageAuditResult;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 final class PageAuditResultRepository implements PageAuditResultRepositoryInterface
 {
     /** @param array<string, mixed> $data */
-    public function store(int $auditId, string $url, array $data): void
+    public function store(int $auditId, string $url, array $data): int
     {
-        PageAuditResult::updateOrCreate(
+        return PageAuditResult::updateOrCreate(
             ['site_audit_id' => $auditId, 'url_hash' => sha1($url)],
             [...self::sanitize($data), 'site_audit_id' => $auditId, 'url' => self::utf8($url), 'url_hash' => sha1($url)],
-        );
+        )->id;
     }
 
     /**
@@ -38,6 +39,42 @@ final class PageAuditResultRepository implements PageAuditResultRepositoryInterf
             ->orderBy('score')
             ->orderBy('url')
             ->paginate($perPage);
+    }
+
+    /**
+     * Страницы, у которых совпадает значение метрики. Ровно то, чего постраничный
+     * аудитор увидеть не может: дубли title и description видны только на сайте целиком.
+     *
+     * @return array<int, array{value: string, urls: array<int, string>}>
+     */
+    public function duplicatesByMetric(int $auditId, string $metric, int $minLength = 10): array
+    {
+        // Имя метрики подставляется в SQL текстом, а не биндингом: с биндингом
+        // выражение в SELECT и в GROUP BY получает разные номера параметров, и
+        // Postgres перестаёт считать их одним и тем же. Пользовательский ввод сюда
+        // не попадает, но белый список всё равно обязателен.
+        if (! in_array($metric, ['title', 'description', 'h1', 'canonical'], true)) {
+            throw new \InvalidArgumentException("Дубли по метрике [{$metric}] не считаются");
+        }
+
+        $expression = "metrics->>'{$metric}'";
+
+        /** @var Collection<int, object> $rows */
+        $rows = PageAuditResult::query()
+            ->where('site_audit_id', $auditId)
+            ->whereRaw("{$expression} IS NOT NULL")
+            ->whereRaw("length({$expression}) >= ?", [$minLength])
+            ->selectRaw("{$expression} as value, string_agg(url, chr(10)) as urls, count(*) as total")
+            ->groupByRaw($expression)
+            ->havingRaw('count(*) > 1')
+            ->orderByRaw('count(*) desc')
+            ->limit(20)
+            ->get();
+
+        return $rows->map(fn (object $row): array => [
+            'value' => (string) $row->value,
+            'urls' => array_slice(explode("\n", (string) $row->urls), 0, 10),
+        ])->all();
     }
 
     public function latestForPage(int $pageId): ?PageAuditResult

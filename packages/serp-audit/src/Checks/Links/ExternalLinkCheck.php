@@ -12,8 +12,6 @@ use SerpAudit\Severity;
 
 final class ExternalLinkCheck extends Check
 {
-    use ReadsLinks;
-
     public function code(): string
     {
         return 'links.external';
@@ -33,7 +31,7 @@ final class ExternalLinkCheck extends Check
     public function run(PageContext $context): array
     {
         $dofollow = array_filter(
-            $this->links($context),
+            $context->links(),
             static fn (array $link): bool => ! $link['internal'] && ! $link['nofollow'],
         );
 
@@ -48,7 +46,7 @@ final class ExternalLinkCheck extends Check
     /** @return array<string, mixed> */
     public function metrics(PageContext $context): array
     {
-        $links = $this->links($context);
+        $links = $context->links();
         $internal = array_filter($links, static fn (array $link): bool => $link['internal']);
 
         return [

@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Contracts\Repositories\AuditResourceRepositoryInterface;
 use App\Contracts\Repositories\PageAuditResultRepositoryInterface;
 use App\Contracts\Repositories\PageRepositoryInterface;
 use App\Contracts\Repositories\SiteAuditRepositoryInterface;
+use App\Models\AuditResource;
 use App\Services\Audit\PageAuditor;
 use App\Services\Audit\PageFetcher;
 use Illuminate\Bus\Batchable;
@@ -62,6 +64,7 @@ final class AuditPageJob implements ShouldQueue
         SiteAuditRepositoryInterface $audits,
         PageRepositoryInterface $pages,
         PageAuditResultRepositoryInterface $results,
+        AuditResourceRepositoryInterface $auditResources,
         PageFetcher $fetcher,
         PageAuditor $auditor,
     ): void {
@@ -106,7 +109,7 @@ final class AuditPageJob implements ShouldQueue
         $context = new PageContext($response, $keywords);
         $outcome = $auditor->audit($context, $audit->groups, $audit->check_codes);
 
-        $results->store($this->auditId, $this->url, [
+        $resultId = $results->store($this->auditId, $this->url, [
             'page_id' => $this->pageId,
             'path' => $path,
             'http_status' => $response->status,
@@ -117,6 +120,33 @@ final class AuditPageJob implements ShouldQueue
             'created_at' => now(),
         ]);
 
+        $auditResources->record($this->auditId, $resultId, $this->resourcesOf($context));
+
         $audit->increment('pages_done');
+    }
+
+    /**
+     * Ссылки и картинки страницы для второго этапа. Внешние ссылки не берём:
+     * ходить по чужим сайтам ради их кодов ответа мы права не имеем.
+     *
+     * @return array<int, array{url: string, type: string, internal: bool}>
+     */
+    private function resourcesOf(PageContext $context): array
+    {
+        $resources = [];
+
+        foreach ($context->links() as $link) {
+            if ($link['internal']) {
+                $resources[] = ['url' => $link['url'], 'type' => AuditResource::TYPE_LINK, 'internal' => true];
+            }
+        }
+
+        foreach ($context->images() as $image) {
+            if ($image['url'] !== '') {
+                $resources[] = ['url' => $image['url'], 'type' => AuditResource::TYPE_IMAGE, 'internal' => $image['internal']];
+            }
+        }
+
+        return $resources;
     }
 }

@@ -2,12 +2,14 @@
 
 declare(strict_types=1);
 
+use App\Contracts\Repositories\AuditResourceRepositoryInterface;
 use App\Contracts\Repositories\PageAuditResultRepositoryInterface;
 use App\Contracts\Repositories\SiteAuditRepositoryInterface;
 use App\Enums\AuditStatus;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Jobs\AuditPageJob;
 use App\Jobs\FinalizeSiteAuditJob;
+use App\Models\AuditResource;
 use App\Models\Keyword;
 use App\Models\Page;
 use App\Models\SiteAudit;
@@ -265,6 +267,7 @@ test('потерянные страницы не выдаются за успе�
     (new FinalizeSiteAuditJob($audit->id))->handle(
         app(SiteAuditRepositoryInterface::class),
         app(PageAuditResultRepositoryInterface::class),
+        app(AuditResourceRepositoryInterface::class),
     );
 
     expect($audit->refresh()->error)->toContain('10 из 10');
@@ -368,4 +371,77 @@ test('несуществующий код проверки отвергаетс�
         ['scope' => 'site', 'check_codes' => ['meta.нетакой']],
         orgHeaders($h['org']),
     )->assertStatus(422)->assertJsonValidationErrors(['check_codes.0']);
+});
+
+test('ресурс проверяется один раз, сколько бы страниц на него ни ссылалось', function () {
+    $sitemap = <<<'XML'
+    <?xml version="1.0" encoding="UTF-8"?>
+    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+        <url><loc>https://test.com/a/</loc></url>
+        <url><loc>https://test.com/b/</loc></url>
+    </urlset>
+    XML;
+
+    // Обе страницы ссылаются на один и тот же битый адрес и одну и ту же картинку.
+    $page = '<html lang="ru"><head><title>Страница про разработку сайтов</title>'
+        .'<meta name="description" content="Описание страницы достаточной длины для того, чтобы пройти порог.">'
+        .'</head><body><h1>Заголовок</h1>'
+        .'<a href="/dead/">Битая</a><img src="/shared.png" alt="Общая" width="10" height="10">'
+        .'</body></html>';
+
+    Http::fake([
+        'test.com/robots.txt' => Http::response('', 404),
+        'test.com/sitemap.xml' => Http::response($sitemap, 200, ['Content-Type' => 'application/xml']),
+        'test.com/dead/' => Http::response('', 404),
+        'test.com/shared.png' => Http::response('', 200, ['Content-Length' => '400000', 'Content-Type' => 'image/png']),
+        '*' => Http::response($page, 200, ['Content-Type' => 'text/html']),
+    ]);
+
+    $h = createFullStack();
+
+    $this->actingAs($h['user'])->postJson(
+        "/api/v1/projects/{$h['project']->id}/audits",
+        ['scope' => 'site', 'domain_id' => $h['domain']->id],
+        orgHeaders($h['org']),
+    )->assertStatus(201);
+
+    $audit = SiteAudit::latest('id')->firstOrFail();
+
+    // Две страницы ссылались на /dead/ — строка одна, счётчик два.
+    $dead = AuditResource::where('site_audit_id', $audit->id)
+        ->where('url', 'https://test.com/dead/')
+        ->firstOrFail();
+
+    expect($dead->reference_count)->toBe(2)
+        ->and($dead->status)->toBe(404)
+        ->and($dead->checked_at)->not->toBeNull();
+
+    $codes = array_column($audit->findings, 'code');
+
+    expect($codes)
+        ->toContain('site.resources.broken')
+        ->toContain('site.resources.heavy_images')
+        // Обе страницы отдают один и тот же title — это видно только на сайте целиком.
+        ->toContain('site.duplicate.title');
+
+    expect($audit->metrics['resources']['broken'])->toBe(1);
+});
+
+test('этап ресурсов выключается конфигом', function () {
+    config(['audit.check_resources' => false]);
+
+    Http::fake(['*' => Http::response(goodPage(), 200, ['Content-Type' => 'text/html'])]);
+
+    $h = createFullStack();
+
+    $this->actingAs($h['user'])->postJson(
+        "/api/v1/projects/{$h['project']->id}/audits",
+        ['scope' => 'url', 'url' => 'https://test.com/x/'],
+        orgHeaders($h['org']),
+    )->assertStatus(201);
+
+    $audit = SiteAudit::latest('id')->firstOrFail();
+
+    expect($audit->status->value)->toBe('completed')
+        ->and(AuditResource::where('site_audit_id', $audit->id)->whereNotNull('checked_at')->count())->toBe(0);
 });

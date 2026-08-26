@@ -102,7 +102,7 @@ final class AuditSiteJob implements ShouldQueue
             ->name("audit:{$origin}:{$auditId}")
             ->onQueue('audit')
             ->allowFailures()
-            ->finally(fn () => FinalizeSiteAuditJob::dispatch($auditId))
+            ->finally(fn () => CheckResourcesJob::dispatch($auditId))
             ->dispatch();
 
         $audits->update($audit, ['batch_id' => $batch->id]);

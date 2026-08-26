@@ -19,6 +19,13 @@ return [
     'respect_robots' => (bool) env('AUDIT_RESPECT_ROBOTS', true),
 
     /*
+     * Второй этап: обход ссылок и картинок за кодом ответа и размером. Каждый URL
+     * запрашивается один раз за прогон, сколько бы страниц на него ни ссылалось.
+     */
+    'check_resources' => (bool) env('AUDIT_CHECK_RESOURCES', true),
+    'max_resources' => (int) env('AUDIT_MAX_RESOURCES', 2000),
+
+    /*
      * Проверки живут в пакетах и регистрируются в CheckRegistry их
      * сервис-провайдерами — список здесь держать больше негде и незачем.
      *
