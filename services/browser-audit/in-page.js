@@ -31,18 +31,43 @@ export const collectorSource = `(() => {
     return (light + 0.05) / (dark + 0.05);
   };
 
-  // Фон элемента почти всегда задан предку. Поднимаемся, пока не встретим
-  // непрозрачный. Если по дороге попался градиент или картинка — сдаёмся:
-  // угадывать усреднённый цвет значит выдумывать.
+  // Наложение полупрозрачного цвета на непрозрачный. Это арифметика, а не догадка:
+  // браузер рисует ровно так же.
+  const composite = (top, bottom) => ({
+    r: top.r * top.a + bottom.r * (1 - top.a),
+    g: top.g * top.a + bottom.g * (1 - top.a),
+    b: top.b * top.a + bottom.b * (1 - top.a),
+    a: 1,
+  });
+
+  // Фон элемента почти всегда задан предку. Поднимаемся, накапливая полупрозрачные
+  // слои, пока не встретим непрозрачный. Картинка или градиент по дороге — сдаёмся:
+  // усреднять пиксели значит выдумывать, а этого делать нельзя.
   const effectiveBackground = (node) => {
-    for (let el = node; el && el !== document.documentElement.parentNode; el = el.parentElement) {
+    const layers = [];
+
+    for (let el = node; el && el.nodeType === 1; el = el.parentElement) {
       const style = getComputedStyle(el);
+
       if (style.backgroundImage && style.backgroundImage !== 'none') return { unknown: 'background-image' };
+
       const color = parseColor(style.backgroundColor);
-      if (color && color.a === 1) return { color };
-      if (color && color.a > 0 && color.a < 1) return { unknown: 'translucent-background' };
+      if (!color || color.a === 0) continue;
+
+      if (color.a === 1) {
+        let result = color;
+        for (let i = layers.length - 1; i >= 0; i--) result = composite(layers[i], result);
+        return { color: result };
+      }
+
+      layers.push(color);
     }
-    return { color: { r: 255, g: 255, b: 255 } };
+
+    // До корня не встретили непрозрачного — под всем этим белый холст браузера.
+    let result = { r: 255, g: 255, b: 255, a: 1 };
+    for (let i = layers.length - 1; i >= 0; i--) result = composite(layers[i], result);
+
+    return { color: result };
   };
 
   const selectorFor = (el) => {
@@ -79,10 +104,13 @@ export const collectorSource = `(() => {
 
     const fg = parseColor(style.color);
     if (!fg) { skip('не разобран цвет текста'); return; }
-    if (fg.a < 1) { skip('полупрозрачный текст'); return; }
+    if (fg.a === 0) { skip('прозрачный текст'); return; }
 
     const bg = effectiveBackground(el);
-    if (bg.unknown) { skip(bg.unknown === 'background-image' ? 'фон картинкой или градиентом' : 'полупрозрачный фон'); return; }
+    if (bg.unknown) { skip('фон картинкой или градиентом'); return; }
+
+    // Полупрозрачный текст смешиваем с фоном — именно это видит глаз.
+    const effectiveFg = fg.a < 1 ? composite(fg, bg.color) : fg;
 
     contrast.checked++;
 
@@ -91,7 +119,7 @@ export const collectorSource = `(() => {
     // Крупным считается текст от 24px, либо от 18.66px при жирном начертании.
     const large = size >= 24 || (size >= 18.66 && weight >= 700);
     const required = large ? 3 : 4.5;
-    const ratio = contrastRatio(fg, bg.color);
+    const ratio = contrastRatio(effectiveFg, bg.color);
 
     if (ratio + 0.005 < required) {
       const key = selectorFor(el) + '|' + Math.round(ratio * 100);

@@ -6,7 +6,8 @@
   "description": "Браузерные замеры для аудита: CLS с виновниками, контраст по вычисленным стилям, метрики отрисовки",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "check": "node math-check.mjs"
   },
   "dependencies": {
     "playwright-core": "1.49.0"
