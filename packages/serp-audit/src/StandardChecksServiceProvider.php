@@ -5,16 +5,27 @@ declare(strict_types=1);
 namespace SerpAudit;
 
 use Illuminate\Support\ServiceProvider;
+use SerpAudit\Checks\A11y\AccessibleNameCheck;
+use SerpAudit\Checks\A11y\DuplicateIdCheck;
+use SerpAudit\Checks\A11y\FormLabelCheck;
+use SerpAudit\Checks\A11y\LandmarkCheck;
+use SerpAudit\Checks\A11y\SkipLinkCheck;
+use SerpAudit\Checks\A11y\TableHeaderCheck;
 use SerpAudit\Checks\Content\NauseaCheck;
 use SerpAudit\Checks\Content\RelevanceCheck;
 use SerpAudit\Checks\Content\TextCheck;
 use SerpAudit\Checks\Content\WaterCheck;
+use SerpAudit\Checks\Http\AnalyticsCheck;
+use SerpAudit\Checks\Http\AssetsCheck;
 use SerpAudit\Checks\Http\PayloadCheck;
 use SerpAudit\Checks\Http\RedirectCheck;
 use SerpAudit\Checks\Http\SecurityHeadersCheck;
 use SerpAudit\Checks\Http\StatusCheck;
+use SerpAudit\Checks\Http\TechnologyCheck;
 use SerpAudit\Checks\Images\AltCheck;
 use SerpAudit\Checks\Images\SourceCheck;
+use SerpAudit\Checks\Legal\ConsentCheck;
+use SerpAudit\Checks\Legal\PolicyLinkCheck;
 use SerpAudit\Checks\Links\AnchorCheck;
 use SerpAudit\Checks\Links\ExternalLinkCheck;
 use SerpAudit\Checks\Meta\DescriptionCheck;
@@ -39,6 +50,17 @@ final class StandardChecksServiceProvider extends ServiceProvider
         RedirectCheck::class,
         PayloadCheck::class,
         SecurityHeadersCheck::class,
+        AnalyticsCheck::class,
+        TechnologyCheck::class,
+        AssetsCheck::class,
+        LandmarkCheck::class,
+        SkipLinkCheck::class,
+        DuplicateIdCheck::class,
+        FormLabelCheck::class,
+        TableHeaderCheck::class,
+        AccessibleNameCheck::class,
+        ConsentCheck::class,
+        PolicyLinkCheck::class,
         TitleCheck::class,
         DescriptionCheck::class,
         HeadingsCheck::class,

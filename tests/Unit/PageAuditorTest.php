@@ -273,3 +273,97 @@ test('расхождение lang и письменности ловится, а
     expect($short['findings'])->toBe([])
         ->and($short['metrics']['content_script'])->toBe('unknown');
 });
+
+test('доступность: ориентиры, скип-ссылка, дубли id, таблицы', function () {
+    $html = <<<'HTML'
+    <html lang="ru"><head><title>T</title></head>
+    <body>
+        <a href="#nowhere">К содержимому</a>
+        <nav>Одна</nav><nav>Другая</nav>
+        <div id="dup"></div><div id="dup"></div>
+        <table><tr><th>Колонка</th></tr><tr><td>1</td></tr></table>
+        <button><svg></svg></button>
+    </body></html>
+    HTML;
+
+    $codes = codes(app(PageAuditor::class)->audit(contextFor($html), [Category::A11Y]));
+
+    expect($codes)
+        ->toContain('a11y.landmarks.main_missing')
+        ->toContain('a11y.skip_link.broken')
+        ->toContain('a11y.duplicate_id.found')
+        ->toContain('a11y.table_header.no_scope')
+        ->toContain('a11y.accessible_name.button_nameless')
+        ->toContain('a11y.landmarks.nav_unnamed');
+});
+
+test('доступность: правильная разметка молчит', function () {
+    $html = <<<'HTML'
+    <html lang="ru"><head><title>T</title></head>
+    <body>
+        <a href="#main-content">К содержимому</a>
+        <main id="main-content">
+            <table><tr><th scope="col">Колонка</th></tr><tr><td>1</td></tr></table>
+            <button aria-label="Закрыть"><svg aria-hidden="true"></svg></button>
+            <label for="mail">Почта</label><input id="mail" type="email">
+        </main>
+    </body></html>
+    HTML;
+
+    expect(app(PageAuditor::class)->audit(contextFor($html), [Category::A11Y])['findings'])->toBe([]);
+});
+
+test('honeypot не считается полем без подписи', function () {
+    // Ловушка для спам-ботов убрана из дерева доступности — подпись ей не нужна.
+    $html = '<html lang="ru"><head><title>T</title></head><body><main id="m"><form>'
+        .'<label for="e">Почта</label><input id="e" type="email" name="email">'
+        .'<input type="text" name="website" tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px">'
+        .'</form></main></body></html>';
+
+    $codes = codes(app(PageAuditor::class)->audit(contextFor($html), [Category::A11Y]));
+
+    expect($codes)->not->toContain('a11y.form_label.missing');
+});
+
+test('юридические: форма без согласия и отсутствие политики', function () {
+    $html = '<html lang="ru"><head><title>T</title></head><body><form>'
+        .'<input type="email" name="email"><input type="tel" name="phone">'
+        .'<button>Отправить</button></form></body></html>';
+
+    $codes = codes(app(PageAuditor::class)->audit(contextFor($html), [Category::LEGAL]));
+
+    expect($codes)
+        ->toContain('legal.consent.missing')
+        ->toContain('legal.policy_link.missing');
+});
+
+test('юридические: галочка согласия со ссылкой на политику принимается', function () {
+    $html = '<html lang="ru"><head><title>T</title></head><body><form>'
+        .'<input type="email" name="email">'
+        .'<label><input type="checkbox" name="consent"> Согласен на обработку персональных данных</label>'
+        .'<a href="/privacy/">Политика конфиденциальности</a>'
+        .'</form></body></html>';
+
+    expect(app(PageAuditor::class)->audit(contextFor($html), [Category::LEGAL])['findings'])->toBe([]);
+});
+
+test('аналитика и технологии определяются по разметке', function () {
+    $html = '<html lang="ru"><head><title>T</title>'
+        .'<script>ym(123, "init", {});</script></head>'
+        .'<body><img src="/wp-content/x.png" alt="x"></body></html>';
+
+    $outcome = app(PageAuditor::class)->audit(contextFor($html), [Category::TECHNICAL], ['http.analytics', 'http.technology']);
+
+    expect($outcome['metrics']['analytics'])->toContain('Яндекс Метрика')
+        ->and($outcome['metrics']['technologies'])->toContain('WordPress')
+        ->and(codes($outcome))->not->toContain('http.analytics.missing');
+
+    // Голая страница — счётчиков нет, об этом надо сказать.
+    $bare = app(PageAuditor::class)->audit(
+        contextFor('<html lang="ru"><head><title>T</title></head><body><p>x</p></body></html>'),
+        null,
+        ['http.analytics'],
+    );
+
+    expect(codes($bare))->toContain('http.analytics.missing');
+});

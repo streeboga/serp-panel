@@ -21,6 +21,10 @@ final class Category
 
     public const IMAGES = 'images';
 
+    public const A11Y = 'a11y';
+
+    public const LEGAL = 'legal';
+
     /** @var array<string, string> Человеческие названия встроенных категорий. */
     private const TITLES = [
         self::TECHNICAL => 'Технические данные',
@@ -28,6 +32,8 @@ final class Category
         self::CONTENT => 'Контент',
         self::LINKS => 'Ссылки',
         self::IMAGES => 'Изображения',
+        self::A11Y => 'Доступность',
+        self::LEGAL => 'Юридические требования',
     ];
 
     public static function title(string $category): string
