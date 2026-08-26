@@ -2,16 +2,44 @@
 
 declare(strict_types=1);
 
+use App\Contracts\Repositories\DomainIndexResultRepositoryInterface;
+use App\Contracts\Repositories\DomainRepositoryInterface;
+use App\Contracts\Repositories\ScraperRepositoryInterface;
 use App\Jobs\FetchIndexPageJob;
 use App\Models\DomainIndexResult;
 use App\Models\Scraper;
-use App\Services\Scrapers\Adapters\XmlRiverAdapter;
+use App\Services\Scrapers\Contracts\SerpScraperAdapter;
 use App\Services\Scrapers\DTO\ScrapeResponse;
 use App\Services\Scrapers\DTO\SerpResultItem;
 use App\Services\Scrapers\ScraperFactory;
 use Illuminate\Queue\Middleware\RateLimitedWithRedis;
 
 covers(FetchIndexPageJob::class);
+
+function fetchPageFactory(ScrapeResponse $response, bool $once = false): ScraperFactory
+{
+    $adapter = Mockery::mock(SerpScraperAdapter::class);
+    $expectation = $adapter->shouldReceive('scrapePage')->andReturn($response);
+
+    if ($once) {
+        $expectation->once();
+    }
+
+    $factory = Mockery::mock(ScraperFactory::class)->makePartial();
+    $factory->shouldReceive('make')->andReturn($adapter);
+
+    return $factory;
+}
+
+function runFetchPageJob(FetchIndexPageJob $job, ScraperFactory $factory): void
+{
+    $job->handle(
+        app(DomainRepositoryInterface::class),
+        app(ScraperRepositoryInterface::class),
+        app(DomainIndexResultRepositoryInterface::class),
+        $factory,
+    );
+}
 
 test('fetches page and upserts results', function () {
     $stack = createFullStack();
@@ -30,13 +58,7 @@ test('fetches page and upserts results', function () {
         new SerpResultItem(12, 'https://example.com/p12', 'example.com', 'P12', 'Desc', 'organic', false),
     ];
 
-    $mockAdapter = Mockery::mock(XmlRiverAdapter::class);
-    $mockAdapter->shouldReceive('scrapePage')->once()->andReturn(
-        new ScrapeResponse(results: $results, totalResults: 350)
-    );
-
-    $mockFactory = Mockery::mock(ScraperFactory::class);
-    $mockFactory->shouldReceive('make')->andReturn($mockAdapter);
+    $mockFactory = fetchPageFactory(new ScrapeResponse(results: $results, totalResults: 350), once: true);
 
     $job = new FetchIndexPageJob(
         domainId: $stack['domain']->id,
@@ -45,7 +67,7 @@ test('fetches page and upserts results', function () {
         collectedAt: now()->toDateString(),
     );
 
-    $job->handle($mockFactory);
+    runFetchPageJob($job, $mockFactory);
 
     expect(DomainIndexResult::where('domain_id', $stack['domain']->id)->count())->toBe(2);
 
@@ -81,13 +103,7 @@ test('upsert updates existing rows without duplicating', function () {
         new SerpResultItem(11, 'https://example.com/p11', 'example.com', 'P11', 'Desc', 'organic', false),
     ];
 
-    $mockAdapter = Mockery::mock(XmlRiverAdapter::class);
-    $mockAdapter->shouldReceive('scrapePage')->andReturn(
-        new ScrapeResponse(results: $results, totalResults: 100)
-    );
-
-    $mockFactory = Mockery::mock(ScraperFactory::class);
-    $mockFactory->shouldReceive('make')->andReturn($mockAdapter);
+    $mockFactory = fetchPageFactory(new ScrapeResponse(results: $results, totalResults: 100));
 
     $job = new FetchIndexPageJob(
         domainId: $stack['domain']->id,
@@ -96,7 +112,7 @@ test('upsert updates existing rows without duplicating', function () {
         collectedAt: '2026-03-27',
     );
 
-    $job->handle($mockFactory);
+    runFetchPageJob($job, $mockFactory);
 
     // Should still be 1 row, not 2
     expect(DomainIndexResult::where('domain_id', $stack['domain']->id)->count())->toBe(1);

@@ -72,14 +72,9 @@ final readonly class UrlSource
 
         $urls = [];
 
+        // Реестр индекса отдаётся целиком — потолок на прогон ставит clean().
         foreach (['yandex', 'google'] as $engine) {
-            $results = $this->indexResults->getForDomain(
-                $audit->domain_id,
-                $engine,
-                (int) config('audit.max_pages'),
-            );
-
-            foreach ($results as $result) {
+            foreach ($this->indexResults->getForDomain($audit->domain_id, $engine) as $result) {
                 $urls[] = $result->url;
             }
         }
