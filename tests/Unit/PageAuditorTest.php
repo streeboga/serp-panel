@@ -202,3 +202,74 @@ test('относительные ссылки разрешаются как в �
     expect($context->isInternal('https://www.example.com/x'))->toBeTrue()
         ->and($context->isInternal('https://other.com/x'))->toBeFalse();
 });
+
+test('заголовки безопасности читаются из ответа', function () {
+    $bare = new FetchedPage(
+        requestedUrl: 'https://example.com/',
+        finalUrl: 'https://example.com/',
+        status: 200,
+        headers: ['Content-Type' => ['text/html']],
+        body: '<html><body></body></html>',
+        redirectChain: [],
+        responseTimeMs: 10,
+    );
+
+    $codes = codes(app(PageAuditor::class)->audit(new PageContext($bare), null, ['http.security_headers']));
+
+    expect($codes)->toContain(
+        'http.security_headers.strict_transport_security',
+        'http.security_headers.content_security_policy',
+        'http.security_headers.clickjacking',
+    );
+
+    // frame-ancestors в CSP заменяет X-Frame-Options — вторую находку выдавать нельзя.
+    $protected = new FetchedPage(
+        requestedUrl: 'https://example.com/',
+        finalUrl: 'https://example.com/',
+        status: 200,
+        headers: [
+            'Content-Type' => ['text/html'],
+            'Strict-Transport-Security' => ['max-age=31536000'],
+            'X-Content-Type-Options' => ['nosniff'],
+            'Content-Security-Policy' => ["default-src 'self'; frame-ancestors 'none'"],
+            'Referrer-Policy' => ['strict-origin-when-cross-origin'],
+            'Permissions-Policy' => ['camera=()'],
+        ],
+        body: '<html><body></body></html>',
+        redirectChain: [],
+        responseTimeMs: 10,
+    );
+
+    expect(app(PageAuditor::class)->audit(new PageContext($protected), null, ['http.security_headers'])['findings'])
+        ->toBe([]);
+});
+
+test('расхождение lang и письменности ловится, а догадки — нет', function () {
+    $russian = str_repeat('Разработка сайтов и поддержка проектов под ключ. ', 12);
+
+    // Объявлен английский, текст кириллицей — это расхождение.
+    $mismatch = codes(app(PageAuditor::class)->audit(
+        contextFor("<html lang=\"en\"><head><title>T</title></head><body><p>{$russian}</p></body></html>"),
+        null,
+        ['meta.language'],
+    ));
+    expect($mismatch)->toContain('meta.language.mismatch');
+
+    // Тот же текст с честным lang — молчим.
+    $ok = app(PageAuditor::class)->audit(
+        contextFor("<html lang=\"ru-RU\"><head><title>T</title></head><body><p>{$russian}</p></body></html>"),
+        null,
+        ['meta.language'],
+    );
+    expect($ok['findings'])->toBe([])
+        ->and($ok['metrics']['content_script'])->toBe('cyrillic');
+
+    // Текста мало — судить не о чем, находки быть не должно.
+    $short = app(PageAuditor::class)->audit(
+        contextFor('<html lang="en"><head><title>T</title></head><body><p>Привет</p></body></html>'),
+        null,
+        ['meta.language'],
+    );
+    expect($short['findings'])->toBe([])
+        ->and($short['metrics']['content_script'])->toBe('unknown');
+});

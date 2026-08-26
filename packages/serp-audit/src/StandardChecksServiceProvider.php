@@ -11,6 +11,7 @@ use SerpAudit\Checks\Content\TextCheck;
 use SerpAudit\Checks\Content\WaterCheck;
 use SerpAudit\Checks\Http\PayloadCheck;
 use SerpAudit\Checks\Http\RedirectCheck;
+use SerpAudit\Checks\Http\SecurityHeadersCheck;
 use SerpAudit\Checks\Http\StatusCheck;
 use SerpAudit\Checks\Images\AltCheck;
 use SerpAudit\Checks\Images\SourceCheck;
@@ -20,6 +21,7 @@ use SerpAudit\Checks\Meta\DescriptionCheck;
 use SerpAudit\Checks\Meta\DocumentCheck;
 use SerpAudit\Checks\Meta\HeadingsCheck;
 use SerpAudit\Checks\Meta\IndexingCheck;
+use SerpAudit\Checks\Meta\LanguageCheck;
 use SerpAudit\Checks\Meta\LegacyCheck;
 use SerpAudit\Checks\Meta\SocialCheck;
 use SerpAudit\Checks\Meta\TitleCheck;
@@ -36,6 +38,7 @@ final class StandardChecksServiceProvider extends ServiceProvider
         StatusCheck::class,
         RedirectCheck::class,
         PayloadCheck::class,
+        SecurityHeadersCheck::class,
         TitleCheck::class,
         DescriptionCheck::class,
         HeadingsCheck::class,
@@ -43,6 +46,7 @@ final class StandardChecksServiceProvider extends ServiceProvider
         DocumentCheck::class,
         SocialCheck::class,
         LegacyCheck::class,
+        LanguageCheck::class,
         ExternalLinkCheck::class,
         AnchorCheck::class,
         AltCheck::class,

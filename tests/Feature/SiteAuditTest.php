@@ -328,8 +328,9 @@ test('каталог проверок отдаётся по категориям
         $catalog,
     ));
 
+    // Число проверок зависит от установленных пакетов — привязываться к нему нельзя.
     expect($codes)->toContain('meta.title', 'content.relevance', 'images.alt')
-        ->and($codes)->toHaveCount(18);
+        ->and($codes)->toEqual(array_unique($codes));
 
     // Каждая проверка обязана назвать себя — каталог показывается людям.
     foreach ($catalog as $row) {

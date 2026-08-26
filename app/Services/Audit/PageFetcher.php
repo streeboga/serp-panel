@@ -69,6 +69,33 @@ final class PageFetcher
         }
     }
 
+    /**
+     * Чем сервер сжимает ответ. Обычный fetch этого не покажет: curl распаковывает
+     * содержимое и Content-Encoding из ответа пропадает — проверка «сжатия нет»
+     * срабатывала бы на любом сайте. Поэтому отдельный запрос без распаковки.
+     *
+     * @return array{encoding: string|null, bytes: int}|null null — сайт не ответил
+     */
+    public function compression(string $url): ?array
+    {
+        try {
+            $response = Http::withHeaders([
+                'User-Agent' => (string) config('audit.user_agent'),
+                'Accept-Encoding' => 'br, gzip, deflate',
+            ])
+                ->withOptions(['decode_content' => false, 'verify' => false])
+                ->timeout((int) config('audit.timeout'))
+                ->get($url);
+        } catch (ConnectionException) {
+            return null;
+        }
+
+        return [
+            'encoding' => $response->header('Content-Encoding') ?: null,
+            'bytes' => mb_strlen($response->body(), '8bit'),
+        ];
+    }
+
     /** Тело текстового ресурса (robots.txt, sitemap.xml) или null, если недоступен. */
     public function text(string $url): ?string
     {

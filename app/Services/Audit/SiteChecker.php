@@ -56,6 +56,10 @@ final class SiteChecker
         $findings = [...$findings, ...$faviconFindings];
         $metrics = [...$metrics, ...$faviconMetrics];
 
+        [$compressionFindings, $compressionMetrics] = $this->checkCompression($origin);
+        $findings = [...$findings, ...$compressionFindings];
+        $metrics = [...$metrics, ...$compressionMetrics];
+
         return [
             'findings' => $findings,
             'metrics' => $metrics,
@@ -318,6 +322,31 @@ final class SiteChecker
         }
 
         return null;
+    }
+
+    /**
+     * Сжатие ответа — критерий K1 из приёмки eq.team.
+     *
+     * @return array{0: array<int, Finding>, 1: array<string, mixed>}
+     */
+    private function checkCompression(string $origin): array
+    {
+        $probe = $this->fetcher->compression($origin.'/');
+
+        // Сайт не ответил на пробу — это «не проверено», а не «сжатия нет».
+        if ($probe === null) {
+            return [[], ['compression' => null]];
+        }
+
+        if ($probe['encoding'] === null) {
+            return [
+                [$this->finding('site.compression.missing', Severity::Warning,
+                    'Ответ отдаётся без сжатия', null, 'br или gzip')],
+                ['compression' => null],
+            ];
+        }
+
+        return [[], ['compression' => $probe['encoding'], 'compressed_bytes' => $probe['bytes']]];
     }
 
     private function finding(string $check, Severity $severity, string $message, mixed $value = null, mixed $expected = null): Finding
