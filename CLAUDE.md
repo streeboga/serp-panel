@@ -138,7 +138,12 @@ Unified registry of tracked pages (own + competitors) with polymorphic attachmen
 - **Источники URL**: `UrlSource` — sitemap → `DomainIndexResult` (собран через `site:`) → `Page` проекта. Своего краулера нет
 - **Релевантность**: для `Page` с целевыми ключами через `Pageable` считается вхождение ключа по зонам
   (title / description / h1 / заголовки / анкоры / текст) — в `metrics.relevance`
-- **Вежливость**: `User-Agent` из конфига, лимит `audit.requests_per_second` (RateLimitedWithRedis),
+- **Ресурсы**: `audit_resources` — ссылки и картинки прогона, дедуп по `url_hash` через
+  `ON CONFLICT`, счётчик `reference_count`. Второй этап (`CheckResourcesJob` →
+  батч `CheckResourceJob` на очереди `audit-assets`) даёт битые ссылки и вес картинок
+- **Кросс-страничное**: дубли title и description считает `FinalizeSiteAuditJob`
+- **Вежливость**: `User-Agent` из конфига, лимит `audit.requests_per_second` (RateLimitedWithRedis)
+  общий для обоих этапов — вежливость считается на сайт, а не на очередь,
   уважение `Disallow`, потолок `audit.max_pages`
 - **Разовая проверка**: `POST /api/v1/audit/url` — синхронно, без записи в БД (воротца перед публикацией страницы)
 
