@@ -29,12 +29,20 @@ final class AuditPageJob implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public int $tries = 2;
-
-    /** @var int[] */
-    public array $backoff = [10, 30];
+    /**
+     * Лимитер вежливости отпускает джобу обратно в очередь, и каждый отпуск съедает
+     * попытку — с фиксированным $tries батч выкашивало целиком (476 из 500 на первом
+     * прогоне eq.team). Считаем не попытки, а время: у джобы есть час, чтобы дождаться
+     * своей очереди. Потерянную страницу никто не пере-диспатчит, батч одноразовый.
+     */
+    public int $tries = 0;
 
     public int $timeout = 60;
+
+    public function retryUntil(): \DateTimeInterface
+    {
+        return now()->addHour();
+    }
 
     public function __construct(
         public readonly int $auditId,

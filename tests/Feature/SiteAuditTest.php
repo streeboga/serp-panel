@@ -234,3 +234,34 @@ test('проверки уровня сайта ловят отсутствие r
         // Несуществующая страница отдала 200 вместо 404 — это ошибка сайта.
         ->and($codes)->toContain('site.not_found');
 });
+
+test('джоба страницы ограничена временем, а не числом попыток', function () {
+    // Лимитер вежливости отпускает джобу обратно в очередь, и каждый отпуск съедает
+    // попытку. С фиксированным $tries батч выкашивало целиком.
+    $job = new App\Jobs\AuditPageJob(auditId: 1, url: 'https://test.com/');
+
+    expect($job->tries)->toBe(0)
+        ->and($job->retryUntil())->toBeInstanceOf(DateTimeInterface::class)
+        ->and($job->retryUntil()->getTimestamp())->toBeGreaterThan(now()->addMinutes(30)->getTimestamp());
+});
+
+test('потерянные страницы не выдаются за успешный прогон', function () {
+    Http::fake(['*' => Http::response(goodPage(), 200, ['Content-Type' => 'text/html'])]);
+
+    $h = createFullStack();
+
+    $audit = SiteAudit::create([
+        'project_id' => $h['project']->id,
+        'scope' => 'site',
+        'status' => AuditStatus::Running,
+        'pages_total' => 10,
+    ]);
+
+    // Ни одна страница не записалась — батч отработал, результатов нет.
+    (new App\Jobs\FinalizeSiteAuditJob($audit->id))->handle(
+        app(App\Contracts\Repositories\SiteAuditRepositoryInterface::class),
+        app(App\Contracts\Repositories\PageAuditResultRepositoryInterface::class),
+    );
+
+    expect($audit->refresh()->error)->toContain('10 из 10');
+});

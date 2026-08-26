@@ -53,8 +53,15 @@ final class FinalizeSiteAuditJob implements ShouldQueue
             ? $siteScore
             : (int) round(($siteScore + $aggregate['score']) / 2);
 
+        // Молчаливая потеря страниц — худший исход: прогон выглядит завершённым и
+        // зелёным, хотя обошли четверть сайта. Говорим об этом вслух.
+        $dropped = max(0, $audit->pages_total - $aggregate['pages']);
+
         $audits->update($audit, [
             'status' => $status,
+            'error' => $dropped > 0
+                ? "Не удалось проверить {$dropped} из {$audit->pages_total} страниц — смотрите failed_jobs."
+                : null,
             'score' => $score,
             'pages_done' => $aggregate['pages'],
             'issues_critical' => $site['critical'] + $aggregate['critical'],
