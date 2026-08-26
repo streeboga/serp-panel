@@ -32,6 +32,19 @@ final class PageRepository implements PageRepositoryInterface
         return $this->queryBuilder->build($baseQuery)->paginate($perPage);
     }
 
+    /**
+     * @param  array<int, int>|null  $ids
+     * @return Collection<int, Page>
+     */
+    public function forAudit(int $projectId, ?array $ids = null): Collection
+    {
+        return Page::query()
+            ->where('project_id', $projectId)
+            ->when($ids !== null, fn ($query) => $query->whereIn('id', $ids))
+            ->with('targetKeywords')
+            ->get();
+    }
+
     public function findById(int $id): Page
     {
         return Page::with(['domain', 'tags'])->findOrFail($id);

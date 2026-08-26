@@ -55,7 +55,8 @@
     "competitorsTab": "Конкуренты",
     "categoriesTab": "Категории",
     "pagesTab": "Страницы",
-    "created": "Создан"
+    "created": "Создан",
+    "auditTab": "Аудит"
   },
   "domains": {
     "title": "Домены",

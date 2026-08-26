@@ -96,8 +96,9 @@ Organization → Project → Domain → Category → Cluster → Keyword
 - `indexing`: IndexDomainJob (orchestrator) + FetchIndexPageJob (page worker) — domain index via site: query, batch processing with Bus::batch()
 - `wordstat`: CollectWordstatJob — collects Wordstat frequencies
 - `classification`: ClassifyDomainsJob — classifies domains from SERP
+- `audit`: AuditSiteJob (orchestrator) + AuditPageJob (page worker) + FinalizeSiteAuditJob — проверка качества сайта
 - `default`: SendPositionAlertJob — sends Telegram/Email alerts on position changes
-- Run: `php artisan queue:work --queue=serp-scrape,indexing,wordstat,classification,default`
+- Run: `php artisan queue:work --queue=serp-scrape,indexing,wordstat,classification,audit,default`
 
 ## Events
 
@@ -114,6 +115,23 @@ Unified registry of tracked pages (own + competitors) with polymorphic attachmen
 - **Cascade**: keyword.effective_target_url inherits from keyword → cluster → category
 - **Match status**: top3, top10, cannibalization, missing, unset
 - **Auto-matching**: `MatchPagesFromSerpListener` on `SerpSnapshotCollected` event
+
+## Site Audit
+
+Проверка качества сайта целиком или постранично. Пайплайн повторяет индексацию домена:
+оркестратор → `Bus::batch` постраничных джоб → финализатор.
+
+- **SiteAudit**: `site_audits` — прогон (scope site/pages/url, статус, batch_id, оценка, находки уровня сайта)
+- **PageAuditResult**: `page_audit_results` — результат по одному URL (findings + metrics в JSONB)
+- **Проверки**: `app/Services/Audit/Checks/` — по классу на группу (`CheckGroup`: technical, meta, content, links, images).
+  Один разбор DOM на страницу, каждая проверка возвращает `Finding[]` и метрики. Список — в `config/audit.php`
+- **Уровень сайта**: `SiteChecker` — robots.txt, sitemap (рекурсивно), SSL, 404, канонические редиректы, фавикон. Раз за прогон
+- **Источники URL**: `UrlSource` — sitemap → `DomainIndexResult` (собран через `site:`) → `Page` проекта. Своего краулера нет
+- **Релевантность**: для `Page` с целевыми ключами через `Pageable` считается вхождение ключа по зонам
+  (title / description / h1 / заголовки / анкоры / текст) — в `metrics.relevance`
+- **Вежливость**: `User-Agent` из конфига, лимит `audit.requests_per_second` (RateLimitedWithRedis),
+  уважение `Disallow`, потолок `audit.max_pages`
+- **Разовая проверка**: `POST /api/v1/audit/url` — синхронно, без записи в БД (воротца перед публикацией страницы)
 
 ## Testing
 

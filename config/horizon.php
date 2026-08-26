@@ -241,6 +241,15 @@ return [
                 'tries' => 3,
                 'timeout' => 300,
             ],
+            'audit-supervisor' => [
+                'connection' => 'redis',
+                'queue' => ['audit'],
+                'balance' => 'auto',
+                'minProcesses' => 1,
+                'maxProcesses' => 3,
+                'tries' => 2,
+                'timeout' => 300,
+            ],
             'classification-supervisor' => [
                 'connection' => 'redis',
                 'queue' => ['classification'],
@@ -263,7 +272,7 @@ return [
         'local' => [
             'default-supervisor' => [
                 'connection' => 'redis',
-                'queue' => ['serp-scrape', 'indexing', 'wordstat', 'classification', 'default'],
+                'queue' => ['serp-scrape', 'indexing', 'wordstat', 'classification', 'audit', 'default'],
                 'balance' => 'auto',
                 'minProcesses' => 1,
                 'maxProcesses' => 3,

@@ -40,6 +40,12 @@ final class AppServiceProvider extends ServiceProvider
             return Limit::perSecond(10);
         });
 
+        // Ходим по живым сайтам клиентов — держим щадящий темп, иначе аудит
+        // выглядит для их сервера как атака.
+        RateLimiter::for('audit', function () {
+            return Limit::perSecond((int) config('audit.requests_per_second', 2));
+        });
+
         // Yandex Cloud Wordstat API hard quota is 100 requests/hour. Each job makes
         // up to ~2 calls (topRequests + dynamics), so cap jobs at 45/hour (~90 calls).
         RateLimiter::for('wordstat', function () {

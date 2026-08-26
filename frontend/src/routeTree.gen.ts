@@ -27,6 +27,7 @@ import { Route as ProjectsProjectIdKeywordsRouteImport } from './routes/projects
 import { Route as ProjectsProjectIdDomainsRouteImport } from './routes/projects/$projectId/domains'
 import { Route as ProjectsProjectIdCompetitorsRouteImport } from './routes/projects/$projectId/competitors'
 import { Route as ProjectsProjectIdCategoriesRouteImport } from './routes/projects/$projectId/categories'
+import { Route as ProjectsProjectIdAuditRouteImport } from './routes/projects/$projectId/audit'
 import { Route as ProjectsProjectIdKeywordsKeywordIdRouteImport } from './routes/projects/$projectId/keywords/$keywordId'
 import { Route as ProjectsProjectIdDomainsDomainIdRouteImport } from './routes/projects/$projectId/domains/$domainId'
 
@@ -138,6 +139,13 @@ const ProjectsProjectIdCategoriesRoute =
     path: '/categories',
     getParentRoute: () => ProjectsProjectIdRoute,
   } as any)
+const ProjectsProjectIdAuditRoute = ProjectsProjectIdAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => ProjectsProjectIdRoute,
+} as any).lazy(() =>
+  import('./routes/projects/$projectId/audit.lazy').then((d) => d.Route),
+)
 const ProjectsProjectIdKeywordsKeywordIdRoute =
   ProjectsProjectIdKeywordsKeywordIdRouteImport.update({
     id: '/$keywordId',
@@ -172,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/scrapers/': typeof ScrapersIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/wordstat-schedules/': typeof WordstatSchedulesIndexRoute
+  '/projects/$projectId/audit': typeof ProjectsProjectIdAuditRoute
   '/projects/$projectId/categories': typeof ProjectsProjectIdCategoriesRoute
   '/projects/$projectId/competitors': typeof ProjectsProjectIdCompetitorsRoute
   '/projects/$projectId/domains': typeof ProjectsProjectIdDomainsRouteWithChildren
@@ -193,6 +202,7 @@ export interface FileRoutesByTo {
   '/scrapers': typeof ScrapersIndexRoute
   '/settings': typeof SettingsIndexRoute
   '/wordstat-schedules': typeof WordstatSchedulesIndexRoute
+  '/projects/$projectId/audit': typeof ProjectsProjectIdAuditRoute
   '/projects/$projectId/categories': typeof ProjectsProjectIdCategoriesRoute
   '/projects/$projectId/competitors': typeof ProjectsProjectIdCompetitorsRoute
   '/projects/$projectId/domains': typeof ProjectsProjectIdDomainsRouteWithChildren
@@ -216,6 +226,7 @@ export interface FileRoutesById {
   '/scrapers/': typeof ScrapersIndexRoute
   '/settings/': typeof SettingsIndexRoute
   '/wordstat-schedules/': typeof WordstatSchedulesIndexRoute
+  '/projects/$projectId/audit': typeof ProjectsProjectIdAuditRoute
   '/projects/$projectId/categories': typeof ProjectsProjectIdCategoriesRoute
   '/projects/$projectId/competitors': typeof ProjectsProjectIdCompetitorsRoute
   '/projects/$projectId/domains': typeof ProjectsProjectIdDomainsRouteWithChildren
@@ -240,6 +251,7 @@ export interface FileRouteTypes {
     | '/scrapers/'
     | '/settings/'
     | '/wordstat-schedules/'
+    | '/projects/$projectId/audit'
     | '/projects/$projectId/categories'
     | '/projects/$projectId/competitors'
     | '/projects/$projectId/domains'
@@ -261,6 +273,7 @@ export interface FileRouteTypes {
     | '/scrapers'
     | '/settings'
     | '/wordstat-schedules'
+    | '/projects/$projectId/audit'
     | '/projects/$projectId/categories'
     | '/projects/$projectId/competitors'
     | '/projects/$projectId/domains'
@@ -283,6 +296,7 @@ export interface FileRouteTypes {
     | '/scrapers/'
     | '/settings/'
     | '/wordstat-schedules/'
+    | '/projects/$projectId/audit'
     | '/projects/$projectId/categories'
     | '/projects/$projectId/competitors'
     | '/projects/$projectId/domains'
@@ -436,6 +450,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectsProjectIdCategoriesRouteImport
       parentRoute: typeof ProjectsProjectIdRoute
     }
+    '/projects/$projectId/audit': {
+      id: '/projects/$projectId/audit'
+      path: '/audit'
+      fullPath: '/projects/$projectId/audit'
+      preLoaderRoute: typeof ProjectsProjectIdAuditRouteImport
+      parentRoute: typeof ProjectsProjectIdRoute
+    }
     '/projects/$projectId/keywords/$keywordId': {
       id: '/projects/$projectId/keywords/$keywordId'
       path: '/$keywordId'
@@ -484,6 +505,7 @@ const ProjectsProjectIdKeywordsRouteWithChildren =
   )
 
 interface ProjectsProjectIdRouteChildren {
+  ProjectsProjectIdAuditRoute: typeof ProjectsProjectIdAuditRoute
   ProjectsProjectIdCategoriesRoute: typeof ProjectsProjectIdCategoriesRoute
   ProjectsProjectIdCompetitorsRoute: typeof ProjectsProjectIdCompetitorsRoute
   ProjectsProjectIdDomainsRoute: typeof ProjectsProjectIdDomainsRouteWithChildren
@@ -493,6 +515,7 @@ interface ProjectsProjectIdRouteChildren {
 }
 
 const ProjectsProjectIdRouteChildren: ProjectsProjectIdRouteChildren = {
+  ProjectsProjectIdAuditRoute: ProjectsProjectIdAuditRoute,
   ProjectsProjectIdCategoriesRoute: ProjectsProjectIdCategoriesRoute,
   ProjectsProjectIdCompetitorsRoute: ProjectsProjectIdCompetitorsRoute,
   ProjectsProjectIdDomainsRoute: ProjectsProjectIdDomainsRouteWithChildren,

@@ -13,6 +13,15 @@ interface PageRepositoryInterface
     /** @return Collection<int, Page> */
     public function allForProject(int $projectId): Collection;
 
+    /**
+     * Страницы проекта с целевыми ключами, без QueryBuilder — для очередей,
+     * где нет HTTP-запроса, из которого билдер читает фильтры.
+     *
+     * @param  array<int, int>|null  $ids
+     * @return Collection<int, Page>
+     */
+    public function forAudit(int $projectId, ?array $ids = null): Collection;
+
     /** @return LengthAwarePaginator<int, Page> */
     public function paginateForProject(int $projectId, int $perPage = 20): LengthAwarePaginator;
 

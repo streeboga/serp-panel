@@ -22,6 +22,7 @@ Controller → Service → Repository → QueryBuilder → Model
 - `WebhookController` — incoming SERP data from external services
 - `YandexOAuthController` — OAuth flow with verification_code support
 - `PageController` — CRUD pages, attach/detach to entities, match-or-create, target report, tags sync
+- `AuditController` — start/cancel audit runs, list runs and per-page results, synchronous single-URL check
 
 ## Resources (`Http/Resources/`)
 
@@ -54,6 +55,9 @@ SerpScraperAdapter (interface)
 - `CollectWordstatJob(keywordId, scheduleId, regionIds)` — Wordstat API → frequencies
 - `ClassifyDomainsJob(snapshotId, collectedAt, organizationId)` — classifies domains from SERP
 - `SendPositionAlertJob(alertId, keywordId, oldPosition, newPosition)` — sends Telegram/Email alerts
+- `AuditSiteJob(auditId)` — site-level checks → resolves URL list → dispatches batch of `AuditPageJob`
+- `AuditPageJob(auditId, url, pageId)` — fetches one page, runs `PageAuditor`, stores `PageAuditResult`
+- `FinalizeSiteAuditJob(auditId)` — aggregates score and counters, closes the run
 
 ## Events & Listeners
 
@@ -75,6 +79,10 @@ SerpScraperAdapter (interface)
 - `OrganizationRole`: admin, manager, analyst, viewer
 - `ClassificationRuleType`: domain_exact, domain_contains, domain_regex, url_regex, title_contains
 - `PageType`: commercial, informational, navigational, transactional
+- `AuditScope`: site, pages, url
+- `AuditStatus`: pending, running, completed, failed, cancelled
+- `CheckGroup`: technical, meta, content, links, images
+- `Severity`: critical, warning, notice (несёт вес штрафа к оценке через `penalty()`)
 
 ## Common Pitfalls
 

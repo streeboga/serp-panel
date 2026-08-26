@@ -20,6 +20,7 @@ import {
   KeyRound,
   FolderTree,
   FileText,
+  ShieldCheck,
   ChevronRight,
   Settings,
   Copy,
@@ -41,6 +42,7 @@ const tabs = [
   { labelKey: 'projects.keywordsTab', to: '/projects/$projectId/keywords' as const, icon: <KeyRound className="size-3.5" />, segment: 'keywords' },
   { labelKey: 'projects.categoriesTab', to: '/projects/$projectId/categories' as const, icon: <FolderTree className="size-3.5" />, segment: 'categories' },
   { labelKey: 'projects.pagesTab', to: '/projects/$projectId/pages' as const, icon: <FileText className="size-3.5" />, segment: 'pages' },
+  { labelKey: 'projects.auditTab', to: '/projects/$projectId/audit' as const, icon: <ShieldCheck className="size-3.5" />, segment: 'audit' },
 ]
 
 const MANAGER_ROLES = ['admin', 'manager', 'owner']

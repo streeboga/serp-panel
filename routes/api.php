@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\AlertController;
 use App\Http\Controllers\Api\V1\ApiTokenController;
+use App\Http\Controllers\Api\V1\AuditController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BillingController;
 use App\Http\Controllers\Api\V1\CategoryController;
@@ -260,6 +261,21 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
             Route::get('tokens', [ApiTokenController::class, 'index']);
             Route::post('tokens', [ApiTokenController::class, 'store']);
             Route::delete('tokens/{tokenId}', [ApiTokenController::class, 'destroy']);
+        });
+
+        // Аудит сайта — read
+        Route::get('projects/{project}/audits', [AuditController::class, 'index']);
+        Route::get('audits/{audit}', [AuditController::class, 'show']);
+        Route::get('audits/{audit}/results', [AuditController::class, 'results']);
+        Route::get('pages/{page}/audit', [AuditController::class, 'pageAudit']);
+
+        // Аудит сайта — write (manager+)
+        Route::middleware('org.role:manager')->group(function () {
+            Route::post('projects/{project}/audits', [AuditController::class, 'store']);
+            Route::delete('audits/{audit}', [AuditController::class, 'destroy']);
+
+            // Разовая проверка ходит по чужому сайту синхронно — держим её на коротком поводке.
+            Route::post('audit/url', [AuditController::class, 'checkUrl'])->middleware('throttle:20,1');
         });
 
         // Export

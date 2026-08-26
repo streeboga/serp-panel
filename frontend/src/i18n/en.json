@@ -55,7 +55,8 @@
     "competitorsTab": "Competitors",
     "categoriesTab": "Categories",
     "pagesTab": "Pages",
-    "created": "Created"
+    "created": "Created",
+    "auditTab": "Audit"
   },
   "domains": {
     "title": "Domains",
