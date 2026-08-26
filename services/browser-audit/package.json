@@ -9,6 +9,6 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "playwright-core": "^1.49.0"
+    "playwright-core": "1.49.0"
   }
 }
