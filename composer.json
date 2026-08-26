@@ -3,7 +3,10 @@
     "name": "laravel/laravel",
     "type": "project",
     "description": "The skeleton application for the Laravel framework.",
-    "keywords": ["laravel", "framework"],
+    "keywords": [
+        "laravel",
+        "framework"
+    ],
     "license": "MIT",
     "require": {
         "php": "^8.3",
@@ -14,7 +17,8 @@
         "laravel/tinker": "^3.0",
         "spatie/laravel-data": "^4.20",
         "spatie/laravel-query-builder": "^7.0",
-        "spatie/laravel-tags": "^4.11"
+        "spatie/laravel-tags": "^4.11",
+        "streeboga/serp-audit": "*"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -90,5 +94,14 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "repositories": [
+        {
+            "type": "path",
+            "url": "packages/*",
+            "options": {
+                "symlink": true
+            }
+        }
+    ]
 }

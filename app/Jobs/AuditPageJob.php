@@ -7,10 +7,6 @@ namespace App\Jobs;
 use App\Contracts\Repositories\PageAuditResultRepositoryInterface;
 use App\Contracts\Repositories\PageRepositoryInterface;
 use App\Contracts\Repositories\SiteAuditRepositoryInterface;
-use App\Enums\CheckGroup;
-use App\Enums\Severity;
-use App\Services\Audit\DTO\Finding;
-use App\Services\Audit\DTO\PageContext;
 use App\Services\Audit\PageAuditor;
 use App\Services\Audit\PageFetcher;
 use Illuminate\Bus\Batchable;
@@ -21,6 +17,10 @@ use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\Middleware\RateLimitedWithRedis;
 use Illuminate\Queue\SerializesModels;
+use SerpAudit\Category;
+use SerpAudit\Finding;
+use SerpAudit\PageContext;
+use SerpAudit\Severity;
 
 /**
  * Одна страница: скачали, разобрали один раз, прогнали проверки, записали результат.
@@ -77,7 +77,8 @@ final class AuditPageJob implements ShouldQueue
         } catch (ConnectionException $exception) {
             $summary = PageAuditor::summarize([new Finding(
                 'http.unreachable',
-                CheckGroup::Technical,
+                'http.unreachable',
+                Category::TECHNICAL,
                 Severity::Critical,
                 'Страница не открылась',
                 $exception->getMessage(),
@@ -102,8 +103,8 @@ final class AuditPageJob implements ShouldQueue
             ? []
             : $page->targetKeywords()->pluck('keyword')->all();
 
-        $context = new PageContext($response, $page, $keywords);
-        $outcome = $auditor->audit($context, $audit->groups);
+        $context = new PageContext($response, $keywords);
+        $outcome = $auditor->audit($context, $audit->groups, $audit->check_codes);
 
         $results->store($this->auditId, $this->url, [
             'page_id' => $this->pageId,

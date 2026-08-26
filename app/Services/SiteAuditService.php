@@ -12,12 +12,12 @@ use App\Jobs\AuditSiteJob;
 use App\Models\PageAuditResult;
 use App\Models\Project;
 use App\Models\SiteAudit;
-use App\Services\Audit\DTO\PageContext;
 use App\Services\Audit\PageAuditor;
 use App\Services\Audit\PageFetcher;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Bus;
+use SerpAudit\PageContext;
 
 final readonly class SiteAuditService
 {
@@ -29,7 +29,7 @@ final readonly class SiteAuditService
     ) {}
 
     /**
-     * @param  array{scope?: string, domain_id?: int|null, groups?: array<int, string>|null, url?: string|null, page_ids?: array<int, int>|null}  $data
+     * @param  array{scope?: string, domain_id?: int|null, groups?: array<int, string>|null, check_codes?: array<int, string>|null, url?: string|null, page_ids?: array<int, int>|null}  $data
      */
     public function start(Project $project, array $data): SiteAudit
     {
@@ -47,6 +47,7 @@ final readonly class SiteAuditService
             'scope' => $scope,
             'status' => AuditStatus::Pending,
             'groups' => $data['groups'] ?? null,
+            'check_codes' => $data['check_codes'] ?? null,
             'input' => $input,
         ]);
 
@@ -103,9 +104,10 @@ final readonly class SiteAuditService
      * которым нужен ответ «можно публиковать или нет» до создания страницы.
      *
      * @param  array<int, string>|null  $groups
+     * @param  array<int, string>|null  $codes
      * @return array<string, mixed>
      */
-    public function checkUrl(string $url, ?array $groups = null): array
+    public function checkUrl(string $url, ?array $groups = null, ?array $codes = null): array
     {
         try {
             $response = $this->fetcher->fetch($url);
@@ -122,7 +124,7 @@ final readonly class SiteAuditService
             ];
         }
 
-        $outcome = $this->auditor->audit(new PageContext($response), $groups);
+        $outcome = $this->auditor->audit(new PageContext($response), $groups, $codes);
 
         return [
             'url' => $response->finalUrl,

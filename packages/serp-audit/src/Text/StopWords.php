@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services\Audit;
+namespace SerpAudit\Text;
 
 /**
  * Стоп-слова для расчёта «воды»: частицы, предлоги, союзы, местоимения, междометия.

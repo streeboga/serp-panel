@@ -2,9 +2,8 @@
 
 declare(strict_types=1);
 
-namespace App\Services\Audit\DTO;
+namespace SerpAudit;
 
-use App\Models\Page;
 use DOMDocument;
 use DOMNodeList;
 use DOMXPath;
@@ -18,15 +17,119 @@ final class PageContext
     private ?string $base = null;
 
     /**
-     * @param  array<int, string>  $targetKeywords  Целевые ключи страницы из pageables (наше преимущество
-     *                                              перед внешними аудиторами: релевантность считаем
-     *                                              против реальных ключей, а не против слов самой страницы).
+     * @param  array<int, string>  $targetKeywords  Целевые ключи страницы: релевантность считаем
+     *                                              против реальных ключей, а не против слов самой
+     *                                              страницы. Именно строки, а не модель — пакету
+     *                                              незачем знать про Eloquent приложения.
      */
     public function __construct(
         public readonly FetchedPage $response,
-        public readonly ?Page $page = null,
         public readonly array $targetKeywords = [],
     ) {}
+
+    /** Содержимое <title>. */
+    public function title(): ?string
+    {
+        return $this->firstValue('//head/title') ?? $this->firstValue('//title');
+    }
+
+    /** Содержимое <meta name="..."> без оглядки на регистр имени. */
+    public function meta(string $name): ?string
+    {
+        $upper = mb_strtoupper($name);
+        $node = $this->first("//meta[translate(@name,'{$upper}','{$name}')='{$name}']");
+
+        if (! $node instanceof \DOMElement) {
+            return null;
+        }
+
+        $content = trim($node->getAttribute('content'));
+
+        return $content === '' ? null : $content;
+    }
+
+    /** Содержимое <meta property="og:..."> и подобных. */
+    public function property(string $property): ?string
+    {
+        foreach ($this->query('//meta[@property]') as $node) {
+            if (! $node instanceof \DOMElement) {
+                continue;
+            }
+
+            if (mb_strtolower($node->getAttribute('property')) !== $property) {
+                continue;
+            }
+
+            $content = trim($node->getAttribute('content'));
+
+            return $content === '' ? null : $content;
+        }
+
+        return null;
+    }
+
+    /** Объявленная кодировка: <meta charset> или http-equiv. */
+    public function charset(): ?string
+    {
+        $charset = $this->firstValueAttr('//meta[@charset]', 'charset');
+
+        if ($charset !== null) {
+            return $charset;
+        }
+
+        $equiv = $this->firstValueAttr("//meta[translate(@http-equiv,'CONTET-YP','contet-yp')='content-type']", 'content');
+
+        if ($equiv !== null && preg_match('/charset=([\w-]+)/i', $equiv, $matches) === 1) {
+            return $matches[1];
+        }
+
+        return null;
+    }
+
+    public function canonical(): ?string
+    {
+        return $this->firstValueAttr("//link[contains(translate(@rel,'CANONICL','canonicl'),'canonical')]", 'href');
+    }
+
+    /**
+     * Типы из разметки JSON-LD, включая вложенные в @graph.
+     *
+     * @return array<int, string>
+     */
+    public function jsonLdTypes(): array
+    {
+        $types = [];
+
+        foreach ($this->query("//script[translate(@type,'APLICTON/JSD+','aplicton/jsd+')='application/ld+json']") as $node) {
+            $decoded = json_decode(trim($node->nodeValue ?? ''), true);
+
+            if (! is_array($decoded)) {
+                continue;
+            }
+
+            array_walk_recursive($decoded, static function ($value, $key) use (&$types): void {
+                if ($key === '@type' && is_string($value)) {
+                    $types[] = $value;
+                }
+            });
+        }
+
+        return array_values(array_unique($types));
+    }
+
+    /** Хост без www плюс путь без хвостового слэша — для сравнения адресов. */
+    public function sameAddress(string $a, string $b): bool
+    {
+        $normalize = static function (string $url): string {
+            $parts = parse_url($url);
+            $host = preg_replace('/^www\./i', '', mb_strtolower($parts['host'] ?? ''));
+            $path = rtrim($parts['path'] ?? '/', '/');
+
+            return $host . ($path === '' ? '/' : $path);
+        };
+
+        return $normalize($a) === $normalize($b);
+    }
 
     public function url(): string
     {

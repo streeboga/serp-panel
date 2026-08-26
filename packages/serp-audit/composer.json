@@ -1,0 +1,26 @@
+{
+    "name": "streeboga/serp-audit",
+    "description": "Page-quality checks for SERP Panel: contracts, registry and the standard check pack. Third-party packs depend on this for the contract.",
+    "type": "library",
+    "version": "1.0.0",
+    "license": "MIT",
+    "require": {
+        "php": "^8.3",
+        "ext-dom": "*",
+        "ext-libxml": "*",
+        "ext-mbstring": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "SerpAudit\\": "src/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "SerpAudit\\StandardChecksServiceProvider"
+            ]
+        }
+    },
+    "minimum-stability": "stable"
+}

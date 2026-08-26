@@ -2,12 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Services\Audit\Checks\ContentCheck;
-use App\Services\Audit\Checks\HttpCheck;
-use App\Services\Audit\Checks\ImageCheck;
-use App\Services\Audit\Checks\LinkCheck;
-use App\Services\Audit\Checks\MetaCheck;
-
 return [
     /*
      * Ходим по чужим (пусть и собственным для клиента) сайтам — представляемся честно
@@ -25,18 +19,9 @@ return [
     'respect_robots' => (bool) env('AUDIT_RESPECT_ROBOTS', true),
 
     /*
-     * Проверки уровня страницы. Ключ — группа из CheckGroup, значение — класс.
-     * Каждая проверка получает один разобранный DOM и возвращает список находок.
-     */
-    'checks' => [
-        HttpCheck::class,
-        MetaCheck::class,
-        ContentCheck::class,
-        LinkCheck::class,
-        ImageCheck::class,
-    ],
-
-    /*
+     * Проверки живут в пакетах и регистрируются в CheckRegistry их
+     * сервис-провайдерами — список здесь держать больше негде и незачем.
+     *
      * Пороги. Взяты из отчёта gvozd.org и приёмки eq.team; правятся без правки кода.
      */
     'thresholds' => [

@@ -22,7 +22,7 @@ Controller → Service → Repository → QueryBuilder → Model
 - `WebhookController` — incoming SERP data from external services
 - `YandexOAuthController` — OAuth flow with verification_code support
 - `PageController` — CRUD pages, attach/detach to entities, match-or-create, target report, tags sync
-- `AuditController` — start/cancel audit runs, list runs and per-page results, synchronous single-URL check
+- `AuditController` — start/cancel audit runs, list runs and per-page results, check catalog, synchronous single-URL check
 
 ## Resources (`Http/Resources/`)
 
@@ -81,8 +81,9 @@ SerpScraperAdapter (interface)
 - `PageType`: commercial, informational, navigational, transactional
 - `AuditScope`: site, pages, url
 - `AuditStatus`: pending, running, completed, failed, cancelled
-- `CheckGroup`: technical, meta, content, links, images
-- `Severity`: critical, warning, notice (несёт вес штрафа к оценке через `penalty()`)
+
+Категории и severity аудита живут в пакете `streeboga/serp-audit`: `SerpAudit\Category`
+(строки, расширяемые пакетами) и `SerpAudit\Severity` (несёт вес штрафа через `penalty()`).
 
 ## Common Pitfalls
 

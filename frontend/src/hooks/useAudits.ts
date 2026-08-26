@@ -5,12 +5,21 @@ export type AuditScope = 'site' | 'pages' | 'url'
 export type Severity = 'critical' | 'warning' | 'notice'
 
 export interface Finding {
+  /** Код проверки — им же её включают и выключают. */
   check: string
-  group: string
+  /** Код конкретного дефекта: код проверки плюс суффикс. */
+  code: string
+  category: string
   severity: Severity
   message: string
   value: unknown
   expected: unknown
+}
+
+export interface CheckCatalogEntry {
+  category: string
+  title: string
+  checks: Array<{ code: string; title: string }>
 }
 
 export interface SiteAudit {
@@ -103,6 +112,7 @@ export function useStartAudit(projectId: string) {
       url?: string
       page_ids?: number[]
       groups?: string[]
+      check_codes?: string[]
     }) => api.post(`/projects/${projectId}/audits`, data).then((r) => r.data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['audits', projectId] }),
   })
@@ -122,5 +132,17 @@ export function usePageAudit(pageId: number | null) {
     queryFn: () => api.get(`/pages/${pageId}/audit`).then((r) => r.data),
     enabled: !!pageId,
     retry: false,
+  })
+}
+
+/**
+ * Каталог проверок: категории и их проверки. Наполняется установленными пакетами,
+ * поэтому список приходит с сервера, а не хардкодится здесь.
+ */
+export function useCheckCatalog() {
+  return useQuery({
+    queryKey: ['audits', 'catalog'],
+    queryFn: () => api.get('/audit/checks').then((r) => r.data),
+    staleTime: Infinity,
   })
 }

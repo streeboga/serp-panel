@@ -133,7 +133,7 @@ test('считает релевантность страницы её целев
 
     $result = SiteAudit::latest('id')->firstOrFail()->results()->firstOrFail();
 
-    expect(array_column($result->findings, 'check'))->toContain('content.relevance.text')
+    expect(array_column($result->findings, 'code'))->toContain('content.relevance.text')
         ->and($result->metrics['relevance'][0]['keyword'])->toBe('ремонт котлов')
         ->and($result->page_id)->toBe($page->id);
 });
@@ -309,4 +309,62 @@ test('явно выбранные страницы проверяются даж
 
     expect(SiteAudit::latest('id')->firstOrFail()->results()->pluck('url')->all())
         ->toContain('https://competitor.example/x/');
+});
+
+test('каталог проверок отдаётся по категориям', function () {
+    $h = createUserWithOrg();
+
+    $response = $this->actingAs($h['user'])
+        ->getJson('/api/v1/audit/checks', orgHeaders($h['org']))
+        ->assertOk();
+
+    $catalog = $response->json('data');
+    $categories = array_column($catalog, 'category');
+
+    expect($categories)->toContain('technical', 'meta', 'content', 'links', 'images');
+
+    $codes = array_merge(...array_map(
+        fn (array $row): array => array_column($row['checks'], 'code'),
+        $catalog,
+    ));
+
+    expect($codes)->toContain('meta.title', 'content.relevance', 'images.alt')
+        ->and($codes)->toHaveCount(18);
+
+    // Каждая проверка обязана назвать себя — каталог показывается людям.
+    foreach ($catalog as $row) {
+        expect($row['title'])->not->toBeEmpty();
+
+        foreach ($row['checks'] as $check) {
+            expect($check['title'])->not->toBeEmpty();
+        }
+    }
+});
+
+test('прогон можно сузить до отдельных проверок', function () {
+    Http::fake(['*' => Http::response('<html><body><p>ничего</p></body></html>', 200, ['Content-Type' => 'text/html'])]);
+
+    $h = createFullStack();
+
+    $this->actingAs($h['user'])->postJson(
+        "/api/v1/projects/{$h['project']->id}/audits",
+        ['scope' => 'url', 'url' => 'https://test.com/x/', 'check_codes' => ['meta.title']],
+        orgHeaders($h['org']),
+    )->assertStatus(201);
+
+    $result = SiteAudit::latest('id')->firstOrFail()->results()->firstOrFail();
+    $checks = array_unique(array_column($result->findings, 'check'));
+
+    // Ровно одна проверка — отключённые молчат, хотя дефекты на странице есть.
+    expect($checks)->toBe(['meta.title']);
+});
+
+test('несуществующий код проверки отвергается', function () {
+    $h = createFullStack();
+
+    $this->actingAs($h['user'])->postJson(
+        "/api/v1/projects/{$h['project']->id}/audits",
+        ['scope' => 'site', 'check_codes' => ['meta.нетакой']],
+        orgHeaders($h['org']),
+    )->assertStatus(422)->assertJsonValidationErrors(['check_codes.0']);
 });

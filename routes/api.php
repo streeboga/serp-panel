@@ -264,6 +264,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         });
 
         // Аудит сайта — read
+        Route::get('audit/checks', [AuditController::class, 'checks']);
         Route::get('projects/{project}/audits', [AuditController::class, 'index']);
         Route::get('audits/{audit}', [AuditController::class, 'show']);
         Route::get('audits/{audit}/results', [AuditController::class, 'results']);

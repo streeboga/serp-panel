@@ -5,7 +5,9 @@ import {
   useAudits,
   useAuditResults,
   useCancelAudit,
+  useCheckCatalog,
   useStartAudit,
+  type CheckCatalogEntry,
   type Finding,
   type PageAuditResult,
   type Severity,
@@ -33,7 +35,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { parseApiError } from '@/lib/api'
-import { ChevronDown, ChevronRight, Play, X } from 'lucide-react'
+import { ChevronDown, ChevronRight, Play, SlidersHorizontal, X } from 'lucide-react'
 import type { Domain } from '@/types/api'
 
 export const Route = createLazyFileRoute('/projects/$projectId/audit')({
@@ -92,7 +94,7 @@ function FindingRow({ finding }: { finding: Finding }) {
             )}
           </span>
         )}
-        <span className="ml-2 font-mono text-xs text-muted-foreground">{finding.check}</span>
+        <span className="ml-2 font-mono text-xs text-muted-foreground">{finding.code}</span>
       </div>
     </div>
   )
@@ -148,10 +150,13 @@ function AuditPage() {
   const [severity, setSeverity] = useState<Severity | ''>('')
   const [search, setSearch] = useState('')
   const [scope, setScope] = useState<'site' | 'url'>('site')
+  const [enabled, setEnabled] = useState<Set<string> | null>(null)
+  const [picking, setPicking] = useState(false)
   const [url, setUrl] = useState('')
   const [error, setError] = useState<string | null>(null)
 
   const { data: auditsData, isLoading } = useAudits(projectId)
+  const { data: catalogData } = useCheckCatalog()
   const { data: domainsData } = useDomains(projectId)
   const startAudit = useStartAudit(projectId)
   const cancelAudit = useCancelAudit()
@@ -165,6 +170,37 @@ function AuditPage() {
     const d = domainsData?.data ?? domainsData
     return Array.isArray(d) ? d : []
   }, [domainsData])
+
+  const catalog: CheckCatalogEntry[] = useMemo(() => {
+    const d = catalogData?.data ?? catalogData
+    return Array.isArray(d) ? d : []
+  }, [catalogData])
+
+  const allCodes = useMemo(
+    () => catalog.flatMap((c) => c.checks.map((check) => check.code)),
+    [catalog],
+  )
+
+  // null означает «все» — так пустой выбор не превращается в «ни одной».
+  const isOn = (code: string) => enabled === null || enabled.has(code)
+
+  const toggle = (code: string) => {
+    setEnabled((prev) => {
+      const next = new Set(prev ?? allCodes)
+      next.has(code) ? next.delete(code) : next.add(code)
+      return next.size === allCodes.length ? null : next
+    })
+  }
+
+  const toggleCategory = (entry: CheckCatalogEntry) => {
+    const codes = entry.checks.map((c) => c.code)
+    const allOn = codes.every(isOn)
+    setEnabled((prev) => {
+      const next = new Set(prev ?? allCodes)
+      codes.forEach((c) => (allOn ? next.delete(c) : next.add(c)))
+      return next.size === allCodes.length ? null : next
+    })
+  }
 
   const ownDomain = domains.find((d) => d.is_own) ?? domains[0]
 
@@ -186,10 +222,12 @@ function AuditPage() {
 
   const handleStart = () => {
     setError(null)
+    const check_codes = enabled === null ? undefined : [...enabled]
+
     startAudit.mutate(
       scope === 'url'
-        ? { scope: 'url', url }
-        : { scope: 'site', domain_id: ownDomain ? Number(ownDomain.id) : null },
+        ? { scope: 'url', url, check_codes }
+        : { scope: 'site', domain_id: ownDomain ? Number(ownDomain.id) : null, check_codes },
       {
         onSuccess: (response) => setSelectedId(response?.data?.id ?? null),
         onError: (e) => setError(parseApiError(e)),
@@ -243,6 +281,18 @@ function AuditPage() {
           </Button>
         )}
 
+        {catalog.length > 0 && (
+          <Button variant="outline" onClick={() => setPicking((v) => !v)}>
+            <SlidersHorizontal className="mr-1 size-3.5" />
+            Проверки
+            {enabled !== null && (
+              <Badge variant="secondary" className="ml-1">
+                {enabled.size} из {allCodes.length}
+              </Badge>
+            )}
+          </Button>
+        )}
+
         {audits.length > 0 && (
           <div className="space-y-1">
             <span className="text-xs text-muted-foreground">Прогон</span>
@@ -267,6 +317,36 @@ function AuditPage() {
           </div>
         )}
       </div>
+
+      {picking && (
+        <div className="grid gap-4 rounded-lg border p-4 sm:grid-cols-2 lg:grid-cols-3">
+          {catalog.map((entry) => (
+            <div key={entry.category}>
+              <button
+                type="button"
+                className="mb-1 text-left text-sm font-semibold hover:underline"
+                onClick={() => toggleCategory(entry)}
+              >
+                {entry.title}
+              </button>
+              {entry.checks.map((check) => (
+                <label key={check.code} className="flex items-start gap-2 py-0.5 text-sm">
+                  <input
+                    type="checkbox"
+                    className="mt-1"
+                    checked={isOn(check.code)}
+                    onChange={() => toggle(check.code)}
+                  />
+                  <span>
+                    {check.title}
+                    <span className="ml-1 font-mono text-xs text-muted-foreground">{check.code}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
 

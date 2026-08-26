@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "e273a69e6482c628168e5ed3095a4924",
+    "content-hash": "7116273e3943e8b5fd01cc8ba493d268",
     "packages": [
         {
             "name": "brick/math",
@@ -4503,6 +4503,42 @@
                 }
             ],
             "time": "2026-02-21T15:57:15+00:00"
+        },
+        {
+            "name": "streeboga/serp-audit",
+            "version": "1.0.0",
+            "dist": {
+                "type": "path",
+                "url": "packages/serp-audit",
+                "reference": "ecaaa99a90bd95d1da33c99f42eb9b3e388fceac"
+            },
+            "require": {
+                "ext-dom": "*",
+                "ext-libxml": "*",
+                "ext-mbstring": "*",
+                "php": "^8.3"
+            },
+            "type": "library",
+            "extra": {
+                "laravel": {
+                    "providers": [
+                        "SerpAudit\\StandardChecksServiceProvider"
+                    ]
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "SerpAudit\\": "src/"
+                }
+            },
+            "license": [
+                "MIT"
+            ],
+            "description": "Page-quality checks for SERP Panel: contracts, registry and the standard check pack. Third-party packs depend on this for the contract.",
+            "transport-options": {
+                "symlink": true,
+                "relative": true
+            }
         },
         {
             "name": "symfony/clock",

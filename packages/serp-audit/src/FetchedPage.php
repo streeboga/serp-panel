@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Services\Audit\DTO;
+namespace SerpAudit;
 
 final readonly class FetchedPage
 {

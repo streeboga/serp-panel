@@ -5,7 +5,6 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Enums\AuditScope;
-use App\Enums\CheckGroup;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PageAuditResultResource;
 use App\Http\Resources\SiteAuditResource;
@@ -20,12 +19,14 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rule;
+use SerpAudit\CheckRegistry;
 
 #[Group(name: 'Аудит сайта', description: 'Проверка сайта целиком или постранично: технические данные, мета-теги, контент, ссылки, изображения', weight: 6)]
 final class AuditController extends Controller
 {
     public function __construct(
         private readonly SiteAuditService $service,
+        private readonly CheckRegistry $registry,
     ) {}
 
     /**
@@ -62,7 +63,9 @@ final class AuditController extends Controller
             'scope' => ['nullable', Rule::enum(AuditScope::class)],
             'domain_id' => ['nullable', 'integer', 'exists:domains,id'],
             'groups' => ['nullable', 'array'],
-            'groups.*' => [Rule::enum(CheckGroup::class)],
+            'groups.*' => [Rule::in($this->registry->categories())],
+            'check_codes' => ['nullable', 'array'],
+            'check_codes.*' => [Rule::in($this->registry->codes())],
             'url' => ['required_if:scope,url', 'nullable', 'url', 'max:2048'],
             'page_ids' => ['required_if:scope,pages', 'nullable', 'array'],
             'page_ids.*' => ['integer', 'exists:pages,id'],
@@ -162,12 +165,30 @@ final class AuditController extends Controller
         $validated = $request->validate([
             'url' => ['required', 'url', 'max:2048'],
             'groups' => ['nullable', 'array'],
-            'groups.*' => [Rule::enum(CheckGroup::class)],
+            'groups.*' => [Rule::in($this->registry->categories())],
+            'check_codes' => ['nullable', 'array'],
+            'check_codes.*' => [Rule::in($this->registry->codes())],
         ]);
 
         return response()->json([
-            'data' => $this->service->checkUrl($validated['url'], $validated['groups'] ?? null),
+            'data' => $this->service->checkUrl(
+                $validated['url'],
+                $validated['groups'] ?? null,
+                $validated['check_codes'] ?? null,
+            ),
         ]);
+    }
+
+    /**
+     * Каталог проверок
+     *
+     * Категории и проверки в них — всё, что зарегистрировали установленные пакеты.
+     * Коды отсюда годятся для `check_codes` при запуске прогона.
+     */
+    #[Response(200, description: 'Категории и проверки')]
+    public function checks(): JsonResponse
+    {
+        return response()->json(['data' => $this->registry->catalog()]);
     }
 
     private function authorizeProject(Request $request, Project $project): void

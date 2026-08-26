@@ -4,12 +4,12 @@ declare(strict_types=1);
 
 namespace App\Services\Audit;
 
-use App\Enums\CheckGroup;
-use App\Enums\Severity;
-use App\Services\Audit\DTO\Finding;
-use App\Services\Audit\DTO\PageContext;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Carbon;
+use SerpAudit\Category;
+use SerpAudit\Finding;
+use SerpAudit\PageContext;
+use SerpAudit\Severity;
 
 /**
  * Проверки уровня сайта — те, что не имеют смысла на каждой странице:
@@ -322,6 +322,8 @@ final class SiteChecker
 
     private function finding(string $check, Severity $severity, string $message, mixed $value = null, mixed $expected = null): Finding
     {
-        return new Finding($check, CheckGroup::Technical, $severity, $message, $value, $expected);
+        // Проверки уровня сайта не постраничные, поэтому код проверки и код дефекта
+        // здесь совпадают: включать их по отдельности нечем и незачем.
+        return new Finding($check, $check, Category::TECHNICAL, $severity, $message, $value, $expected);
     }
 }

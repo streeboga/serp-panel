@@ -4,9 +4,9 @@ declare(strict_types=1);
 
 namespace App\Services\Audit;
 
-use App\Services\Audit\DTO\FetchedPage;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
+use SerpAudit\FetchedPage;
 
 final class PageFetcher
 {

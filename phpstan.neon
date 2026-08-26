@@ -4,4 +4,5 @@ includes:
 parameters:
     paths:
         - app/
+        - packages/serp-audit/src/
     level: 6

@@ -4,17 +4,22 @@ declare(strict_types=1);
 
 namespace App\Services\Audit;
 
-use App\Enums\Severity;
-use App\Services\Audit\Contracts\PageCheck;
-use App\Services\Audit\DTO\Finding;
-use App\Services\Audit\DTO\PageContext;
+use SerpAudit\CheckRegistry;
+use SerpAudit\Finding;
+use SerpAudit\PageContext;
+use SerpAudit\Severity;
 
-final class PageAuditor
+final readonly class PageAuditor
 {
+    public function __construct(
+        private CheckRegistry $registry,
+    ) {}
+
     /**
-     * Прогоняет включённые проверки по одному разобранному документу.
+     * Прогоняет выбранные проверки по одному разобранному документу.
      *
-     * @param  array<int, string>|null  $groups  Значения CheckGroup; null — все.
+     * @param  array<int, string>|null  $categories  пусто — все категории
+     * @param  array<int, string>|null  $codes  пусто — все проверки категорий
      * @return array{
      *     score: int,
      *     findings: array<int, array<string, mixed>>,
@@ -24,12 +29,12 @@ final class PageAuditor
      *     issues_notice: int
      * }
      */
-    public function audit(PageContext $context, ?array $groups = null): array
+    public function audit(PageContext $context, ?array $categories = null, ?array $codes = null): array
     {
         $findings = [];
         $metrics = [];
 
-        foreach ($this->checks($groups) as $check) {
+        foreach ($this->registry->select($categories, $codes) as $check) {
             $findings = [...$findings, ...$check->run($context)];
             $metrics = [...$metrics, ...$check->metrics($context)];
         }
@@ -66,26 +71,5 @@ final class PageAuditor
             'issues_warning' => $counts[Severity::Warning->value],
             'issues_notice' => $counts[Severity::Notice->value],
         ];
-    }
-
-    /**
-     * @param  array<int, string>|null  $groups
-     * @return array<int, PageCheck>
-     */
-    private function checks(?array $groups): array
-    {
-        /** @var array<int, class-string<PageCheck>> $classes */
-        $classes = config('audit.checks', []);
-
-        $checks = array_map(static fn (string $class): PageCheck => app($class), $classes);
-
-        if ($groups === null || $groups === []) {
-            return $checks;
-        }
-
-        return array_values(array_filter(
-            $checks,
-            static fn (PageCheck $check): bool => in_array($check->group()->value, $groups, true),
-        ));
     }
 }

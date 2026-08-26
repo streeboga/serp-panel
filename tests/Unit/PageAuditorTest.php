@@ -2,19 +2,15 @@
 
 declare(strict_types=1);
 
-use App\Enums\CheckGroup;
-use App\Models\Page;
-use App\Services\Audit\Checks\ContentCheck;
-use App\Services\Audit\Checks\ImageCheck;
-use App\Services\Audit\Checks\LinkCheck;
-use App\Services\Audit\Checks\MetaCheck;
-use App\Services\Audit\DTO\FetchedPage;
-use App\Services\Audit\DTO\PageContext;
 use App\Services\Audit\PageAuditor;
 use App\Services\Audit\RobotsTxt;
-use App\Services\Audit\TextAnalyzer;
+use SerpAudit\Category;
+use SerpAudit\CheckRegistry;
+use SerpAudit\FetchedPage;
+use SerpAudit\PageContext;
+use SerpAudit\Text\TextAnalyzer;
 
-covers(PageAuditor::class, MetaCheck::class, ContentCheck::class, LinkCheck::class, ImageCheck::class, RobotsTxt::class, TextAnalyzer::class);
+covers(PageAuditor::class, CheckRegistry::class, RobotsTxt::class, TextAnalyzer::class);
 
 /** Страница с заранее известным набором дефектов — по одному на проверку. */
 function brokenHtml(): string
@@ -43,7 +39,7 @@ function brokenHtml(): string
     HTML;
 }
 
-function contextFor(string $html, string $url = 'https://example.com/', array $keywords = [], ?Page $page = null): PageContext
+function contextFor(string $html, string $url = 'https://example.com/', array $keywords = []): PageContext
 {
     $response = new FetchedPage(
         requestedUrl: $url,
@@ -55,27 +51,27 @@ function contextFor(string $html, string $url = 'https://example.com/', array $k
         responseTimeMs: 120,
     );
 
-    return new PageContext($response, $page, $keywords);
+    return new PageContext($response, $keywords);
 }
 
 /** @return array<int, string> */
 function codes(array $outcome): array
 {
-    return array_column($outcome['findings'], 'check');
+    return array_column($outcome['findings'], 'code');
 }
 
 test('находит дефекты мета-разметки', function () {
-    $outcome = app(PageAuditor::class)->audit(contextFor(brokenHtml()), [CheckGroup::Meta->value]);
+    $outcome = app(PageAuditor::class)->audit(contextFor(brokenHtml()), [Category::META]);
 
     expect(codes($outcome))
         ->toContain('meta.title.short')
         ->toContain('meta.description.missing')
-        ->toContain('meta.h1.multiple')
+        ->toContain('meta.headings.h1_multiple')
         ->toContain('meta.headings.skip')
-        ->toContain('meta.canonical.mismatch')
-        ->toContain('meta.viewport.missing')
-        ->toContain('meta.opengraph.missing')
-        ->toContain('meta.schema.missing');
+        ->toContain('meta.indexing.canonical_mismatch')
+        ->toContain('meta.document.viewport_missing')
+        ->toContain('meta.social.opengraph_missing')
+        ->toContain('meta.social.schema_missing');
 
     expect($outcome['metrics']['h1_count'])->toBe(2)
         ->and($outcome['metrics']['title'])->toBe('Коротко')
@@ -103,7 +99,7 @@ test('чистая страница не даёт находок по мета-�
     </html>
     HTML;
 
-    $outcome = app(PageAuditor::class)->audit(contextFor($html), [CheckGroup::Meta->value]);
+    $outcome = app(PageAuditor::class)->audit(contextFor($html), [Category::META]);
 
     expect($outcome['findings'])->toBe([])
         ->and($outcome['score'])->toBe(100)
@@ -113,14 +109,14 @@ test('чистая страница не даёт находок по мета-�
 test('видит проблемы ссылок и изображений', function () {
     $outcome = app(PageAuditor::class)->audit(
         contextFor(brokenHtml()),
-        [CheckGroup::Links->value, CheckGroup::Images->value],
+        [Category::LINKS, Category::IMAGES],
     );
 
     expect(codes($outcome))
-        ->toContain('links.external_dofollow')
-        ->toContain('links.empty_anchor')
-        ->toContain('images.alt_missing')
-        ->toContain('images.alt_empty');
+        ->toContain('links.external.dofollow')
+        ->toContain('links.anchor.empty')
+        ->toContain('images.alt.missing')
+        ->toContain('images.alt.empty');
 
     expect($outcome['metrics']['links_internal'])->toBe(2)
         ->and($outcome['metrics']['links_external'])->toBe(1)
@@ -134,7 +130,7 @@ test('считает релевантность против целевых кл
     // Ключ есть в тексте и в title — претензий быть не должно.
     $matching = app(PageAuditor::class)->audit(
         contextFor($html, keywords: ['купить велосипед']),
-        [CheckGroup::Content->value],
+        [Category::CONTENT],
     );
 
     expect(codes($matching))->not->toContain('content.relevance.title')
@@ -143,7 +139,7 @@ test('считает релевантность против целевых кл
     // А этого ключа на странице нет вовсе.
     $missing = app(PageAuditor::class)->audit(
         contextFor($html, keywords: ['ремонт скутеров']),
-        [CheckGroup::Content->value],
+        [Category::CONTENT],
     );
 
     expect(codes($missing))->toContain('content.relevance.text');
@@ -165,7 +161,7 @@ test('стемминг склеивает словоформы', function () {
 });
 
 test('текстовые метрики считаются', function () {
-    $outcome = app(PageAuditor::class)->audit(contextFor(brokenHtml()), [CheckGroup::Content->value]);
+    $outcome = app(PageAuditor::class)->audit(contextFor(brokenHtml()), [Category::CONTENT]);
 
     expect($outcome['metrics']['words'])->toBeGreaterThan(0)
         ->and($outcome['metrics']['water'])->toBeGreaterThanOrEqual(0.0)

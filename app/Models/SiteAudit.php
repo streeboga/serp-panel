@@ -20,6 +20,7 @@ use Illuminate\Support\Carbon;
  * @property AuditStatus $status
  * @property string|null $batch_id
  * @property array<int, string>|null $groups
+ * @property array<int, string>|null $check_codes
  * @property array<string, mixed>|null $input
  * @property int $pages_total
  * @property int $pages_done
@@ -41,7 +42,7 @@ use Illuminate\Support\Carbon;
 final class SiteAudit extends Model
 {
     protected $fillable = [
-        'project_id', 'domain_id', 'scope', 'status', 'batch_id', 'groups', 'input',
+        'project_id', 'domain_id', 'scope', 'status', 'batch_id', 'groups', 'check_codes', 'input',
         'pages_total', 'pages_done', 'score',
         'issues_critical', 'issues_warning', 'issues_notice',
         'findings', 'metrics', 'error', 'started_at', 'finished_at',
@@ -65,6 +66,7 @@ final class SiteAudit extends Model
         'scope' => AuditScope::class,
         'status' => AuditStatus::class,
         'groups' => 'array',
+        'check_codes' => 'array',
         'input' => 'array',
         'findings' => 'array',
         'metrics' => 'array',

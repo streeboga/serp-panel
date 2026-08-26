@@ -123,8 +123,15 @@ Unified registry of tracked pages (own + competitors) with polymorphic attachmen
 
 - **SiteAudit**: `site_audits` — прогон (scope site/pages/url, статус, batch_id, оценка, находки уровня сайта)
 - **PageAuditResult**: `page_audit_results` — результат по одному URL (findings + metrics в JSONB)
-- **Проверки**: `app/Services/Audit/Checks/` — по классу на группу (`CheckGroup`: technical, meta, content, links, images).
-  Один разбор DOM на страницу, каждая проверка возвращает `Finding[]` и метрики. Список — в `config/audit.php`
+- **Проверки**: пакет `packages/serp-audit` (`streeboga/serp-audit`, подключён как path-репозиторий).
+  По классу на проверку, 18 штук в 5 категориях. Один разбор DOM на страницу,
+  каждая проверка возвращает `Finding[]` и метрики
+- **Реестр**: `SerpAudit\CheckRegistry` — пакеты кладут туда свои проверки из сервис-провайдера,
+  приложение только выбирает. Новый набор = новый пакет, кода в приложении менять не нужно
+- **Категории**: `SerpAudit\Category` — обычные строки, не enum: свой пакет вправе завести свою.
+  Валидация в контроллере идёт от реестра, каталог отдаётся через `GET /api/v1/audit/checks`
+- **Коды**: у проверки код вида `meta.title`, у находки — `meta.title.long`. Прогон сужается
+  категориями (`groups`) и/или отдельными проверками (`check_codes`)
 - **Уровень сайта**: `SiteChecker` — robots.txt, sitemap (рекурсивно), SSL, 404, канонические редиректы, фавикон. Раз за прогон
 - **Источники URL**: `UrlSource` — sitemap → `DomainIndexResult` (собран через `site:`) → `Page` проекта. Своего краулера нет
 - **Релевантность**: для `Page` с целевыми ключами через `Pageable` считается вхождение ключа по зонам
