@@ -143,6 +143,12 @@ Unified registry of tracked pages (own + competitors) with polymorphic attachmen
   `ON CONFLICT`, счётчик `reference_count`. Второй этап (`CheckResourcesJob` →
   батч `CheckResourceJob` на очереди `audit-assets`) даёт битые ссылки и вес картинок
 - **Кросс-страничное**: дубли title и description считает `FinalizeSiteAuditJob`
+- **W3C**: `HtmlValidator` + `ValidateHtmlJob` — эталонный валидатор, ключ не нужен.
+  Находкой становится только `type=error`; предупреждения и стилевые замечания живут
+  в `metrics.w3c`. Свой лимитер `w3c` — сервер чужой и общий
+- **Полевые данные**: `CruxClient` + `CollectFieldDataJob` — Chrome UX Report по домену,
+  один запрос на прогон, в `metrics.field`. Спрашивает URL, при отсутствии данных
+  откатывается на origin и пишет об этом в находке. Без `AUDIT_CRUX_KEY` молчит
 - **Браузер**: `services/browser-audit` — Playwright в Docker, отдаёт CLS с виновниками,
   контраст по вычисленным стилям, LCP/FCP и мелкий шрифт. Третий этап
   (`RunBrowserStageJob` → батч `BrowserAuditJob` на очереди `audit-browser`) по выборке
