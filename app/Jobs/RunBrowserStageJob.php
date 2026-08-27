@@ -6,7 +6,10 @@ namespace App\Jobs;
 
 use App\Contracts\Repositories\SiteAuditRepositoryInterface;
 use App\Models\PageAuditResult;
+use App\Models\SiteAudit;
 use App\Services\Audit\BrowserAudit;
+use App\Services\Audit\CruxClient;
+use App\Services\Audit\HtmlValidator;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -36,11 +39,34 @@ final class RunBrowserStageJob implements ShouldQueue
         $this->onQueue('audit');
     }
 
-    public function handle(SiteAuditRepositoryInterface $audits, BrowserAudit $browser): void
+    /** Origin прогона: берём из первого результата, домен там уже нормализован. */
+    private function origin(SiteAudit $audit): ?string
     {
+        $url = PageAuditResult::where('site_audit_id', $audit->id)->value('url');
+
+        if (! is_string($url)) {
+            return null;
+        }
+
+        $parts = parse_url($url);
+
+        return isset($parts['scheme'], $parts['host']) ? "{$parts['scheme']}://{$parts['host']}" : null;
+    }
+
+    public function handle(
+        SiteAuditRepositoryInterface $audits,
+        BrowserAudit $browser,
+        HtmlValidator $validator,
+        CruxClient $crux,
+    ): void {
         $audit = $audits->findById($this->auditId);
 
-        if (! $browser->enabled()) {
+        // Полевые данные по домену — один запрос на прогон, не на страницу.
+        if ($crux->enabled() && $this->origin($audit) !== null) {
+            CollectFieldDataJob::dispatch($audit->id, (string) $this->origin($audit));
+        }
+
+        if (! $browser->enabled() && ! $validator->enabled()) {
             FinalizeSiteAuditJob::dispatch($audit->id);
 
             return;
@@ -65,7 +91,25 @@ final class RunBrowserStageJob implements ShouldQueue
 
         $auditId = $audit->id;
 
-        $batch = Bus::batch($targets->map(fn (PageAuditResult $r): BrowserAuditJob => new BrowserAuditJob($r->id, $r->url))->all())
+        $jobs = [];
+
+        foreach ($targets as $target) {
+            if ($browser->enabled()) {
+                $jobs[] = new BrowserAuditJob($target->id, $target->url);
+            }
+
+            if ($validator->enabled()) {
+                $jobs[] = new ValidateHtmlJob($target->id, $target->url);
+            }
+        }
+
+        if ($jobs === []) {
+            FinalizeSiteAuditJob::dispatch($audit->id);
+
+            return;
+        }
+
+        $batch = Bus::batch($jobs)
             ->name("audit-browser:{$auditId}")
             ->onQueue('audit-browser')
             ->allowFailures()
