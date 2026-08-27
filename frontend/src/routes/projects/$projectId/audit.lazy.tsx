@@ -17,6 +17,7 @@ import { useDomains } from '@/hooks/useDomains'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { AuditFindingValue } from '@/components/AuditFindingValue'
 import { EmptyState } from '@/components/EmptyState'
 import { TableSkeleton } from '@/components/PageSkeleton'
 import {
@@ -71,30 +72,34 @@ function scoreClass(score: number | null): string {
 }
 
 function FindingRow({ finding }: { finding: Finding }) {
-  const value =
-    finding.value === null || finding.value === undefined
-      ? null
-      : typeof finding.value === 'object'
-        ? JSON.stringify(finding.value)
-        : String(finding.value)
+  const scalar =
+    finding.value !== null &&
+    finding.value !== undefined &&
+    typeof finding.value !== 'object'
 
   return (
-    <div className="flex items-start gap-2 py-1 text-sm">
+    // Код проверки не показываем, но держим в подсказке: он нужен, когда надо
+    // сузить прогон через check_codes.
+    <div className="flex items-start gap-2 py-1 text-sm" title={finding.check}>
       <Badge variant={SEVERITY_VARIANT[finding.severity]} className="shrink-0">
         {SEVERITY_LABELS[finding.severity]}
       </Badge>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <span>{finding.message}</span>
-        {value !== null && (
+        {scalar && (
           <span className="text-muted-foreground">
             {' — '}
-            <span className="font-mono break-all">{value}</span>
-            {finding.expected !== null && finding.expected !== undefined && (
-              <> (ожидается {String(finding.expected)})</>
-            )}
+            <span className="font-mono">{String(finding.value)}</span>
           </span>
         )}
-        <span className="ml-2 font-mono text-xs text-muted-foreground">{finding.code}</span>
+        {finding.expected !== null && finding.expected !== undefined && (
+          <span className="text-muted-foreground"> (ожидается {String(finding.expected)})</span>
+        )}
+        {!scalar && (
+          <div className="mt-1">
+            <AuditFindingValue value={finding.value} />
+          </div>
+        )}
       </div>
     </div>
   )
@@ -187,7 +192,8 @@ function AuditPage() {
   const toggle = (code: string) => {
     setEnabled((prev) => {
       const next = new Set(prev ?? allCodes)
-      next.has(code) ? next.delete(code) : next.add(code)
+      if (next.has(code)) next.delete(code)
+      else next.add(code)
       return next.size === allCodes.length ? null : next
     })
   }
