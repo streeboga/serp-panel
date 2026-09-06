@@ -22,7 +22,7 @@ use Illuminate\Support\Carbon;
  */
 class Project extends Model
 {
-    protected $fillable = ['organization_id', 'name', 'description', 'muted_codes', 'is_public', 'public_slug'];
+    protected $fillable = ['organization_id', 'name', 'description', 'muted_codes', 'is_public', 'public_slug', 'metrika_counter_id'];
 
     /** @return array<string, string> */
     protected function casts(): array

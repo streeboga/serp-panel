@@ -66,6 +66,10 @@ final class RunBrowserStageJob implements ShouldQueue
             CollectFieldDataJob::dispatch($audit->id, (string) $this->origin($audit));
         }
 
+        if ($audit->project->metrika_counter_id !== null) {
+            CollectBehaviourJob::dispatch($audit->id);
+        }
+
         if (! $browser->enabled() && ! $validator->enabled()) {
             FinalizeSiteAuditJob::dispatch($audit->id);
 
