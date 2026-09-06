@@ -62,6 +62,57 @@ final readonly class CompetitorService
     }
 
     /**
+     * Конкуренты по регионам: кто силён везде, а кто только в своём городе.
+     *
+     * Федеральным считаем того, кто попадает в топ-10 больше чем в одном регионе:
+     * данных о юридической географии у нас нет, и придумывать её нельзя.
+     *
+     * @param  array<int, int>|null  $keywordIds
+     * @return array<int, array<string, mixed>>
+     */
+    public function getCompetitorsByRegion(int $projectId, ?array $keywordIds = null): array
+    {
+        [$snapshotIds, $keywordIds] = $this->latestSnapshotScope($projectId, $keywordIds);
+
+        if ($snapshotIds === []) {
+            return [];
+        }
+
+        $rows = $this->resultRepository->getCompetitorStatsByRegion($snapshotIds, $keywordIds);
+        $regionsByDomain = [];
+
+        foreach ($rows as $row) {
+            if ((int) $row->top10 === 0) {
+                continue;
+            }
+
+            $regionsByDomain[$row->domain][] = [
+                'region' => $row->region,
+                'region_id' => (int) $row->region_id,
+                'top10' => (int) $row->top10,
+                'keyword_count' => (int) $row->keyword_count,
+            ];
+        }
+
+        $result = [];
+
+        foreach ($regionsByDomain as $domain => $regions) {
+            usort($regions, static fn (array $a, array $b): int => $b['top10'] <=> $a['top10']);
+
+            $result[] = [
+                'domain' => $domain,
+                'scope' => count($regions) > 1 ? 'федеральный' : 'региональный',
+                'regions' => $regions,
+                'top10_total' => array_sum(array_column($regions, 'top10')),
+            ];
+        }
+
+        usort($result, static fn (array $a, array $b): int => $b['top10_total'] <=> $a['top10_total']);
+
+        return $result;
+    }
+
+    /**
      * Competitor pages: which URL of which site ranks for each of our phrases.
      * Covers every tracked phrase, including those we do not rank for ourselves.
      *

@@ -228,6 +228,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         // Competitors
         Route::get('serp/competitors', [CompetitorController::class, 'index']);
         Route::get('serp/competitors/pages', [CompetitorController::class, 'pages']);
+        Route::get('serp/competitors/regions', [CompetitorController::class, 'byRegion']);
 
         // Wordstat
         Route::get('keywords/{keyword}/wordstat', [WordstatController::class, 'frequencies']);

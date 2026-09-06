@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Models\Project;
 use App\Services\CompetitorService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\QueryParameter;
@@ -31,6 +32,29 @@ final class CompetitorController extends Controller
     #[QueryParameter('page[number]', type: 'integer', description: 'Номер страницы', example: 1)]
     #[Response(200, description: 'Сводная таблица конкурентов')]
     #[Response(422, description: 'Ошибка валидации')]
+    /**
+     * Конкуренты по регионам
+     *
+     * Кто держится в топе везде, а кто только в своём регионе. Федеральным
+     * считается тот, кто попадает в топ-10 больше чем в одном регионе.
+     */
+    #[QueryParameter('filter[keyword_id]', type: 'array', description: 'Ограничить набором ключевых слов')]
+    #[Response(200, description: 'Конкуренты с разбивкой по регионам')]
+    public function byRegion(Request $request, CompetitorService $service): JsonResponse
+    {
+        $projectId = (int) $request->query('project_id');
+
+        abort_if($projectId === 0, 422, 'Не указан project_id');
+
+        $project = Project::findOrFail($projectId);
+
+        if ($project->organization_id !== $request->get('organization')->id) {
+            abort(404);
+        }
+
+        return response()->json(['data' => $service->getCompetitorsByRegion($projectId)]);
+    }
+
     public function index(Request $request): JsonResponse
     {
         $validated = $request->validate([

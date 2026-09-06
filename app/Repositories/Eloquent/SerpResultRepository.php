@@ -76,6 +76,37 @@ final class SerpResultRepository implements SerpResultRepositoryInterface
     }
 
     /**
+     * Те же конкуренты, но с разбивкой по регионам: региональный игрок и
+     * федеральный — разные соперники, и в ТЗ это отдельное требование.
+     *
+     * @param  array<int, int>  $snapshotIds
+     * @param  array<int, int>  $keywordIds
+     * @return Collection<int, object>
+     */
+    public function getCompetitorStatsByRegion(array $snapshotIds, array $keywordIds): Collection
+    {
+        return SerpResult::query()
+            ->join('serp_snapshots', function ($join) use ($keywordIds) {
+                $join->on('serp_results.snapshot_id', '=', 'serp_snapshots.id')
+                    ->on('serp_results.collected_at', '=', 'serp_snapshots.collected_at')
+                    ->whereIn('serp_snapshots.keyword_id', $keywordIds);
+            })
+            ->join('regions', 'serp_snapshots.region_id', '=', 'regions.id')
+            ->whereIn('serp_snapshots.id', $snapshotIds)
+            ->select(
+                'serp_results.domain',
+                'regions.name as region',
+                'regions.id as region_id',
+                DB::raw('COUNT(DISTINCT serp_snapshots.keyword_id) as keyword_count'),
+                DB::raw('COUNT(DISTINCT CASE WHEN serp_results.position <= 10 THEN serp_snapshots.keyword_id END) as top10'),
+            )
+            ->groupBy('serp_results.domain', 'regions.id', 'regions.name')
+            ->orderByDesc('top10')
+            ->limit(300)
+            ->get();
+    }
+
+    /**
      * Every ranking page of every domain across the given snapshots — the competitor
      * URLs that show up for our phrases, whether or not we rank for them ourselves.
      *
