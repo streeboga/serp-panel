@@ -50,8 +50,14 @@ final readonly class RobotsTxt
             match ($directive) {
                 // Sitemap глобальна и не зависит от секции User-agent.
                 'sitemap' => $sitemaps[] = $value,
-                // Host убрана Яндексом в 2018-м, но продолжает жить в старых файлах.
-                'host', 'clean-param' => $deprecated[] = $line,
+                // Отменённые директивы: Host и Crawl-delay Яндекс перестал учитывать
+                // в 2018-м, но обе продолжают жить в старых файлах.
+                // Clean-param отсюда убрана: она действующая и Яндекс прямо просит
+                // «заполняйте её максимально полно и поддерживайте актуальность»
+                // (yandex.ru/support/webmaster/robot-workings/clean-param.html,
+                // проверено 06.09.2026). Несколько строк Clean-param в одной секции
+                // это норма, а не дубль.
+                'host', 'crawl-delay' => $deprecated[] = $line,
                 'user-agent' => $applies = ($value === '*' || mb_stripos($userAgent, $value) !== false),
                 'disallow' => $applies && $value !== '' ? $disallow[] = $value : null,
                 'allow' => $applies && $value !== '' ? $allow[] = $value : null,
