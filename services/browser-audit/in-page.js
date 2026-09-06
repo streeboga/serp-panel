@@ -152,7 +152,10 @@ export const collectorSource = `(() => {
     if (rect.width === 0 || rect.height === 0) return;
 
     // Ссылку внутри абзаца пальцем и не тыкают — она читается, а не нажимается.
-    if (el.tagName === 'A' && el.parentElement && /^(P|LI|SPAN|TD)$/.test(el.parentElement.tagName)) return;
+    // closest, а не parentElement: в <p><strong><a>…</a></strong></p> прямой
+    // родитель ссылки — STRONG, но текст всё тот же абзацный. Проверка по
+    // одному родителю считала такую ссылку самостоятельной целью нажатия.
+    if (el.tagName === 'A' && el.closest('p, li, span, td')) return;
 
     if (rect.width < 44 || rect.height < 44) {
       smallTargets.push({
