@@ -31,26 +31,21 @@ final class BrowserAuditJob implements ShouldQueue
     /** Браузер медленный: полминуты на страницу это норма, а не сбой. */
     public int $timeout = 120;
 
+    /**
+     * Обычное свойство со значением по умолчанию, а не продвинутый параметр:
+     * у продвинутого дефолт живёт на параметре конструктора, и джоба, снятая
+     * из очереди без этого поля, приезжала неинициализированной. Выкатка
+     * посреди прогона убивала так весь батч.
+     */
+    public string $viewport = 'mobile';
+
     public function __construct(
         public readonly int $resultId,
         public readonly string $url,
-        // Не readonly намеренно: __wakeup доинициализирует его для джоб,
-        // положенных в очередь до появления этого поля.
-        public string $viewport = 'mobile',
+        string $viewport = 'mobile',
     ) {
+        $this->viewport = $viewport;
         $this->onQueue('audit-browser');
-    }
-
-    /**
-     * Джоба, поставленная в очередь до появления $viewport, приезжает без него —
-     * выкатка посреди прогона убивала весь батч. Readonly-свойство можно
-     * доинициализировать здесь: мы в области видимости самого класса.
-     */
-    public function __wakeup(): void
-    {
-        if (! isset($this->viewport)) {
-            $this->viewport = 'mobile';
-        }
     }
 
     public function retryUntil(): DateTimeInterface

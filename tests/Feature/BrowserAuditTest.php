@@ -220,13 +220,9 @@ test('молчащий Lighthouse не пишет нулевую оценку', 
 });
 
 test('джоба из старой очереди не падает без вьюпорта', function () {
-    // Такой объект приезжает из очереди, если его положили туда до появления
-    // $viewport: свойство просто отсутствует в сериализации.
+    // Так выглядит объект, снятый из очереди без поля $viewport: конструктор
+    // не вызывался, и значение должно прийти из объявления свойства.
     $job = (new ReflectionClass(BrowserAuditJob::class))->newInstanceWithoutConstructor();
-
-    expect(fn () => $job->viewport)->toThrow(Error::class);
-
-    $job->__wakeup();
 
     expect($job->viewport)->toBe('mobile');
 });
