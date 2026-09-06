@@ -89,13 +89,15 @@ final class ValidateHtmlJob implements ShouldQueue
         }
 
         $result->update([
+            // Политика заглушения обязательна по той же причине, что и в
+            // BrowserAuditJob: пересборка находок из массивов теряет пометки muted.
             ...PageAuditor::summarize(array_map(
                 static fn (array $f): Finding => new Finding(
                     $f['check'], $f['code'], $f['category'],
                     Severity::from($f['severity']), $f['message'], $f['value'] ?? null, $f['expected'] ?? null,
                 ),
                 $findings,
-            )),
+            ), $result->audit->muted_codes ?? []),
             'metrics' => [...($result->metrics ?? []), 'w3c' => [
                 'errors' => count($outcome['errors']),
                 // Предпочтения линтера держим отдельно и находкой не считаем:

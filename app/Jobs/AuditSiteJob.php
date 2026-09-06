@@ -68,7 +68,7 @@ final class AuditSiteJob implements ShouldQueue
             ? $siteChecker->run($origin)
             : ['findings' => [], 'metrics' => [], 'robots' => RobotsTxt::missing(), 'sitemap_urls' => []];
 
-        $summary = PageAuditor::summarize($site['findings']);
+        $summary = PageAuditor::summarize($site['findings'], $audit->muted_codes ?? []);
 
         $urls = $urlSource->resolve($audit, $site['sitemap_urls'], $site['robots'], $origin);
 

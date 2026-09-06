@@ -72,13 +72,17 @@ final class BrowserAuditJob implements ShouldQueue
             ...array_map(static fn (Finding $f): array => $f->toArray(), $findings),
         ];
 
+        // Политику заглушения передаём обязательно: этап пересобирает находки из
+        // массивов, а вместе с ними теряются пометки muted, проставленные страничной
+        // джобой. Без неё двадцать страниц из 234 приходили в прогон с удвоенным
+        // счётчиком — ровно те, что дошли до браузера.
         $summary = PageAuditor::summarize(array_map(
             static fn (array $f): Finding => new Finding(
                 $f['check'], $f['code'], $f['category'],
                 Severity::from($f['severity']), $f['message'], $f['value'] ?? null, $f['expected'] ?? null,
             ),
             $merged,
-        ));
+        ), $result->audit->muted_codes ?? []);
 
         $result->update([
             ...$summary,

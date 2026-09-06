@@ -149,3 +149,36 @@ test('выключённый браузер ничего не запрашива
 
     Http::assertNothingSent();
 });
+
+test('браузерный этап не теряет пометки заглушённых находок', function () {
+    // Этап пересобирает находки из массивов, поэтому политику заглушения надо
+    // применять заново. Пока он этого не делал, страницы, дошедшие до браузера,
+    // приходили в прогон с удвоенным счётчиком: 20 из 234 на eq.team 06.09.2026.
+    $result = resultFor();
+    $result->audit->update(['muted_codes' => ['browser.contrast' => 'фон картинкой, замер недостоверен']]);
+
+    $result->update(['findings' => [[
+        'check' => 'content.nausea',
+        'code' => 'content.nausea.academic',
+        'category' => 'content',
+        'severity' => 'notice',
+        'message' => 'Академическая тошнота выше порога',
+        'value' => 41,
+        'expected' => 30,
+    ]]]);
+
+    Http::fake(['browser.test:8081/*' => Http::response(measurement(), 200)]);
+
+    (new BrowserAuditJob($result->id, $result->url))->handle(app(BrowserAudit::class), new BrowserFindings);
+
+    $result->refresh();
+
+    $muted = array_values(array_filter($result->findings, fn (array $f): bool => ($f['muted'] ?? false) === true));
+
+    expect(array_column($muted, 'code'))->toContain('browser.contrast')
+        ->and($result->issues_muted)->toBe(count($muted));
+
+    $visible = array_values(array_filter($result->findings, fn (array $f): bool => ($f['muted'] ?? false) !== true));
+
+    expect($result->issues_critical + $result->issues_warning + $result->issues_notice)->toBe(count($visible));
+});
