@@ -347,6 +347,20 @@ test('юридические: галочка согласия со ссылко�
     expect(app(PageAuditor::class)->audit(contextFor($html), [Category::LEGAL])['findings'])->toBe([]);
 });
 
+test('юридические: якорь оглавления со словом-маркером не заслоняет ссылку в подвале', function () {
+    // Регрессия eq.team 06.09.2026: оглавление статьи содержит «…конфиденциальная
+    // информация» с href="#…", а политика лежит ниже, в подвале. Проверка обязана
+    // дойти до подвала, а не остановиться на первом совпадении маркера.
+    $html = '<html lang="ru"><head><title>T</title></head><body>'
+        .'<nav><a href="#bezopasno">Не утечёт ли конфиденциальная информация</a></nav>'
+        .'<footer><a href="/privacy/">Политика обработки персональных данных</a></footer>'
+        .'</body></html>';
+
+    $outcome = app(PageAuditor::class)->audit(contextFor($html), [Category::LEGAL], ['legal.policy_link']);
+
+    expect(codes($outcome))->not->toContain('legal.policy_link.missing')
+        ->and($outcome['metrics']['policy_url'])->toContain('/privacy/');
+});
 test('аналитика и технологии определяются по разметке', function () {
     $html = '<html lang="ru"><head><title>T</title>'
         .'<script>ym(123, "init", {});</script></head>'

@@ -66,19 +66,41 @@ final class PolicyLinkCheck extends Check
             $href = mb_strtolower($node->getAttribute('href'));
             $text = mb_strtolower(trim($node->textContent));
 
-            foreach (self::HREF_MARKERS as $marker) {
-                if (str_contains($href, $marker)) {
-                    return $context->absolute($node->getAttribute('href'));
-                }
+            if (! $this->matches($href, self::HREF_MARKERS) && ! $this->matches($text, self::TEXT_MARKERS)) {
+                continue;
             }
 
-            foreach (self::TEXT_MARKERS as $marker) {
-                if (str_contains($text, $marker)) {
-                    return $context->absolute($node->getAttribute('href'));
-                }
+            $absolute = $context->absolute($node->getAttribute('href'));
+
+            /*
+             * Раньше здесь стоял return сразу после совпадения маркера, и первая же
+             * якорная ссылка оглавления с текстом вроде «…не утечёт ли конфиденциальная
+             * информация» отдавала null: absolute() не умеет разворачивать «#заголовок».
+             * Проверка объявляла «на странице нет ссылки на политику», хотя ссылка лежала
+             * в подвале ниже по документу. Поймано на eq.team 06.09.2026, три страницы
+             * из 247. Якорь внутри страницы политикой быть не может — идём дальше.
+             */
+            if ($absolute === null) {
+                continue;
             }
+
+            return $absolute;
         }
 
         return null;
+    }
+
+    /**
+     * @param  array<int, string>  $markers
+     */
+    private function matches(string $haystack, array $markers): bool
+    {
+        foreach ($markers as $marker) {
+            if (str_contains($haystack, $marker)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
