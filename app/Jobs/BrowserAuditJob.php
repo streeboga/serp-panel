@@ -34,7 +34,9 @@ final class BrowserAuditJob implements ShouldQueue
     public function __construct(
         public readonly int $resultId,
         public readonly string $url,
-        public readonly string $viewport = 'mobile',
+        // Не readonly намеренно: __wakeup доинициализирует его для джоб,
+        // положенных в очередь до появления этого поля.
+        public string $viewport = 'mobile',
     ) {
         $this->onQueue('audit-browser');
     }
