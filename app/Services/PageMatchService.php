@@ -71,11 +71,13 @@ final readonly class PageMatchService
                 if (! isset($pathMap[$normalizedPath])) {
                     $pathMap[$normalizedPath] = $existing->id;
                 }
+
                 continue;
             }
 
-            // Auto-create page
-            $page = $this->pageRepository->create([
+            // Создание переживает гонку: выдачу разбирают четыре воркера сразу,
+            // и проверка выше не защищает от одновременной вставки.
+            $page = $this->pageRepository->createOrFind([
                 'project_id' => $projectId,
                 'domain_id' => $domainId,
                 'url' => $result->url,
@@ -95,8 +97,8 @@ final readonly class PageMatchService
             }
 
             // Avoid duplicate matches
-            $matchKey = $pathMap[$normalizedPath] . ':' . $result->id;
-            $existingKeys = array_map(fn ($m) => $m['page_id'] . ':' . $m['serp_result_id'], $matches);
+            $matchKey = $pathMap[$normalizedPath].':'.$result->id;
+            $existingKeys = array_map(fn ($m) => $m['page_id'].':'.$m['serp_result_id'], $matches);
             if (in_array($matchKey, $existingKeys, true)) {
                 continue;
             }

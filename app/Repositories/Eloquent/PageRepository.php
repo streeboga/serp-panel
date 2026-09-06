@@ -9,6 +9,8 @@ use App\Contracts\Repositories\PageRepositoryInterface;
 use App\Models\Page;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 
 final class PageRepository implements PageRepositoryInterface
 {
@@ -67,6 +69,22 @@ final class PageRepository implements PageRepositoryInterface
     public function delete(Page $page): void
     {
         $page->delete();
+    }
+
+    /** @param array<string, mixed> $data */
+    public function createOrFind(array $data): Page
+    {
+        try {
+            // Вложенная транзакция ставит SAVEPOINT: после отката к нему внешняя
+            // транзакция остаётся рабочей. Без него Postgres блокирует все
+            // последующие запросы, и восстановиться уже нельзя.
+            return DB::transaction(static fn (): Page => Page::create($data));
+        } catch (UniqueConstraintViolationException) {
+            // Другой воркер успел вставить эту же страницу — берём его строку.
+            return Page::where('project_id', $data['project_id'])
+                ->where('url', $data['url'])
+                ->firstOrFail();
+        }
     }
 
     public function findByUrl(int $projectId, string $url): ?Page

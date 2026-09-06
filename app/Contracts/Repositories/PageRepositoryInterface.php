@@ -35,6 +35,14 @@ interface PageRepositoryInterface
 
     public function delete(Page $page): void;
 
+    /**
+     * Создаёт страницу, переживая гонку: несколько воркеров разбирают выдачу
+     * одновременно и могут наткнуться на один и тот же адрес.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function createOrFind(array $data): Page;
+
     public function findByUrl(int $projectId, string $url): ?Page;
 
     public function findByNormalizedPath(int $projectId, string $path): ?Page;
