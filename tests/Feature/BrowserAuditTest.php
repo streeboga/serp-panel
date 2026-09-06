@@ -60,17 +60,17 @@ function resultFor(): PageAuditResult
 }
 
 test('замеры браузера превращаются в находки', function () {
-    $findings = (new BrowserFindings)->from(measurement());
+    $findings = (new BrowserFindings)->forViewport('mobile')->from(measurement());
     $codes = array_map(fn ($f) => $f->code, $findings);
 
-    expect($codes)->toContain('browser.cls', 'browser.lcp', 'browser.contrast', 'browser.small_text');
+    expect($codes)->toContain('browser.mobile.cls', 'browser.mobile.lcp', 'browser.mobile.contrast', 'browser.mobile.small_text');
 
-    $cls = collect($findings)->firstWhere('code', 'browser.cls');
+    $cls = collect($findings)->firstWhere('code', 'browser.mobile.cls');
     // CLS 0.31 выше критического порога, и виновник должен приехать вместе с числом.
     expect($cls->severity->value)->toBe('critical')
         ->and($cls->value['виновники'][0]['element'])->toBe('img.hero');
 
-    $lcp = collect($findings)->firstWhere('code', 'browser.lcp');
+    $lcp = collect($findings)->firstWhere('code', 'browser.mobile.lcp');
     expect($lcp->severity->value)->toBe('critical')
         ->and($lcp->value['элемент'])->toBe('h1.title');
 });
@@ -85,7 +85,7 @@ test('хорошая страница не даёт браузерных нах�
     $good['contrast']['violations'] = [];
     $good['small_text'] = [];
 
-    expect((new BrowserFindings)->from($good))->toBe([]);
+    expect((new BrowserFindings)->forViewport('mobile')->from($good))->toBe([]);
 });
 
 test('находки доливаются в результат страницы, не затирая прежние', function () {
@@ -103,9 +103,9 @@ test('находки доливаются в результат страницы
     $codes = array_column($fresh->findings, 'code');
 
     expect($codes)->toContain('meta.title.long')
-        ->and($codes)->toContain('browser.cls')
+        ->and($codes)->toContain('browser.mobile.cls')
         ->and($fresh->metrics['title'])->toBe('Заголовок')
-        ->and($fresh->metrics['browser']['contrast']['unchecked_reasons'])
+        ->and($fresh->metrics['browser']['mobile']['contrast']['unchecked_reasons'])
         ->toBe(['фон картинкой или градиентом' => 3]);
 
     // Счётчики пересчитаны с учётом обеих групп.
@@ -123,7 +123,7 @@ test('повторный замер не плодит дубли находок'
 
     $codes = array_column($result->refresh()->findings, 'code');
 
-    expect(array_count_values($codes)['browser.cls'])->toBe(1);
+    expect(array_count_values($codes)['browser.mobile.cls'])->toBe(1);
 });
 
 test('недоступный сервис оставляет страницу непроверенной, а не чистой', function () {
@@ -155,7 +155,7 @@ test('браузерный этап не теряет пометки заглу�
     // применять заново. Пока он этого не делал, страницы, дошедшие до браузера,
     // приходили в прогон с удвоенным счётчиком: 20 из 234 на eq.team 06.09.2026.
     $result = resultFor();
-    $result->audit->update(['muted_codes' => ['browser.contrast' => 'фон картинкой, замер недостоверен']]);
+    $result->audit->update(['muted_codes' => ['browser.mobile.contrast' => 'фон картинкой, замер недостоверен']]);
 
     $result->update(['findings' => [[
         'check' => 'content.nausea',
@@ -175,7 +175,7 @@ test('браузерный этап не теряет пометки заглу�
 
     $muted = array_values(array_filter($result->findings, fn (array $f): bool => ($f['muted'] ?? false) === true));
 
-    expect(array_column($muted, 'code'))->toContain('browser.contrast')
+    expect(array_column($muted, 'code'))->toContain('browser.mobile.contrast')
         ->and($result->issues_muted)->toBe(count($muted));
 
     $visible = array_values(array_filter($result->findings, fn (array $f): bool => ($f['muted'] ?? false) !== true));

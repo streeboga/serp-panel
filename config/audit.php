@@ -60,7 +60,9 @@ return [
         'token' => env('AUDIT_BROWSER_TOKEN'),
         'timeout' => (int) env('AUDIT_BROWSER_TIMEOUT', 90),
         'max_pages' => (int) env('AUDIT_BROWSER_MAX_PAGES', 20),
-        'viewport' => env('AUDIT_BROWSER_VIEWPORT', 'mobile'),
+        // ТЗ требует замеров и на десктопе, и на мобильных: каждый вьюпорт — свой
+        // проход браузера, поэтому список, а не одно значение.
+        'viewports' => array_filter(explode(',', (string) env('AUDIT_BROWSER_VIEWPORTS', 'mobile,desktop'))),
     ],
 
     /*

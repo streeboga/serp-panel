@@ -34,6 +34,7 @@ final class BrowserAuditJob implements ShouldQueue
     public function __construct(
         public readonly int $resultId,
         public readonly string $url,
+        public readonly string $viewport = 'mobile',
     ) {
         $this->onQueue('audit-browser');
     }
@@ -49,7 +50,7 @@ final class BrowserAuditJob implements ShouldQueue
             return;
         }
 
-        $measurement = $browser->measure($this->url, (string) config('audit.browser.viewport'));
+        $measurement = $browser->measure($this->url, $this->viewport);
 
         // Сервис недоступен — это «не проверено». Молча писать «нарушений нет»
         // нельзя: страница осталась непроверенной, а выглядела бы чистой.
@@ -63,11 +64,16 @@ final class BrowserAuditJob implements ShouldQueue
             return;
         }
 
-        $findings = (new BrowserFindings)->from($measurement);
+        $findings = $mapper->forViewport($this->viewport)->from($measurement);
+
+        // Свои прошлые находки убираем, чужой вьюпорт не трогаем: мобильный и
+        // десктопный замеры живут в одной записи и не должны затирать друг друга.
+        $prefix = "browser.{$this->viewport}.";
+
         $merged = [
             ...array_values(array_filter(
                 $result->findings ?? [],
-                static fn (array $f): bool => ! str_starts_with((string) ($f['check'] ?? ''), 'browser.'),
+                static fn (array $f): bool => ! str_starts_with((string) ($f['check'] ?? ''), $prefix),
             )),
             ...array_map(static fn (Finding $f): array => $f->toArray(), $findings),
         ];
@@ -86,7 +92,7 @@ final class BrowserAuditJob implements ShouldQueue
 
         $result->update([
             ...$summary,
-            'metrics' => [...($result->metrics ?? []), 'browser' => [
+            'metrics' => [...($result->metrics ?? []), 'browser' => [...(($result->metrics ?? [])['browser'] ?? []), $this->viewport => [
                 'cls' => $measurement['cls']['value'] ?? null,
                 'lcp' => $measurement['paint']['lcp'] ?? null,
                 'fcp' => $measurement['paint']['fcp'] ?? null,
@@ -96,7 +102,7 @@ final class BrowserAuditJob implements ShouldQueue
                     'unchecked' => $measurement['contrast']['unchecked'] ?? 0,
                     'unchecked_reasons' => $measurement['contrast']['unchecked_reasons'] ?? [],
                 ],
-            ]],
+            ]]],
         ]);
     }
 }

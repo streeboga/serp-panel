@@ -95,7 +95,9 @@ final class RunBrowserStageJob implements ShouldQueue
 
         foreach ($targets as $target) {
             if ($browser->enabled()) {
-                $jobs[] = new BrowserAuditJob($target->id, $target->url);
+                foreach ((array) config('audit.browser.viewports', ['mobile']) as $viewport) {
+                    $jobs[] = new BrowserAuditJob($target->id, $target->url, trim((string) $viewport));
+                }
             }
 
             if ($validator->enabled()) {

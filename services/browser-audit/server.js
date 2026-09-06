@@ -10,6 +10,7 @@ const PAGES_BEFORE_RESTART = Number(process.env.PAGES_BEFORE_RESTART || 40);
 
 const VIEWPORTS = {
   desktop: { width: 1366, height: 900, isMobile: false },
+  tablet: { width: 820, height: 1180, isMobile: true },
   mobile: { width: 390, height: 844, isMobile: true },
 };
 

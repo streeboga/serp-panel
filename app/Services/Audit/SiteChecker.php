@@ -140,8 +140,23 @@ final class SiteChecker
                 'В карте сайта есть дублирующиеся URL', $duplicates, 0);
         }
 
+        $withLastmod = array_sum(array_column($sitemaps, 'with_lastmod'));
+        $future = array_sum(array_column($sitemaps, 'future_lastmod'));
+        $total = count($urls);
+
+        if ($total > 0 && $withLastmod === 0) {
+            $findings[] = $this->finding('site.sitemap.no_lastmod', Severity::Notice,
+                'Ни у одного адреса в карте сайта нет даты изменения — поисковику нечем понять, что перечитывать',
+                0, 'lastmod у каждого URL');
+        } elseif ($future > 0) {
+            $findings[] = $this->finding('site.sitemap.future_lastmod', Severity::Warning,
+                'Даты изменения в карте сайта стоят в будущем — такой карте поисковик перестаёт верить',
+                $future, 0);
+        }
+
         return [$urls, $findings, [
             'sitemap_urls_count' => count($urls),
+            'sitemap_with_lastmod' => $withLastmod,
             'sitemaps' => $sitemaps,
         ]];
     }

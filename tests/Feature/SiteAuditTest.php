@@ -555,3 +555,37 @@ test('граф ссылок даёт глубину, сирот и входящ�
         ->and($orphan->depth)->toBeNull()
         ->and($orphan->inbound_links)->toBe(0);
 });
+
+test('карта сайта без дат изменения', function () {
+    $sitemap = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        .'<url><loc>https://test.com/a/</loc></url></urlset>';
+
+    Http::fake([
+        'test.com/robots.txt' => Http::response('', 404),
+        'test.com/sitemap.xml' => Http::response($sitemap, 200, ['Content-Type' => 'application/xml']),
+        '*' => Http::response(goodPage(), 200, ['Content-Type' => 'text/html']),
+    ]);
+
+    $codes = array_map(fn ($f) => $f->check, app(SiteChecker::class)->run('https://test.com')['findings']);
+
+    expect($codes)->toContain('site.sitemap.no_lastmod');
+});
+
+test('даты изменения из будущего', function () {
+    // Http::fake повторным вызовом не заменяет шаблоны, а дополняет — поэтому
+    // отдельным тестом, а не вторым фейком внутри первого.
+    $future = date('Y-m-d', strtotime('+30 days'));
+    $sitemap = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        ."<url><loc>https://test.com/a/</loc><lastmod>{$future}</lastmod></url></urlset>";
+
+    Http::fake([
+        'test.com/robots.txt' => Http::response('', 404),
+        'test.com/sitemap.xml' => Http::response($sitemap, 200, ['Content-Type' => 'application/xml']),
+        '*' => Http::response(goodPage(), 200, ['Content-Type' => 'text/html']),
+    ]);
+
+    $codes = array_map(fn ($f) => $f->check, app(SiteChecker::class)->run('https://test.com')['findings']);
+
+    expect($codes)->toContain('site.sitemap.future_lastmod')
+        ->and($codes)->not->toContain('site.sitemap.no_lastmod');
+});

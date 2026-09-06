@@ -14,6 +14,16 @@ use SerpAudit\Severity;
  */
 final class BrowserFindings
 {
+    private string $viewport = 'mobile';
+
+    public function forViewport(string $viewport): self
+    {
+        $clone = clone $this;
+        $clone->viewport = $viewport;
+
+        return $clone;
+    }
+
     private const CLS_WARNING = 0.1;
 
     private const CLS_CRITICAL = 0.25;
@@ -150,6 +160,10 @@ final class BrowserFindings
 
     private function make(string $code, Severity $severity, string $category, string $message, mixed $value = null, mixed $expected = null): Finding
     {
-        return new Finding($code, $code, $category, $severity, $message, $value, $expected);
+        // browser.mobile.cls и browser.desktop.cls — разные дефекты: вёрстка
+        // может ехать только на телефоне, и сваливать их в один код нельзя.
+        $scoped = str_replace('browser.', "browser.{$this->viewport}.", $code);
+
+        return new Finding($scoped, $scoped, $category, $severity, $message, $value, $expected);
     }
 }

@@ -21,7 +21,7 @@ final class SitemapReader
     /**
      * @return array{
      *     urls: array<int, string>,
-     *     sitemaps: array<int, array{url: string, found: bool, urls: int, duplicates: int, error: string|null}>,
+     *     sitemaps: array<int, array{url: string, found: bool, urls: int, duplicates: int, with_lastmod?: int, future_lastmod?: int, error: string|null}>,
      *     duplicates: int
      * }
      */
@@ -84,6 +84,9 @@ final class SitemapReader
             }
         }
 
+        $withLastmod = 0;
+        $futureLastmod = 0;
+
         foreach ($xml->url as $node) {
             $location = trim((string) $node->loc);
 
@@ -98,6 +101,22 @@ final class SitemapReader
             }
 
             $ownUrls[] = $location;
+
+            // lastmod нужен поисковику, чтобы понять, что перечитывать.
+            $lastmod = trim((string) $node->lastmod);
+
+            if ($lastmod === '') {
+                continue;
+            }
+
+            $withLastmod++;
+            $time = strtotime($lastmod);
+
+            // Дата из будущего — верный признак, что её проставляют генератором,
+            // а не по факту правки: поисковик такой карте перестаёт верить.
+            if ($time !== false && $time > time() + 86400) {
+                $futureLastmod++;
+            }
         }
 
         $duplicates += $ownDuplicates;
@@ -108,6 +127,8 @@ final class SitemapReader
             'found' => true,
             'urls' => count($ownUrls),
             'duplicates' => $ownDuplicates,
+            'with_lastmod' => $withLastmod,
+            'future_lastmod' => $futureLastmod,
             'error' => null,
         ];
 
