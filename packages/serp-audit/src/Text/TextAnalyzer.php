@@ -146,6 +146,43 @@ final class TextAnalyzer
         return $density;
     }
 
+    /**
+     * Индекс удобочитаемости Флеша в адаптации Оборневой для русского языка:
+     * коэффициенты у русского другие, английские дают заниженный результат
+     * из-за более длинных слов.
+     *
+     * 100 — предельно просто, 0 — научная статья. Ниже 30 текст тяжёлый.
+     *
+     * @return array{score: float|null, sentences: int, words_per_sentence: float, syllables_per_word: float}
+     */
+    public function readability(string $text): array
+    {
+        $sentences = preg_split('/[.!?…]+(?:\s|$)/u', $text, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+        $sentences = array_values(array_filter($sentences, static fn (string $s): bool => trim($s) !== ''));
+        $words = $this->words($text);
+
+        // На коротком тексте формула шумит: скажем «не проверено», а не соврём.
+        if (count($sentences) < 3 || count($words) < 100) {
+            return ['score' => null, 'sentences' => count($sentences), 'words_per_sentence' => 0.0, 'syllables_per_word' => 0.0];
+        }
+
+        $syllables = 0;
+
+        foreach ($words as $word) {
+            $syllables += max(1, preg_match_all('/[аеёиоуыэюяaeiouy]/u', $word));
+        }
+
+        $wordsPerSentence = count($words) / count($sentences);
+        $syllablesPerWord = $syllables / count($words);
+
+        return [
+            'score' => round(206.835 - 1.3 * $wordsPerSentence - 60.1 * $syllablesPerWord, 1),
+            'sentences' => count($sentences),
+            'words_per_sentence' => round($wordsPerSentence, 1),
+            'syllables_per_word' => round($syllablesPerWord, 2),
+        ];
+    }
+
     /** Все ли значимые слова фразы встречаются в тексте (сравнение по стемам). */
     public function phraseCoverage(string $phrase, string $haystack): float
     {

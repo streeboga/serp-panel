@@ -38,6 +38,7 @@ final class BrowserFindings
             ...$this->paint($measurement),
             ...$this->contrast($measurement),
             ...$this->smallText($measurement),
+            ...$this->touchTargets($measurement),
         ];
     }
 
@@ -125,6 +126,26 @@ final class BrowserFindings
 
         return [$this->make('browser.small_text', Severity::Notice, Category::A11Y,
             'Текст мельче 12px — на телефоне не читается', $small, 'от 16px')];
+    }
+
+    /**
+     * Требование 1.3 ТЗ: размер кликабельных элементов. Считается по фактической
+     * геометрии в браузере — из разметки этого не узнать.
+     *
+     * @param  array<string, mixed>  $measurement
+     * @return array<int, Finding>
+     */
+    private function touchTargets(array $measurement): array
+    {
+        $small = $measurement['small_targets'] ?? [];
+
+        if ($small === []) {
+            return [];
+        }
+
+        return [$this->make('browser.touch_targets', Severity::Warning, Category::A11Y,
+            'Кликабельные элементы мельче 44×44 — пальцем в них не попасть',
+            array_slice($small, 0, 10), '44×44 px')];
     }
 
     private function make(string $code, Severity $severity, string $category, string $message, mixed $value = null, mixed $expected = null): Finding

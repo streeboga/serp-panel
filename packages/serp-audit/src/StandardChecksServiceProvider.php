@@ -12,17 +12,22 @@ use SerpAudit\Checks\A11y\LandmarkCheck;
 use SerpAudit\Checks\A11y\SkipLinkCheck;
 use SerpAudit\Checks\A11y\TableHeaderCheck;
 use SerpAudit\Checks\Content\NauseaCheck;
+use SerpAudit\Checks\Content\ReadabilityCheck;
 use SerpAudit\Checks\Content\RelevanceCheck;
 use SerpAudit\Checks\Content\TextCheck;
 use SerpAudit\Checks\Content\WaterCheck;
 use SerpAudit\Checks\Http\AnalyticsCheck;
 use SerpAudit\Checks\Http\AssetsCheck;
+use SerpAudit\Checks\Http\CachingCheck;
+use SerpAudit\Checks\Http\IndexingHeaderCheck;
+use SerpAudit\Checks\Http\MixedContentCheck;
 use SerpAudit\Checks\Http\PayloadCheck;
 use SerpAudit\Checks\Http\RedirectCheck;
 use SerpAudit\Checks\Http\SecurityHeadersCheck;
 use SerpAudit\Checks\Http\StatusCheck;
 use SerpAudit\Checks\Http\TechnologyCheck;
 use SerpAudit\Checks\Images\AltCheck;
+use SerpAudit\Checks\Images\DeliveryCheck;
 use SerpAudit\Checks\Images\SourceCheck;
 use SerpAudit\Checks\Legal\ConsentCheck;
 use SerpAudit\Checks\Legal\PolicyLinkCheck;
@@ -36,6 +41,7 @@ use SerpAudit\Checks\Meta\LanguageCheck;
 use SerpAudit\Checks\Meta\LegacyCheck;
 use SerpAudit\Checks\Meta\SocialCheck;
 use SerpAudit\Checks\Meta\TitleCheck;
+use SerpAudit\Checks\Meta\UrlStructureCheck;
 use SerpAudit\Text\TextAnalyzer;
 
 /**
@@ -53,6 +59,11 @@ final class StandardChecksServiceProvider extends ServiceProvider
         AnalyticsCheck::class,
         TechnologyCheck::class,
         AssetsCheck::class,
+        CachingCheck::class,
+        IndexingHeaderCheck::class,
+        MixedContentCheck::class,
+        UrlStructureCheck::class,
+        DeliveryCheck::class,
         LandmarkCheck::class,
         SkipLinkCheck::class,
         DuplicateIdCheck::class,
@@ -81,6 +92,7 @@ final class StandardChecksServiceProvider extends ServiceProvider
         WaterCheck::class,
         NauseaCheck::class,
         RelevanceCheck::class,
+        ReadabilityCheck::class,
     ];
 
     public function register(): void

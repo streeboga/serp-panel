@@ -140,6 +140,30 @@ export const collectorSource = `(() => {
   contrast.violations.sort((a, b) => a.ratio - b.ratio);
   contrast.violations = contrast.violations.slice(0, 25);
 
+  // Размер кликабельных зон: пальцем в цель мельче 44×44 не попасть.
+  // Требование 1.3 ТЗ; считается только в браузере, по фактической геометрии.
+  const smallTargets = [];
+  document.querySelectorAll('a[href], button, input:not([type=hidden]), select, [role=button]').forEach((el) => {
+    const style = getComputedStyle(el);
+    if (style.display === 'none' || style.visibility === 'hidden') return;
+    if (el.getAttribute('aria-hidden') === 'true' || el.tabIndex === -1) return;
+
+    const rect = el.getBoundingClientRect();
+    if (rect.width === 0 || rect.height === 0) return;
+
+    // Ссылку внутри абзаца пальцем и не тыкают — она читается, а не нажимается.
+    if (el.tagName === 'A' && el.parentElement && /^(P|LI|SPAN|TD)$/.test(el.parentElement.tagName)) return;
+
+    if (rect.width < 44 || rect.height < 44) {
+      smallTargets.push({
+        selector: selectorFor(el),
+        text: (el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 40),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      });
+    }
+  });
+
   // Мелкий шрифт на мобильном — из отчётов gvozd про мобильные данные.
   const smallText = [];
   document.querySelectorAll('p, li, td, span, div').forEach((el) => {
@@ -152,6 +176,7 @@ export const collectorSource = `(() => {
 
   return {
     contrast,
+    small_targets: smallTargets.slice(0, 15),
     small_text: smallText.slice(0, 10),
     cls: window.__clsReport || { value: 0, sources: [] },
     paint: window.__paintReport || {},
