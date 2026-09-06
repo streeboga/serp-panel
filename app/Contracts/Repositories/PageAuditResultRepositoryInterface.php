@@ -6,6 +6,7 @@ namespace App\Contracts\Repositories;
 
 use App\Models\PageAuditResult;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\LazyCollection;
 
 interface PageAuditResultRepositoryInterface
 {
@@ -22,6 +23,14 @@ interface PageAuditResultRepositoryInterface
      * @return array<int, array{value: string, urls: array<int, string>}>
      */
     public function duplicatesByMetric(int $auditId, string $metric, int $minLength = 10): array;
+
+    /**
+     * Результаты прогона курсором: выгрузки на тысячах страниц не должны
+     * материализовывать всё в память.
+     *
+     * @return LazyCollection<int, PageAuditResult>
+     */
+    public function lazyForAudit(int $auditId): LazyCollection;
 
     public function latestForPage(int $pageId): ?PageAuditResult;
 

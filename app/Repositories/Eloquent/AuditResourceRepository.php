@@ -8,6 +8,7 @@ use App\Contracts\Repositories\AuditResourceRepositoryInterface;
 use App\Models\AuditResource;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\LazyCollection;
 
 final class AuditResourceRepository implements AuditResourceRepositoryInterface
 {
@@ -86,6 +87,15 @@ final class AuditResourceRepository implements AuditResourceRepositoryInterface
             ->where(fn ($q) => $q->where('status', '>=', 400)->orWhereNull('status'))
             ->orderByDesc('reference_count')
             ->get();
+    }
+
+    /** @return LazyCollection<int, AuditResource> */
+    public function lazyForAudit(int $auditId): LazyCollection
+    {
+        return AuditResource::query()
+            ->where('site_audit_id', $auditId)
+            ->orderBy('id')
+            ->cursor();
     }
 
     /** @return array{checked: int, broken: int, bytes: int, heaviest: array<int, array{url: string, bytes: int}>} */

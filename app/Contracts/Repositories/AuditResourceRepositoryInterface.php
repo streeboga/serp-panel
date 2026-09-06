@@ -6,6 +6,7 @@ namespace App\Contracts\Repositories;
 
 use App\Models\AuditResource;
 use Illuminate\Support\Collection;
+use Illuminate\Support\LazyCollection;
 
 interface AuditResourceRepositoryInterface
 {
@@ -25,6 +26,13 @@ interface AuditResourceRepositoryInterface
 
     /** @return Collection<int, AuditResource> */
     public function broken(int $auditId): Collection;
+
+    /**
+     * Все ресурсы прогона курсором — для выгрузки.
+     *
+     * @return LazyCollection<int, AuditResource>
+     */
+    public function lazyForAudit(int $auditId): LazyCollection;
 
     /** @return array{checked: int, broken: int, bytes: int, heaviest: array<int, array{url: string, bytes: int}>} */
     public function summary(int $auditId): array;

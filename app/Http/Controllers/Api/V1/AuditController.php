@@ -11,6 +11,7 @@ use App\Http\Resources\SiteAuditResource;
 use App\Models\Page;
 use App\Models\Project;
 use App\Models\SiteAudit;
+use App\Services\AuditExportService;
 use App\Services\SiteAuditService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
@@ -20,6 +21,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Validation\Rule;
 use SerpAudit\CheckRegistry;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 #[Group(name: 'Аудит сайта', description: 'Проверка сайта целиком или постранично: технические данные, мета-теги, контент, ссылки, изображения', weight: 6)]
 final class AuditController extends Controller
@@ -27,6 +29,7 @@ final class AuditController extends Controller
     public function __construct(
         private readonly SiteAuditService $service,
         private readonly CheckRegistry $registry,
+        private readonly AuditExportService $exports,
     ) {}
 
     /**
@@ -189,6 +192,54 @@ final class AuditController extends Controller
     public function checks(): JsonResponse
     {
         return response()->json(['data' => $this->registry->catalog()]);
+    }
+
+    /**
+     * Выгрузка прогона в CSV
+     *
+     * Наборы: `pages` — все проверенные URL с кодами ответов, `meta` — Title,
+     * Description и заголовки, `broken` — битые ссылки и файлы, `findings` —
+     * все находки построчно. Ровно те выгрузки, которые просят в закупках.
+     */
+    #[PathParameter('audit', description: 'ID прогона', example: '1')]
+    #[PathParameter('dataset', description: 'Набор: pages, meta, broken, findings', example: 'pages')]
+    #[Response(200, description: 'CSV-файл')]
+    #[Response(404, description: 'Неизвестный набор')]
+    public function export(Request $request, SiteAudit $audit, string $dataset): StreamedResponse
+    {
+        $this->authorizeAudit($request, $audit);
+
+        abort_unless(array_key_exists($dataset, $this->exports->datasets()), 404);
+
+        $rows = $this->exports->dataset($audit, $dataset);
+
+        return response()->streamDownload(function () use ($rows): void {
+            $handle = fopen('php://output', 'w');
+
+            if ($handle === false) {
+                return;
+            }
+
+            // BOM и точка с запятой — иначе русский Excel покажет кракозябры
+            // и свалит всю строку в одну ячейку.
+            fwrite($handle, "\xEF\xBB\xBF");
+
+            $headerWritten = false;
+
+            foreach ($rows as $row) {
+                if (! $headerWritten) {
+                    fputcsv($handle, array_keys($row), ';');
+                    $headerWritten = true;
+                }
+
+                fputcsv($handle, array_map(
+                    static fn ($value) => is_bool($value) ? ($value ? 'да' : 'нет') : $value,
+                    $row,
+                ), ';');
+            }
+
+            fclose($handle);
+        }, "audit-{$audit->id}-{$dataset}.csv", ['Content-Type' => 'text/csv; charset=utf-8']);
     }
 
     private function authorizeProject(Request $request, Project $project): void

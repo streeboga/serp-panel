@@ -9,6 +9,7 @@ use App\Models\PageAuditResult;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\LazyCollection;
 
 final class PageAuditResultRepository implements PageAuditResultRepositoryInterface
 {
@@ -75,6 +76,15 @@ final class PageAuditResultRepository implements PageAuditResultRepositoryInterf
             'value' => (string) $row->value,
             'urls' => array_slice(explode("\n", (string) $row->urls), 0, 10),
         ])->all();
+    }
+
+    /** @return LazyCollection<int, PageAuditResult> */
+    public function lazyForAudit(int $auditId): LazyCollection
+    {
+        return PageAuditResult::query()
+            ->where('site_audit_id', $auditId)
+            ->orderBy('id')
+            ->cursor();
     }
 
     public function latestForPage(int $pageId): ?PageAuditResult

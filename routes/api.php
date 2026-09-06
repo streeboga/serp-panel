@@ -270,6 +270,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::get('audits/{audit}', [AuditController::class, 'show']);
         Route::get('audits/{audit}/results', [AuditController::class, 'results']);
         Route::get('pages/{page}/audit', [AuditController::class, 'pageAudit']);
+        Route::get('audits/{audit}/export/{dataset}', [AuditController::class, 'export']);
 
         // Аудит сайта — write (manager+)
         Route::middleware('org.role:manager')->group(function () {
