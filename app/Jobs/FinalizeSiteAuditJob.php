@@ -11,6 +11,7 @@ use App\Contracts\Repositories\SiteAuditRepositoryInterface;
 use App\Enums\AuditStatus;
 use App\Models\PageAuditResult;
 use App\Services\Audit\LinkGraph;
+use App\Services\Audit\SiteStructure;
 use App\Support\MutedCodes;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -58,7 +59,10 @@ final class FinalizeSiteAuditJob implements ShouldQueue
             $audit->findings ?? [],
             static fn (array $f): bool => ! str_starts_with((string) ($f['check'] ?? ''), 'site.resources')
                 && ! str_starts_with((string) ($f['check'] ?? ''), 'site.duplicate')
-                && ! str_starts_with((string) ($f['check'] ?? ''), 'site.structure'),
+                && ! str_starts_with((string) ($f['check'] ?? ''), 'site.structure')
+                && ! str_starts_with((string) ($f['check'] ?? ''), 'site.anchors')
+                && ! str_starts_with((string) ($f['check'] ?? ''), 'site.params')
+                && ! str_starts_with((string) ($f['check'] ?? ''), 'site.near_duplicate'),
         ));
 
         $siteFindings = [
@@ -66,6 +70,7 @@ final class FinalizeSiteAuditJob implements ShouldQueue
             ...$this->resourceFindings($resources, $audit->id),
             ...$this->duplicateFindings($results, $audit->id),
             ...$this->structureFindings($links, $audit->id),
+            ...$this->crossPageFindings($links, $audit->id),
         ];
 
         // Политика заглушения — та, что записана в прогоне при запуске. Находки
@@ -107,6 +112,69 @@ final class FinalizeSiteAuditJob implements ShouldQueue
         ]);
 
         Log::info("AuditSiteJob batch complete: audit {$audit->id} — {$aggregate['pages']} страниц, оценка {$score}");
+    }
+
+    /**
+     * Разборы, которые видны только на сайте целиком: анкор-лист, дубли из-за
+     * параметров, почти совпадающие заголовки.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function crossPageFindings(AuditLinkRepositoryInterface $links, int $auditId): array
+    {
+        $structure = new SiteStructure;
+        $findings = [];
+
+        $anchors = $structure->anchors($links->anchorsByTarget($auditId));
+
+        if ($anchors['spam'] !== []) {
+            $findings[] = $this->siteFinding(
+                'site.anchors.spam',
+                'links',
+                'warning',
+                'Однообразный анкор-лист: почти все ссылки на адрес идут одним текстом',
+                array_slice($anchors['spam'], 0, 15),
+                'разные анкоры',
+            );
+        }
+
+        $rows = PageAuditResult::where('site_audit_id', $auditId)->get(['url', 'metrics']);
+
+        $duplicates = $structure->parameterDuplicates($rows->pluck('url')->all());
+
+        if ($duplicates !== []) {
+            $findings[] = $this->siteFinding(
+                'site.params.duplicates',
+                'meta',
+                'warning',
+                'Один адрес открывается с разным набором параметров — в индекс попадут дубли',
+                array_slice($duplicates, 0, 10),
+                'canonical или запрет в robots.txt',
+            );
+        }
+
+        foreach (['title' => 'title', 'description' => 'description'] as $metric => $label) {
+            $values = $rows
+                ->map(fn (PageAuditResult $r): array => ['url' => $r->url, 'value' => (string) ($r->metrics[$metric] ?? '')])
+                ->filter(fn (array $row): bool => $row['value'] !== '')
+                ->values()
+                ->all();
+
+            $near = $structure->nearDuplicates($values);
+
+            if ($near !== []) {
+                $findings[] = $this->siteFinding(
+                    "site.near_duplicate.{$metric}",
+                    'meta',
+                    'notice',
+                    "Почти одинаковый {$label} на разных страницах",
+                    $near,
+                    'заметно различающиеся',
+                );
+            }
+        }
+
+        return $findings;
     }
 
     /**

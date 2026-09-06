@@ -11,6 +11,7 @@ use SerpAudit\Checks\A11y\FormLabelCheck;
 use SerpAudit\Checks\A11y\LandmarkCheck;
 use SerpAudit\Checks\A11y\SkipLinkCheck;
 use SerpAudit\Checks\A11y\TableHeaderCheck;
+use SerpAudit\Checks\Content\KeywordPlacementCheck;
 use SerpAudit\Checks\Content\NauseaCheck;
 use SerpAudit\Checks\Content\ReadabilityCheck;
 use SerpAudit\Checks\Content\RelevanceCheck;
@@ -39,6 +40,7 @@ use SerpAudit\Checks\Meta\HeadingsCheck;
 use SerpAudit\Checks\Meta\IndexingCheck;
 use SerpAudit\Checks\Meta\LanguageCheck;
 use SerpAudit\Checks\Meta\LegacyCheck;
+use SerpAudit\Checks\Meta\SchemaCheck;
 use SerpAudit\Checks\Meta\SocialCheck;
 use SerpAudit\Checks\Meta\TitleCheck;
 use SerpAudit\Checks\Meta\UrlStructureCheck;
@@ -63,6 +65,7 @@ final class StandardChecksServiceProvider extends ServiceProvider
         IndexingHeaderCheck::class,
         MixedContentCheck::class,
         UrlStructureCheck::class,
+        SchemaCheck::class,
         DeliveryCheck::class,
         LandmarkCheck::class,
         SkipLinkCheck::class,
@@ -93,6 +96,7 @@ final class StandardChecksServiceProvider extends ServiceProvider
         NauseaCheck::class,
         RelevanceCheck::class,
         ReadabilityCheck::class,
+        KeywordPlacementCheck::class,
     ];
 
     public function register(): void
