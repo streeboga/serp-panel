@@ -18,3 +18,6 @@ Schedule::command('domains:classify')->dailyAt('05:00');
 // Drip Wordstat collection so it stays within the 100 req/hour quota and always
 // works the stalest phrases first (wordstat:check remains for manual full runs).
 Schedule::command('wordstat:drip')->everyFifteenMinutes();
+
+// Потерянный батч не вызывает finally, и прогон висит в «идёт» бесконечно.
+Schedule::command('audit:finalize-stuck')->everyThirtyMinutes();
