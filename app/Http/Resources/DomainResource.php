@@ -32,6 +32,9 @@ final class DomainResource extends JsonApiResource
             'site_type_id' => $this->whenLoaded('classification', fn () => $this->resource->classification?->site_type_id),
             'site_type' => $this->whenLoaded('classification', fn () => $this->resource->classification?->siteType?->name),
             'indexed_pages_count' => $this->indexed_pages_count,
+            'webmaster_host_id' => $this->webmaster_host_id,
+            'search_console_site' => $this->search_console_site,
+            'metrika_counter_id' => $this->metrika_counter_id,
             'tags' => $this->resource->tags->map(fn ($tag) => [
                 'id' => $tag->id,
                 'name' => $tag->name,

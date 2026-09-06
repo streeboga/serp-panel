@@ -21,6 +21,9 @@ use Spatie\Tags\HasTags;
  * @property DomainType $type
  * @property int|null $parent_id
  * @property int|null $indexed_pages_count
+ * @property string|null $webmaster_host_id
+ * @property string|null $search_console_site
+ * @property int|null $metrika_counter_id
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property-read Project $project
@@ -37,6 +40,7 @@ final class Domain extends Model
     protected $fillable = [
         'project_id', 'name', 'is_own',
         'type', 'parent_id', 'indexed_pages_count',
+        'webmaster_host_id', 'search_console_site', 'metrika_counter_id',
         'index_batch_id',
     ];
 

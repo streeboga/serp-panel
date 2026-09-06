@@ -19,6 +19,7 @@ import { Route as SchedulesIndexRouteImport } from './routes/schedules/index'
 import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as ClassificationIndexRouteImport } from './routes/classification/index'
 import { Route as AlertsIndexRouteImport } from './routes/alerts/index'
+import { Route as SettingsIntegrationsRouteImport } from './routes/settings/integrations'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as ClassificationDomainsRouteImport } from './routes/classification/domains'
 import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
@@ -85,6 +86,13 @@ const AlertsIndexRoute = AlertsIndexRouteImport.update({
   path: '/alerts/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SettingsIntegrationsRoute = SettingsIntegrationsRouteImport.update({
+  id: '/settings/integrations',
+  path: '/settings/integrations',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() =>
+  import('./routes/settings/integrations.lazy').then((d) => d.Route),
+)
 const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   id: '/projects/$projectId',
   path: '/projects/$projectId',
@@ -173,6 +181,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/classification/domains': typeof ClassificationDomainsRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/settings/integrations': typeof SettingsIntegrationsRoute
   '/alerts/': typeof AlertsIndexRoute
   '/classification/': typeof ClassificationIndexRoute
   '/projects/': typeof ProjectsIndexRoute
@@ -195,6 +204,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/classification/domains': typeof ClassificationDomainsRoute
+  '/settings/integrations': typeof SettingsIntegrationsRoute
   '/alerts': typeof AlertsIndexRoute
   '/classification': typeof ClassificationIndexRoute
   '/projects': typeof ProjectsIndexRoute
@@ -219,6 +229,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/classification/domains': typeof ClassificationDomainsRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/settings/integrations': typeof SettingsIntegrationsRoute
   '/alerts/': typeof AlertsIndexRoute
   '/classification/': typeof ClassificationIndexRoute
   '/projects/': typeof ProjectsIndexRoute
@@ -244,6 +255,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/classification/domains'
     | '/projects/$projectId'
+    | '/settings/integrations'
     | '/alerts/'
     | '/classification/'
     | '/projects/'
@@ -266,6 +278,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/classification/domains'
+    | '/settings/integrations'
     | '/alerts'
     | '/classification'
     | '/projects'
@@ -289,6 +302,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/classification/domains'
     | '/projects/$projectId'
+    | '/settings/integrations'
     | '/alerts/'
     | '/classification/'
     | '/projects/'
@@ -313,6 +327,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ClassificationDomainsRoute: typeof ClassificationDomainsRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRouteWithChildren
+  SettingsIntegrationsRoute: typeof SettingsIntegrationsRoute
   AlertsIndexRoute: typeof AlertsIndexRoute
   ClassificationIndexRoute: typeof ClassificationIndexRoute
   ProjectsIndexRoute: typeof ProjectsIndexRoute
@@ -392,6 +407,13 @@ declare module '@tanstack/react-router' {
       path: '/alerts'
       fullPath: '/alerts/'
       preLoaderRoute: typeof AlertsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings/integrations': {
+      id: '/settings/integrations'
+      path: '/settings/integrations'
+      fullPath: '/settings/integrations'
+      preLoaderRoute: typeof SettingsIntegrationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects/$projectId': {
@@ -533,6 +555,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ClassificationDomainsRoute: ClassificationDomainsRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRouteWithChildren,
+  SettingsIntegrationsRoute: SettingsIntegrationsRoute,
   AlertsIndexRoute: AlertsIndexRoute,
   ClassificationIndexRoute: ClassificationIndexRoute,
   ProjectsIndexRoute: ProjectsIndexRoute,

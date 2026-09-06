@@ -60,6 +60,7 @@ final readonly class AuditReportService
             'orphans' => $this->orphans($audit),
             'actionPlan' => $this->actionPlan($grouped),
             'competitorsSpeed' => $audit->metrics['competitors_speed'] ?? null,
+            'unchecked' => $audit->metrics['unchecked'] ?? [],
         ])->render();
     }
 
@@ -164,6 +165,25 @@ final readonly class AuditReportService
             $rows['Визитов за период'] = (string) (int) $b['visits'];
             $rows['Отказы'] = $b['bounce_rate'].'%';
             $rows['Глубина просмотра'] = (string) $b['page_depth'];
+        }
+
+        if (isset($m['webmaster'])) {
+            if ($m['webmaster']['sqi'] !== null) {
+                $rows['ИКС по Яндекс.Вебмастеру'] = (string) $m['webmaster']['sqi'];
+            }
+
+            if ($m['webmaster']['in_search'] !== null) {
+                $changed = (int) ($m['webmaster']['changed_by'] ?? 0);
+                $rows['Страниц в поиске Яндекса'] = $m['webmaster']['in_search']
+                    .($changed === 0 ? '' : sprintf(' (%+d за период)', $changed));
+            }
+        }
+
+        if (isset($m['search_console']['summary'])) {
+            $c = $m['search_console']['summary'];
+            $rows['Кликов из Google'] = (string) (int) $c['clicks'];
+            $rows['Показов в Google'] = (string) (int) $c['impressions'];
+            $rows['Средняя позиция в Google'] = (string) $c['position'];
         }
 
         if (isset($m['field']['metrics']['largest_contentful_paint']['p75'])) {

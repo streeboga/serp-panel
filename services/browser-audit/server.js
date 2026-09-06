@@ -8,12 +8,26 @@ const TOKEN = process.env.BROWSER_AUDIT_TOKEN || '';
 const NAV_TIMEOUT = Number(process.env.NAV_TIMEOUT_MS || 25000);
 const SETTLE_MS = Number(process.env.SETTLE_MS || 2500);
 const PAGES_BEFORE_RESTART = Number(process.env.PAGES_BEFORE_RESTART || 40);
+// Потолок на весь запрос. Lighthouse умеет зависать насмерть: свой Chromium
+// он поднимает сам, и если тот не отвечает, промис не резолвится никогда —
+// флаг busy остаётся поднятым, и очередь аудита встаёт целиком.
+const REQUEST_TIMEOUT = Number(process.env.REQUEST_TIMEOUT_MS || 180000);
 
 const VIEWPORTS = {
   desktop: { width: 1366, height: 900, isMobile: false },
   tablet: { width: 820, height: 1180, isMobile: true },
   mobile: { width: 390, height: 844, isMobile: true },
 };
+
+/** Отпускает ожидание по таймауту: зависшая операция не должна держать сервис. */
+function withTimeout(promise, ms, label) {
+  let timer;
+  const guard = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`${label}: не уложился в ${ms} мс`)), ms);
+  });
+
+  return Promise.race([promise, guard]).finally(() => clearTimeout(timer));
+}
 
 let browser = null;
 let pagesServed = 0;
@@ -170,7 +184,7 @@ createServer(async (req, res) => {
 
   try {
     if (isPdf) {
-      const pdf = await printPdf(payload.html, payload.title ?? 'Отчёт');
+      const pdf = await withTimeout(printPdf(payload.html, payload.title ?? 'Отчёт'), REQUEST_TIMEOUT, 'печать PDF');
 
       res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Length': pdf.length });
 
@@ -186,14 +200,18 @@ createServer(async (req, res) => {
         pagesServed = 0;
       }
 
-      const report = await withDebugBrowser((port) =>
-        runLighthouse(payload.url, { formFactor: payload.viewport === 'desktop' ? 'desktop' : 'mobile', port }),
+      const report = await withTimeout(
+        withDebugBrowser((port) =>
+          runLighthouse(payload.url, { formFactor: payload.viewport === 'desktop' ? 'desktop' : 'mobile', port }),
+        ),
+        REQUEST_TIMEOUT,
+        'Lighthouse',
       );
 
       return send(res, 200, report ?? { url: payload.url, error: 'lighthouse вернул пустой отчёт' });
     }
 
-    send(res, 200, await measure(payload));
+    send(res, 200, await withTimeout(measure(payload), REQUEST_TIMEOUT, 'измерение'));
   } catch (error) {
     send(res, 200, { url: payload.url, error: String(error && error.message ? error.message : error) });
   } finally {

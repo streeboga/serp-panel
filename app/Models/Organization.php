@@ -19,6 +19,9 @@ use Illuminate\Support\Carbon;
  * @property int $max_projects
  * @property int $max_scrapers
  * @property string|null $yandex_token
+ * @property string|null $google_token
+ * @property string|null $google_refresh_token
+ * @property Carbon|null $google_token_expires_at
  * @property Carbon $created_at
  * @property Carbon $updated_at
  * @property Carbon|null $deleted_at
@@ -27,12 +30,16 @@ class Organization extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = ['name', 'slug', 'billing_tier', 'max_keywords', 'max_projects', 'max_scrapers', 'yandex_token'];
+    protected $fillable = ['name', 'slug', 'billing_tier', 'max_keywords', 'max_projects', 'max_scrapers', 'yandex_token',
+        'google_token', 'google_refresh_token', 'google_token_expires_at'];
 
     protected function casts(): array
     {
         return [
             'yandex_token' => 'encrypted',
+            'google_token' => 'encrypted',
+            'google_refresh_token' => 'encrypted',
+            'google_token_expires_at' => 'datetime',
         ];
     }
 

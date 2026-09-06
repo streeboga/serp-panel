@@ -21,7 +21,6 @@ final class UpdateProjectRequest extends FormRequest
             'name' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             // Счётчик Метрики: без него поведенческий этап аудита молчит.
-            'metrika_counter_id' => 'nullable|integer|min:1',
         ];
     }
 

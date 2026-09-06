@@ -75,6 +75,26 @@
     </table>
 @endif
 
+@if($unchecked)
+    {{-- Что мы посмотреть не смогли. Без этого блока читатель принимает
+         неизмеренное за исправное. --}}
+    <h2>Не проверено</h2>
+    <table>
+        <tbody>
+        @foreach(['behaviour' => 'Поведение посетителей (Яндекс.Метрика)', 'webmaster' => 'Яндекс.Вебмастер', 'search_console' => 'Google Search Console', 'field' => 'Полевые данные скорости (CrUX)', 'lighthouse' => 'Lighthouse', 'w3c' => 'Валидатор W3C', 'browser' => 'Измерения в браузере'] as $key => $label)
+            @if(! empty($unchecked[$key]))
+                <tr><td>{{ $label }}</td><td>{{ $unchecked[$key] }}</td></tr>
+            @endif
+        @endforeach
+        @foreach($unchecked as $key => $reason)
+            @if(! in_array($key, ['behaviour', 'webmaster', 'search_console', 'field', 'lighthouse', 'w3c', 'browser'], true))
+                <tr><td>{{ $key }}</td><td>{{ $reason }}</td></tr>
+            @endif
+        @endforeach
+        </tbody>
+    </table>
+@endif
+
 <h2 class="break">Проблемы по важности</h2>
 @foreach(['critical' => 'Критические', 'warning' => 'Важные', 'notice' => 'Рекомендуемые'] as $severity => $title)
     @if(! empty($grouped[$severity]))

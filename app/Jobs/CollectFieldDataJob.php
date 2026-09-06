@@ -6,6 +6,7 @@ namespace App\Jobs;
 
 use App\Contracts\Repositories\SiteAuditRepositoryInterface;
 use App\Services\Audit\CruxClient;
+use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -20,7 +21,7 @@ use SerpAudit\Severity;
  */
 final class CollectFieldDataJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /** Пороги Core Web Vitals: «хорошо» и «плохо» по методике Google. */
     private const THRESHOLDS = [

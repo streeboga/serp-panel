@@ -7,6 +7,8 @@ namespace App\Jobs;
 use App\Contracts\Repositories\SiteAuditRepositoryInterface;
 use App\Models\PageAuditResult;
 use App\Services\Audit\MetrikaClient;
+use App\Services\Audit\Unchecked;
+use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -21,7 +23,7 @@ use Illuminate\Queue\SerializesModels;
  */
 final class CollectBehaviourJob implements ShouldQueue
 {
-    use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
+    use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     /** Отказы выше этого на заметной посещаемости — повод посмотреть страницу. */
     private const BOUNCE_ALERT = 70.0;
@@ -39,22 +41,28 @@ final class CollectBehaviourJob implements ShouldQueue
         $this->onQueue('audit');
     }
 
-    public function handle(SiteAuditRepositoryInterface $audits): void
+    public function handle(SiteAuditRepositoryInterface $audits, Unchecked $unchecked): void
     {
         $audit = $audits->findById($this->auditId);
-        $audit->loadMissing('project.organization');
+        $audit->loadMissing(['project.organization', 'domain']);
 
         $metrika = new MetrikaClient(
             (string) ($audit->project->organization->yandex_token ?? ''),
-            (int) ($audit->project->metrika_counter_id ?? 0),
+            (int) ($audit->domain->metrika_counter_id ?? 0),
         );
 
         if (! $metrika->available()) {
+            $unchecked->record($audit, 'behaviour', $audit->domain?->metrika_counter_id
+                ? 'Нет OAuth-доступа к Яндексу у организации'
+                : 'Счётчик Метрики не привязан к домену');
+
             return;
         }
         $summary = $metrika->summary();
 
         if ($summary === null) {
+            $unchecked->record($audit, 'behaviour', 'Метрика не отдала данные по счётчику');
+
             return;
         }
 

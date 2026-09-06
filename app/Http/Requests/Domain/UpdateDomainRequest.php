@@ -25,6 +25,9 @@ final class UpdateDomainRequest extends FormRequest
             'type' => ['sometimes', Rule::enum(DomainType::class)],
             'parent_id' => 'sometimes|nullable|integer|exists:domains,id',
             'site_type_id' => 'sometimes|nullable|integer|exists:site_types,id',
+            'webmaster_host_id' => 'sometimes|nullable|string|max:255',
+            'search_console_site' => 'sometimes|nullable|string|max:255',
+            'metrika_counter_id' => 'sometimes|nullable|integer|min:1',
             'tags' => 'sometimes|array',
             'tags.*' => 'string|max:255',
         ];

@@ -14,10 +14,11 @@ function metrikaAudit(): SiteAudit
 {
     $h = createFullStack();
     $h['org']->update(['yandex_token' => 'test-token']);
-    $h['project']->update(['metrika_counter_id' => 12345]);
+    $h['domain']->update(['metrika_counter_id' => 12345]);
 
     $audit = SiteAudit::create([
         'project_id' => $h['project']->id,
+        'domain_id' => $h['domain']->id,
         'scope' => 'site',
         'status' => 'running',
     ]);

@@ -15,6 +15,8 @@ use App\Http\Controllers\Api\V1\ConnectedAccountController;
 use App\Http\Controllers\Api\V1\DashboardController;
 use App\Http\Controllers\Api\V1\DomainController;
 use App\Http\Controllers\Api\V1\ExportController;
+use App\Http\Controllers\Api\V1\GoogleOAuthController;
+use App\Http\Controllers\Api\V1\IntegrationController;
 use App\Http\Controllers\Api\V1\KeywordController;
 use App\Http\Controllers\Api\V1\OrganizationController;
 use App\Http\Controllers\Api\V1\PageController;
@@ -56,6 +58,9 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         // Yandex OAuth
         Route::get('auth/yandex/redirect', [YandexOAuthController::class, 'redirect']);
         Route::get('auth/yandex/callback', [YandexOAuthController::class, 'callback'])->withoutMiddleware(['json-api']);
+
+        // Google OAuth: callback без контекста организации — её id лежит в сессии
+        Route::get('auth/google/callback', [GoogleOAuthController::class, 'callback'])->withoutMiddleware(['json-api']);
     });
 
     Route::middleware(['auth:sanctum', 'org'])->group(function () {
@@ -63,6 +68,11 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::get('organization', [OrganizationController::class, 'show']);
         Route::get('organization/members', [OrganizationController::class, 'members']);
         Route::get('organization/yandex/status', [YandexOAuthController::class, 'status']);
+        Route::get('organization/google/status', [GoogleOAuthController::class, 'status']);
+        Route::get('auth/google/redirect', [GoogleOAuthController::class, 'redirect']);
+
+        // Сопоставление внешних ресурсов с доменами
+        Route::get('integrations/sites', [IntegrationController::class, 'index']);
 
         // Connected Accounts — read
         Route::get('accounts', [ConnectedAccountController::class, 'index']);
@@ -84,6 +94,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
             // Yandex OAuth — admin
             Route::post('organization/yandex/save-token', [YandexOAuthController::class, 'saveToken']);
             Route::delete('organization/yandex', [YandexOAuthController::class, 'disconnect']);
+            Route::delete('organization/google', [GoogleOAuthController::class, 'disconnect']);
 
             // Billing
             Route::patch('billing/tier', [BillingController::class, 'updateTier']);

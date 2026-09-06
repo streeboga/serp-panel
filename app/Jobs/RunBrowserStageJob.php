@@ -61,47 +61,41 @@ final class RunBrowserStageJob implements ShouldQueue
         CruxClient $crux,
     ): void {
         $audit = $audits->findById($this->auditId);
+        $auditId = $audit->id;
+
+        // Сборщики идут внутрь батча, а не мимо него: финализатор — колбэк
+        // батча, и джоба, отправленная в обход, успевала дописать находки уже
+        // после подсчёта оценки.
+        $jobs = [];
 
         // Полевые данные по домену — один запрос на прогон, не на страницу.
         if ($crux->enabled() && $this->origin($audit) !== null) {
-            CollectFieldDataJob::dispatch($audit->id, (string) $this->origin($audit));
+            $jobs[] = new CollectFieldDataJob($auditId, (string) $this->origin($audit));
         }
 
-        if ($audit->project->metrika_counter_id !== null) {
-            CollectBehaviourJob::dispatch($audit->id);
-        }
+        // Оба этапа ставим всегда: не привязан ресурс — джоба запишет
+        // «не проверено» с причиной. Молча пропускать нельзя.
+        $jobs[] = new CollectBehaviourJob($auditId);
+        $jobs[] = new CollectSearchDataJob($auditId);
 
         // Сравнение скорости с конкурентами имеет смысл только для сайта целиком.
         if ($browser->enabled() && $audit->scope === AuditScope::Site && $this->origin($audit) !== null) {
-            CompareCompetitorSpeedJob::dispatch($audit->id, (string) $this->origin($audit));
-        }
-
-        if (! $browser->enabled() && ! $validator->enabled()) {
-            FinalizeSiteAuditJob::dispatch($audit->id);
-
-            return;
+            $jobs[] = new CompareCompetitorSpeedJob($auditId, (string) $this->origin($audit));
         }
 
         $limit = (int) config('audit.browser.max_pages');
 
-        $targets = PageAuditResult::query()
-            ->where('site_audit_id', $audit->id)
-            ->where('http_status', 200)
-            // Сначала страницы проекта, потом самые проблемные по оценке.
-            ->orderByRaw('page_id is null')
-            ->orderBy('score')
-            ->limit($limit)
-            ->get(['id', 'url']);
+        $targets = $browser->enabled() || $validator->enabled()
+            ? PageAuditResult::query()
+                ->where('site_audit_id', $auditId)
+                ->where('http_status', 200)
+                // Сначала страницы проекта, потом самые проблемные по оценке.
+                ->orderByRaw('page_id is null')
+                ->orderBy('score')
+                ->limit($limit)
+                ->get(['id', 'url'])
+            : collect();
 
-        if ($targets->isEmpty()) {
-            FinalizeSiteAuditJob::dispatch($audit->id);
-
-            return;
-        }
-
-        $auditId = $audit->id;
-
-        $jobs = [];
         $lighthouseLeft = (int) config('audit.browser.lighthouse_pages');
 
         foreach ($targets as $target) {
@@ -123,12 +117,6 @@ final class RunBrowserStageJob implements ShouldQueue
             }
         }
 
-        if ($jobs === []) {
-            FinalizeSiteAuditJob::dispatch($audit->id);
-
-            return;
-        }
-
         $batch = Bus::batch($jobs)
             ->name("audit-browser:{$auditId}")
             ->onQueue('audit-browser')
@@ -136,7 +124,10 @@ final class RunBrowserStageJob implements ShouldQueue
             ->finally(fn () => FinalizeSiteAuditJob::dispatch($auditId))
             ->dispatch();
 
-        $audits->update($audit, ['batch_id' => $batch->id]);
+        // Модель перечитываем: на синхронной очереди батч уже отработал внутри
+        // dispatch(), финализатор записал находки и статус — и сохранение
+        // прочитанной ранее модели затёрло бы их.
+        $audits->update($audits->findById($auditId), ['batch_id' => $batch->id]);
 
         $total = PageAuditResult::where('site_audit_id', $auditId)->where('http_status', 200)->count();
 

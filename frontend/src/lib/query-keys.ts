@@ -122,6 +122,12 @@ export const queryKeys = {
     status: () => [...queryKeys.yandex.all, 'status'] as const,
   },
 
+  integrations: {
+    all: ['integrations'] as const,
+    sites: () => [...queryKeys.integrations.all, 'sites'] as const,
+    google: () => [...queryKeys.integrations.all, 'google'] as const,
+  },
+
   accounts: {
     all: ['accounts'] as const,
   },
