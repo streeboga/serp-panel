@@ -27,6 +27,7 @@ final class ProjectResource extends JsonApiResource
         return [
             'name' => $this->name,
             'description' => $this->description,
+            'muted_codes' => $this->muted_codes ?? [],
             'is_public' => $this->is_public,
             'public_slug' => $this->public_slug,
             'public_url' => $this->is_public && $this->public_slug

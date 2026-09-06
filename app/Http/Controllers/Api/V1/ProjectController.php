@@ -10,6 +10,7 @@ use App\Http\Requests\Project\UpdateProjectRequest;
 use App\Http\Resources\ProjectResource;
 use App\Models\Project;
 use App\Services\ProjectService;
+use App\Support\MutedCodes;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
 use Dedoc\Scramble\Attributes\QueryParameter;
@@ -90,6 +91,44 @@ final class ProjectController extends Controller
         }
 
         $project = $this->service->update($project, $request->toDto());
+
+        return ProjectResource::make($project);
+    }
+
+    /**
+     * Политика заглушения находок аудита
+     *
+     * Тело: `{"muted_codes": {"http.analytics.missing": "почему глушим"}}`.
+     * Ключ — код НАХОДКИ (`content.nausea.academic`), а не код проверки
+     * (`content.nausea`): у одной проверки бывают и шумная находка, и та, ради
+     * которой проверка заведена. Причина обязательна — заглушка без причины
+     * через месяц превращается в дыру, о которой никто не помнит.
+     *
+     * Заглушённые находки остаются в результатах с пометкой `muted`, но не
+     * попадают в `issues_critical`, `issues_warning`, `issues_notice` и в оценку.
+     * Их число видно отдельно в `issues_muted`. Пустой объект снимает политику.
+     */
+    #[PathParameter('project', description: 'ID проекта', example: '1')]
+    #[Response(200, description: 'Политика обновлена')]
+    #[Response(422, description: 'Ошибка валидации')]
+    public function muteCodes(Request $request, Project $project): ProjectResource
+    {
+        if ($project->organization_id !== $request->get('organization')->id) {
+            abort(404);
+        }
+
+        $validated = $request->validate([
+            'muted_codes' => ['present', 'array'],
+            'muted_codes.*' => ['required', 'string', 'min:3', 'max:2000'],
+        ], [], []);
+
+        foreach (array_keys($validated['muted_codes']) as $code) {
+            if (! is_string($code) || preg_match(MutedCodes::PATTERN, $code) !== 1) {
+                abort(422, "Код находки «{$code}» непохож на код: ожидается вид content.nausea.academic.");
+            }
+        }
+
+        $project = $this->service->setMutedCodes($project, MutedCodes::normalize($validated['muted_codes']));
 
         return ProjectResource::make($project);
     }

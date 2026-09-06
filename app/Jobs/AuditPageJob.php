@@ -85,7 +85,7 @@ final class AuditPageJob implements ShouldQueue
                 Severity::Critical,
                 'Страница не открылась',
                 $exception->getMessage(),
-            )]);
+            )], $audit->muted_codes ?? []);
 
             $results->store($this->auditId, $this->url, [
                 'page_id' => $this->pageId,
@@ -107,7 +107,7 @@ final class AuditPageJob implements ShouldQueue
             : $page->targetKeywords()->pluck('keyword')->all();
 
         $context = new PageContext($response, $keywords);
-        $outcome = $auditor->audit($context, $audit->groups, $audit->check_codes);
+        $outcome = $auditor->audit($context, $audit->groups, $audit->check_codes, $audit->muted_codes ?? []);
 
         $resultId = $results->store($this->auditId, $this->url, [
             'page_id' => $this->pageId,

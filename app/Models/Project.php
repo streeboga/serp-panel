@@ -14,6 +14,7 @@ use Illuminate\Support\Carbon;
  * @property int $organization_id
  * @property string $name
  * @property string|null $description
+ * @property array<string, string>|null $muted_codes
  * @property bool $is_public
  * @property string|null $public_slug
  * @property Carbon $created_at
@@ -21,13 +22,14 @@ use Illuminate\Support\Carbon;
  */
 class Project extends Model
 {
-    protected $fillable = ['organization_id', 'name', 'description', 'is_public', 'public_slug'];
+    protected $fillable = ['organization_id', 'name', 'description', 'muted_codes', 'is_public', 'public_slug'];
 
     /** @return array<string, string> */
     protected function casts(): array
     {
         return [
             'is_public' => 'boolean',
+            'muted_codes' => 'array',
         ];
     }
 

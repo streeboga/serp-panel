@@ -381,3 +381,50 @@ test('аналитика и технологии определяются по �
 
     expect(codes($bare))->toContain('http.analytics.missing');
 });
+
+test('заглушённая находка остаётся в списке, но уходит из счётчиков и оценки', function () {
+    // Голая страница даёт http.analytics.missing — на eq.team эта находка ложная
+    // по построению: счётчик подключается после ответа на cookie-баннер.
+    $html = '<html lang="ru"><head><title>T</title></head><body><p>x</p></body></html>';
+
+    $noisy = app(PageAuditor::class)->audit(contextFor($html), null, ['http.analytics']);
+
+    expect(codes($noisy))->toContain('http.analytics.missing')
+        ->and($noisy['issues_warning'] + $noisy['issues_notice'] + $noisy['issues_critical'])->toBe(1)
+        ->and($noisy['issues_muted'])->toBe(0);
+
+    $quiet = app(PageAuditor::class)->audit(
+        contextFor($html),
+        null,
+        ['http.analytics'],
+        ['http.analytics.missing' => 'счётчик подключается после ответа на cookie-баннер'],
+    );
+
+    // Находка никуда не делась — иначе «дефектов нет» и «мы перестали смотреть»
+    // выглядят одинаково.
+    expect(codes($quiet))->toContain('http.analytics.missing')
+        ->and($quiet['findings'][0]['muted'])->toBeTrue()
+        ->and($quiet['findings'][0]['mute_reason'])->toContain('cookie-баннер')
+        ->and($quiet['issues_critical'])->toBe(0)
+        ->and($quiet['issues_warning'])->toBe(0)
+        ->and($quiet['issues_notice'])->toBe(0)
+        ->and($quiet['issues_muted'])->toBe(1)
+        ->and($quiet['score'])->toBe(100);
+});
+
+test('заглушается код находки, а не код проверки', function () {
+    // У одной проверки бывают и шумная находка, и та, ради которой она заведена.
+    $html = '<html lang="ru"><head><title>T</title></head><body><h1>З</h1><h3>Пропуск</h3></body></html>';
+
+    $outcome = app(PageAuditor::class)->audit(
+        contextFor($html),
+        null,
+        ['meta.headings'],
+        ['meta.headings.h2_too_many' => 'пять H2 приходят из шаблона темы, а не из текста'],
+    );
+
+    // Пропуск уровня блокирует публикацию и заглушён не был.
+    expect(codes($outcome))->toContain('meta.headings.skip')
+        ->and($outcome['issues_critical'] + $outcome['issues_warning'] + $outcome['issues_notice'])
+        ->toBeGreaterThan(0);
+});

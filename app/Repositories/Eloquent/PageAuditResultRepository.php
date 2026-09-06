@@ -86,10 +86,10 @@ final class PageAuditResultRepository implements PageAuditResultRepositoryInterf
             ->first();
     }
 
-    /** @return array{pages: int, score: int|null, critical: int, warning: int, notice: int} */
+    /** @return array{pages: int, score: int|null, critical: int, warning: int, notice: int, muted: int} */
     public function aggregate(int $auditId): array
     {
-        /** @var object{pages: int, score: string|null, critical: string|null, warning: string|null, notice: string|null}|null $row */
+        /** @var object{pages: int, score: string|null, critical: string|null, warning: string|null, notice: string|null, muted: string|null}|null $row */
         $row = PageAuditResult::query()
             ->where('site_audit_id', $auditId)
             ->select([
@@ -98,6 +98,7 @@ final class PageAuditResultRepository implements PageAuditResultRepositoryInterf
                 DB::raw('SUM(issues_critical) as critical'),
                 DB::raw('SUM(issues_warning) as warning'),
                 DB::raw('SUM(issues_notice) as notice'),
+                DB::raw('SUM(issues_muted) as muted'),
             ])
             ->first();
 
@@ -107,6 +108,7 @@ final class PageAuditResultRepository implements PageAuditResultRepositoryInterf
             'critical' => (int) ($row->critical ?? 0),
             'warning' => (int) ($row->warning ?? 0),
             'notice' => (int) ($row->notice ?? 0),
+            'muted' => (int) ($row->muted ?? 0),
         ];
     }
 

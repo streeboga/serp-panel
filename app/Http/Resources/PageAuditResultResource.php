@@ -36,6 +36,7 @@ final class PageAuditResultResource extends JsonApiResource
             'issues_critical' => $this->issues_critical,
             'issues_warning' => $this->issues_warning,
             'issues_notice' => $this->issues_notice,
+            'issues_muted' => $this->issues_muted,
             'findings' => $this->findings ?? [],
             'metrics' => $this->metrics ?? [],
             'error' => $this->error,

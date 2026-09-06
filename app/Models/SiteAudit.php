@@ -21,6 +21,7 @@ use Illuminate\Support\Carbon;
  * @property string|null $batch_id
  * @property array<int, string>|null $groups
  * @property array<int, string>|null $check_codes
+ * @property array<string, string>|null $muted_codes
  * @property array<string, mixed>|null $input
  * @property int $pages_total
  * @property int $pages_done
@@ -28,6 +29,7 @@ use Illuminate\Support\Carbon;
  * @property int $issues_critical
  * @property int $issues_warning
  * @property int $issues_notice
+ * @property int $issues_muted
  * @property array<mixed>|null $findings
  * @property array<mixed>|null $metrics
  * @property string|null $error
@@ -42,9 +44,9 @@ use Illuminate\Support\Carbon;
 final class SiteAudit extends Model
 {
     protected $fillable = [
-        'project_id', 'domain_id', 'scope', 'status', 'batch_id', 'groups', 'check_codes', 'input',
+        'project_id', 'domain_id', 'scope', 'status', 'batch_id', 'groups', 'check_codes', 'muted_codes', 'input',
         'pages_total', 'pages_done', 'score',
-        'issues_critical', 'issues_warning', 'issues_notice',
+        'issues_critical', 'issues_warning', 'issues_notice', 'issues_muted',
         'findings', 'metrics', 'error', 'started_at', 'finished_at',
     ];
 
@@ -60,6 +62,7 @@ final class SiteAudit extends Model
         'issues_critical' => 0,
         'issues_warning' => 0,
         'issues_notice' => 0,
+        'issues_muted' => 0,
     ];
 
     protected $casts = [
@@ -67,6 +70,7 @@ final class SiteAudit extends Model
         'status' => AuditStatus::class,
         'groups' => 'array',
         'check_codes' => 'array',
+        'muted_codes' => 'array',
         'input' => 'array',
         'findings' => 'array',
         'metrics' => 'array',

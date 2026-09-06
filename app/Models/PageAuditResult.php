@@ -23,6 +23,7 @@ use Illuminate\Support\Carbon;
  * @property int $issues_critical
  * @property int $issues_warning
  * @property int $issues_notice
+ * @property int $issues_muted
  * @property array<mixed>|null $findings
  * @property array<mixed>|null $metrics
  * @property string|null $error
@@ -37,7 +38,7 @@ final class PageAuditResult extends Model
     protected $fillable = [
         'site_audit_id', 'page_id', 'url', 'url_hash', 'path',
         'http_status', 'redirect_chain', 'response_time_ms', 'html_size',
-        'score', 'issues_critical', 'issues_warning', 'issues_notice',
+        'score', 'issues_critical', 'issues_warning', 'issues_notice', 'issues_muted',
         'findings', 'metrics', 'error',
     ];
 

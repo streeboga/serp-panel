@@ -102,6 +102,7 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
             Route::post('projects', [ProjectController::class, 'store']);
             Route::patch('projects/{project}', [ProjectController::class, 'update']);
             Route::patch('projects/{project}/public', [ProjectController::class, 'togglePublic']);
+            Route::patch('projects/{project}/muted-codes', [ProjectController::class, 'muteCodes']);
             Route::delete('projects/{project}', [ProjectController::class, 'destroy']);
         });
 

@@ -53,6 +53,20 @@ final readonly class ProjectService
         $this->repository->delete($project);
     }
 
+    /**
+     * Политика заглушения находок аудита: код находки → причина.
+     * Пустой список пишем как null, чтобы «политики нет» и «политика пустая»
+     * не расходились в базе.
+     *
+     * @param  array<string, string>  $codes
+     */
+    public function setMutedCodes(Project $project, array $codes): Project
+    {
+        return $this->repository->update($project, [
+            'muted_codes' => $codes === [] ? null : $codes,
+        ]);
+    }
+
     public function togglePublic(Project $project, bool $isPublic): Project
     {
         return DB::transaction(function () use ($project, $isPublic): Project {

@@ -10,14 +10,27 @@ use Illuminate\Database\Eloquent\Collection;
 
 final class PageableRepository implements PageableRepositoryInterface
 {
-    /** @param array<string, mixed> $pivotData */
+    /**
+     * Привязка страницы к ключу, кластеру или категории.
+     *
+     * Раньше здесь стоял create(), и повторный вызов на уже привязанной сущности
+     * падал с 500: у таблицы есть ограничение pageables_unique. Из-за этого снять
+     * is_target через API было нельзя — приходилось править pivot руками в базе.
+     * Ведём себя как updateExistingPivot: тройка «страница, тип, сущность» это
+     * идентичность записи, всё остальное обновляем.
+     *
+     * @param  array<string, mixed>  $pivotData
+     */
     public function attach(int $pageId, string $pageableType, int $pageableId, array $pivotData = []): Pageable
     {
-        return Pageable::create(array_merge([
-            'page_id' => $pageId,
-            'pageable_type' => $pageableType,
-            'pageable_id' => $pageableId,
-        ], $pivotData));
+        return Pageable::updateOrCreate(
+            [
+                'page_id' => $pageId,
+                'pageable_type' => $pageableType,
+                'pageable_id' => $pageableId,
+            ],
+            $pivotData,
+        );
     }
 
     public function detach(int $pageableId): void

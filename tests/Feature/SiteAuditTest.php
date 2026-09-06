@@ -445,3 +445,74 @@ test('этап ресурсов выключается конфигом', functi
     expect($audit->status->value)->toBe('completed')
         ->and(AuditResource::where('site_audit_id', $audit->id)->whereNotNull('checked_at')->count())->toBe(0);
 });
+
+test('политика заглушения проекта попадает в прогон и вычитается из счётчиков', function () {
+    Http::fake(['*' => Http::response(goodPage(), 200, ['Content-Type' => 'text/html'])]);
+
+    $h = createFullStack();
+
+    $this->actingAs($h['user'])->patchJson(
+        "/api/v1/projects/{$h['project']->id}/muted-codes",
+        ['muted_codes' => ['http.analytics.missing' => 'счётчик подключается после ответа на cookie-баннер']],
+        orgHeaders($h['org']),
+    )->assertStatus(200);
+
+    expect($h['project']->fresh()->muted_codes)
+        ->toBe(['http.analytics.missing' => 'счётчик подключается после ответа на cookie-баннер']);
+
+    $this->actingAs($h['user'])->postJson(
+        "/api/v1/projects/{$h['project']->id}/audits",
+        ['scope' => 'url', 'url' => 'https://test.com/muted/'],
+        orgHeaders($h['org']),
+    )->assertStatus(201);
+
+    $audit = SiteAudit::latest('id')->firstOrFail();
+
+    // Снимок политики лежит в прогоне: прогон должен читаться и после её правки.
+    expect($audit->muted_codes)->toBe(['http.analytics.missing' => 'счётчик подключается после ответа на cookie-баннер']);
+
+    $result = $audit->results()->firstOrFail();
+    $muted = array_values(array_filter($result->findings, fn (array $f): bool => ($f['muted'] ?? false) === true));
+
+    expect($muted)->not->toBeEmpty()
+        ->and($muted[0]['code'])->toBe('http.analytics.missing')
+        ->and($muted[0]['mute_reason'])->toContain('cookie-баннер')
+        ->and($result->issues_muted)->toBe(count($muted));
+
+    // Счётчик страницы считает только незаглушённое.
+    $visible = array_values(array_filter($result->findings, fn (array $f): bool => ($f['muted'] ?? false) !== true));
+
+    expect($result->issues_critical + $result->issues_warning + $result->issues_notice)->toBe(count($visible));
+
+    // Сводка прогона складывается из страниц, поэтому заглушённое видно отдельно
+    // и в неё не попадает. Финализатор идемпотентен, зовём его явно: батч в
+    // тестовой очереди свой finally отдаёт не всегда.
+    (new FinalizeSiteAuditJob($audit->id))->handle(
+        app(SiteAuditRepositoryInterface::class),
+        app(PageAuditResultRepositoryInterface::class),
+        app(AuditResourceRepositoryInterface::class),
+    );
+
+    $audit->refresh();
+
+    expect($audit->issues_muted)->toBe($result->issues_muted)
+        ->and($audit->issues_critical + $audit->issues_warning + $audit->issues_notice)
+        ->toBe($result->issues_critical + $result->issues_warning + $result->issues_notice);
+});
+
+test('код проверки политикой заглушения не принимается', function () {
+    $h = createFullStack();
+
+    $this->actingAs($h['user'])->patchJson(
+        "/api/v1/projects/{$h['project']->id}/muted-codes",
+        ['muted_codes' => ['analytics' => 'односегментный код это код проверки, а не находки']],
+        orgHeaders($h['org']),
+    )->assertStatus(422);
+
+    // Причина обязательна: заглушка без причины через месяц становится дырой.
+    $this->actingAs($h['user'])->patchJson(
+        "/api/v1/projects/{$h['project']->id}/muted-codes",
+        ['muted_codes' => ['http.analytics.missing' => '']],
+        orgHeaders($h['org']),
+    )->assertStatus(422);
+});

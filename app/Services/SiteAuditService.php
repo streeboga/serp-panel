@@ -14,6 +14,7 @@ use App\Models\Project;
 use App\Models\SiteAudit;
 use App\Services\Audit\PageAuditor;
 use App\Services\Audit\PageFetcher;
+use App\Support\MutedCodes;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Bus;
@@ -41,6 +42,10 @@ final readonly class SiteAuditService
             AuditScope::Site => null,
         };
 
+        // Политику заглушения кладём в сам прогон: она меняется, а прогон должен
+        // читаться и через месяц — с тем списком, по которому его считали.
+        $muted = MutedCodes::normalize($project->muted_codes);
+
         $audit = $this->audits->create([
             'project_id' => $project->id,
             'domain_id' => $data['domain_id'] ?? null,
@@ -48,6 +53,7 @@ final readonly class SiteAuditService
             'status' => AuditStatus::Pending,
             'groups' => $data['groups'] ?? null,
             'check_codes' => $data['check_codes'] ?? null,
+            'muted_codes' => $muted === [] ? null : $muted,
             'input' => $input,
         ]);
 
@@ -105,9 +111,10 @@ final readonly class SiteAuditService
      *
      * @param  array<int, string>|null  $groups
      * @param  array<int, string>|null  $codes
+     * @param  array<string, string>  $muted  код находки → причина заглушения
      * @return array<string, mixed>
      */
-    public function checkUrl(string $url, ?array $groups = null, ?array $codes = null): array
+    public function checkUrl(string $url, ?array $groups = null, ?array $codes = null, array $muted = []): array
     {
         try {
             $response = $this->fetcher->fetch($url);
@@ -121,10 +128,11 @@ final readonly class SiteAuditService
                 'issues_critical' => 1,
                 'issues_warning' => 0,
                 'issues_notice' => 0,
+                'issues_muted' => 0,
             ];
         }
 
-        $outcome = $this->auditor->audit(new PageContext($response), $groups, $codes);
+        $outcome = $this->auditor->audit(new PageContext($response), $groups, $codes, $muted);
 
         return [
             'url' => $response->finalUrl,

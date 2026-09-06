@@ -8,6 +8,7 @@ use App\Contracts\Repositories\AuditResourceRepositoryInterface;
 use App\Contracts\Repositories\PageAuditResultRepositoryInterface;
 use App\Contracts\Repositories\SiteAuditRepositoryInterface;
 use App\Enums\AuditStatus;
+use App\Support\MutedCodes;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -61,6 +62,14 @@ final class FinalizeSiteAuditJob implements ShouldQueue
             ...$this->duplicateFindings($results, $audit->id),
         ];
 
+        // Политика заглушения — та, что записана в прогоне при запуске. Находки
+        // остаются в списке с пометкой, но из счётчиков и оценки уходят: иначе
+        // прогон показывает полторы тысячи находок там, где разбирать надо два
+        // десятка, и число перестают читать.
+        $mutedPolicy = MutedCodes::normalize($audit->muted_codes);
+        $marked = MutedCodes::apply($siteFindings, $mutedPolicy);
+        $siteFindings = $marked['findings'];
+
         $site = $this->countBySeverity($siteFindings);
 
         // Оценка сайта — находки уровня сайта и средняя по страницам в равных долях.
@@ -86,6 +95,7 @@ final class FinalizeSiteAuditJob implements ShouldQueue
             'issues_critical' => $site['critical'] + $aggregate['critical'],
             'issues_warning' => $site['warning'] + $aggregate['warning'],
             'issues_notice' => $site['notice'] + $aggregate['notice'],
+            'issues_muted' => $marked['muted'] + $aggregate['muted'],
             'batch_id' => null,
             'finished_at' => now(),
         ]);
@@ -177,6 +187,10 @@ final class FinalizeSiteAuditJob implements ShouldQueue
         $counts = ['critical' => 0, 'warning' => 0, 'notice' => 0];
 
         foreach ($findings as $finding) {
+            if (MutedCodes::isMuted($finding)) {
+                continue;
+            }
+
             $severity = $finding['severity'] ?? null;
 
             if (is_string($severity) && isset($counts[$severity])) {

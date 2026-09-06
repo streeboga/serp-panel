@@ -25,6 +25,6 @@ interface PageAuditResultRepositoryInterface
 
     public function latestForPage(int $pageId): ?PageAuditResult;
 
-    /** @return array{pages: int, score: int|null, critical: int, warning: int, notice: int} */
+    /** @return array{pages: int, score: int|null, critical: int, warning: int, notice: int, muted: int} */
     public function aggregate(int $auditId): array;
 }
