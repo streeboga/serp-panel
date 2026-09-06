@@ -79,21 +79,24 @@ final readonly class CompetitorService
         }
 
         $rows = $this->resultRepository->getCompetitorStatsByRegion($snapshotIds, $keywordIds);
+
+        /** @var array<string, array<int, array{region: string, region_id: int, top10: int, keyword_count: int}>> $regionsByDomain */
         $regionsByDomain = [];
 
         foreach ($rows as $row) {
-            if ((int) $row->top10 === 0) {
+            if ($row['top10'] === 0) {
                 continue;
             }
 
-            $regionsByDomain[$row->domain][] = [
-                'region' => $row->region,
-                'region_id' => (int) $row->region_id,
-                'top10' => (int) $row->top10,
-                'keyword_count' => (int) $row->keyword_count,
+            $regionsByDomain[$row['domain']][] = [
+                'region' => $row['region'],
+                'region_id' => $row['region_id'],
+                'top10' => $row['top10'],
+                'keyword_count' => $row['keyword_count'],
             ];
         }
 
+        /** @var array<int, array{domain: string, scope: string, regions: array<int, array<string, mixed>>, top10_total: int}> $result */
         $result = [];
 
         foreach ($regionsByDomain as $domain => $regions) {

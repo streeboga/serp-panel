@@ -81,11 +81,11 @@ final class SerpResultRepository implements SerpResultRepositoryInterface
      *
      * @param  array<int, int>  $snapshotIds
      * @param  array<int, int>  $keywordIds
-     * @return Collection<int, object>
+     * @return array<int, array{domain: string, region: string, region_id: int, keyword_count: int, top10: int}>
      */
-    public function getCompetitorStatsByRegion(array $snapshotIds, array $keywordIds): Collection
+    public function getCompetitorStatsByRegion(array $snapshotIds, array $keywordIds): array
     {
-        return SerpResult::query()
+        $rows = SerpResult::query()
             ->join('serp_snapshots', function ($join) use ($keywordIds) {
                 $join->on('serp_results.snapshot_id', '=', 'serp_snapshots.id')
                     ->on('serp_results.collected_at', '=', 'serp_snapshots.collected_at')
@@ -103,7 +103,18 @@ final class SerpResultRepository implements SerpResultRepositoryInterface
             ->groupBy('serp_results.domain', 'regions.id', 'regions.name')
             ->orderByDesc('top10')
             ->limit(300)
+            ->toBase()
             ->get();
+
+        // Это агрегаты, а не модели: возвращаем массивами, чтобы не выдавать
+        // строку с пятью колонками за полноценный SerpResult.
+        return $rows->map(static fn (object $row): array => [
+            'domain' => (string) $row->domain,
+            'region' => (string) $row->region,
+            'region_id' => (int) $row->region_id,
+            'keyword_count' => (int) $row->keyword_count,
+            'top10' => (int) $row->top10,
+        ])->all();
     }
 
     /**
