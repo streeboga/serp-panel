@@ -140,6 +140,31 @@ final class SiteChecker
                 'В карте сайта есть дублирующиеся URL', $duplicates, 0);
         }
 
+        // Карта сайта и robots.txt должны говорить одно и то же. Когда карта
+        // объявляет адреса, которые robots запрещает, поисковик получает
+        // противоречие: «вот мои страницы» и «не ходи туда» одновременно.
+        $blocked = [];
+
+        foreach ($urls as $url) {
+            $path = parse_url($url, PHP_URL_PATH) ?: '/';
+
+            if (! $robots->allows($path)) {
+                $blocked[] = $url;
+            }
+        }
+
+        if ($blocked !== []) {
+            $share = (int) round(count($blocked) / max(1, count($urls)) * 100);
+
+            $findings[] = $this->finding(
+                'site.sitemap.blocked_by_robots',
+                $share >= 50 ? Severity::Critical : Severity::Warning,
+                "Карта сайта объявляет адреса, запрещённые в robots.txt — {$share}% карты",
+                ['адресов' => count($blocked), 'примеры' => array_slice($blocked, 0, 8)],
+                0,
+            );
+        }
+
         $withLastmod = array_sum(array_column($sitemaps, 'with_lastmod'));
         $future = array_sum(array_column($sitemaps, 'future_lastmod'));
         $total = count($urls);
@@ -156,6 +181,7 @@ final class SiteChecker
 
         return [$urls, $findings, [
             'sitemap_urls_count' => count($urls),
+            'sitemap_blocked_by_robots' => count($blocked),
             'sitemap_with_lastmod' => $withLastmod,
             'sitemaps' => $sitemaps,
         ]];

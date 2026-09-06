@@ -589,3 +589,42 @@ test('даты изменения из будущего', function () {
     expect($codes)->toContain('site.sitemap.future_lastmod')
         ->and($codes)->not->toContain('site.sitemap.no_lastmod');
 });
+
+test('карта сайта, противоречащая robots.txt', function () {
+    // Ровно случай gislaved-tire.ru: карта объявляет .php-адреса,
+    // а robots.txt запрещает их правилом /*.php$
+    $sitemap = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        .'<url><loc>https://test.com/catalog/</loc></url>'
+        .'<url><loc>https://test.com/detail.php</loc></url>'
+        .'<url><loc>https://test.com/other.php</loc></url></urlset>';
+
+    Http::fake([
+        'test.com/robots.txt' => Http::response("User-agent: *\nDisallow: /*.php$\nSitemap: https://test.com/sitemap.xml", 200),
+        'test.com/sitemap.xml' => Http::response($sitemap, 200, ['Content-Type' => 'application/xml']),
+        '*' => Http::response(goodPage(), 200, ['Content-Type' => 'text/html']),
+    ]);
+
+    $result = app(SiteChecker::class)->run('https://test.com');
+    $finding = collect($result['findings'])->firstWhere('check', 'site.sitemap.blocked_by_robots');
+
+    expect($finding)->not->toBeNull()
+        // Две трети карты запрещены — это критично, а не замечание.
+        ->and($finding->severity->value)->toBe('critical')
+        ->and($finding->value['адресов'])->toBe(2)
+        ->and($result['metrics']['sitemap_blocked_by_robots'])->toBe(2);
+});
+
+test('согласованная карта сайта претензий не вызывает', function () {
+    $sitemap = '<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        .'<url><loc>https://test.com/catalog/</loc><lastmod>2026-09-01</lastmod></url></urlset>';
+
+    Http::fake([
+        'test.com/robots.txt' => Http::response("User-agent: *\nDisallow: /admin\nSitemap: https://test.com/sitemap.xml", 200),
+        'test.com/sitemap.xml' => Http::response($sitemap, 200, ['Content-Type' => 'application/xml']),
+        '*' => Http::response(goodPage(), 200, ['Content-Type' => 'text/html']),
+    ]);
+
+    $codes = array_map(fn ($f) => $f->check, app(SiteChecker::class)->run('https://test.com')['findings']);
+
+    expect($codes)->not->toContain('site.sitemap.blocked_by_robots');
+});
