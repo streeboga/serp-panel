@@ -96,6 +96,7 @@ final class RunBrowserStageJob implements ShouldQueue
         $auditId = $audit->id;
 
         $jobs = [];
+        $lighthouseLeft = (int) config('audit.browser.lighthouse_pages');
 
         foreach ($targets as $target) {
             if ($browser->enabled()) {
@@ -106,6 +107,13 @@ final class RunBrowserStageJob implements ShouldQueue
 
             if ($validator->enabled()) {
                 $jobs[] = new ValidateHtmlJob($target->id, $target->url);
+            }
+
+            // Lighthouse — только по нескольким первым страницам: он в разы тяжелее.
+            if ($browser->enabled() && (bool) config('audit.browser.lighthouse')
+                && $lighthouseLeft > 0) {
+                $jobs[] = new LighthouseJob($audit->id, $target->url);
+                $lighthouseLeft--;
             }
         }
 

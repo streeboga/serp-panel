@@ -3,6 +3,7 @@
 declare(strict_types=1);
 
 use App\Jobs\BrowserAuditJob;
+use App\Jobs\LighthouseJob;
 use App\Models\PageAuditResult;
 use App\Models\SiteAudit;
 use App\Services\Audit\BrowserAudit;
@@ -181,4 +182,39 @@ test('браузерный этап не теряет пометки заглу�
     $visible = array_values(array_filter($result->findings, fn (array $f): bool => ($f['muted'] ?? false) !== true));
 
     expect($result->issues_critical + $result->issues_warning + $result->issues_notice)->toBe(count($visible));
+});
+
+test('оценка Lighthouse копится в метриках прогона', function () {
+    config(['audit.browser.lighthouse' => true]);
+
+    Http::fake(['browser.test:8081/lighthouse' => Http::response([
+        'score' => 78,
+        'form_factor' => 'mobile',
+        'metrics' => ['lcp' => ['score' => 0.6, 'value' => 3100, 'display' => '3,1 с']],
+        'opportunities' => [['title' => 'Отложить неиспользуемый CSS', 'saving_ms' => 640]],
+    ], 200)]);
+
+    $result = resultFor();
+    $audit = $result->audit;
+
+    runJob(new LighthouseJob($audit->id, 'https://test.com/'));
+
+    $lighthouse = $audit->refresh()->metrics['lighthouse'];
+
+    expect($lighthouse)->toHaveCount(1)
+        ->and($lighthouse[0]['score'])->toBe(78)
+        ->and($lighthouse[0]['url'])->toBe('https://test.com/')
+        ->and($lighthouse[0]['opportunities'][0]['saving_ms'])->toBe(640);
+});
+
+test('молчащий Lighthouse не пишет нулевую оценку', function () {
+    config(['audit.browser.lighthouse' => true]);
+    Http::fake(['browser.test:8081/lighthouse' => Http::response('', 500)]);
+
+    $result = resultFor();
+    $audit = $result->audit;
+
+    runJob(new LighthouseJob($audit->id, 'https://test.com/'));
+
+    expect($audit->refresh()->metrics ?? [])->not->toHaveKey('lighthouse');
 });

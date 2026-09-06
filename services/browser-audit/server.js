@@ -1,6 +1,7 @@
 import { createServer } from 'node:http';
 import { chromium } from 'playwright-core';
 import { collectorSource, observerSource } from './in-page.js';
+import { runLighthouse, withDebugBrowser } from './lighthouse.js';
 
 const PORT = Number(process.env.PORT || 8081);
 const TOKEN = process.env.BROWSER_AUDIT_TOKEN || '';
@@ -101,7 +102,9 @@ createServer(async (req, res) => {
     return send(res, 200, { ok: true, pages_served: pagesServed, busy });
   }
 
-  if (req.method !== 'POST' || req.url !== '/measure') {
+  const isLighthouse = req.method === 'POST' && req.url === '/lighthouse';
+
+  if (!isLighthouse && !(req.method === 'POST' && req.url === '/measure')) {
     return send(res, 404, { error: 'not found' });
   }
 
@@ -132,6 +135,22 @@ createServer(async (req, res) => {
   busy = true;
 
   try {
+    if (isLighthouse) {
+      // Lighthouse поднимает свой Chromium с отладочным портом: два браузера
+      // разом эта машина не тянет, поэтому свой закрываем на время прогона.
+      if (browser) {
+        await browser.close().catch(() => {});
+        browser = null;
+        pagesServed = 0;
+      }
+
+      const report = await withDebugBrowser((port) =>
+        runLighthouse(payload.url, { formFactor: payload.viewport === 'desktop' ? 'desktop' : 'mobile', port }),
+      );
+
+      return send(res, 200, report ?? { url: payload.url, error: 'lighthouse вернул пустой отчёт' });
+    }
+
     send(res, 200, await measure(payload));
   } catch (error) {
     send(res, 200, { url: payload.url, error: String(error && error.message ? error.message : error) });

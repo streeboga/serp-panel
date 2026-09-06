@@ -20,6 +20,38 @@ final readonly class BrowserAudit
     }
 
     /**
+     * Прогон Lighthouse: привычная оценка 0-100 и его собственные замечания.
+     * Тяжёлый — гоняется по короткой выборке, а не по всем страницам.
+     *
+     * @return array<string, mixed>|null
+     */
+    public function lighthouse(string $url, string $viewport = 'mobile'): ?array
+    {
+        if (! $this->enabled() || ! (bool) config('audit.browser.lighthouse')) {
+            return null;
+        }
+
+        try {
+            $response = Http::withHeaders(array_filter(['X-Audit-Token' => config('audit.browser.token')]))
+                ->timeout((int) config('audit.browser.lighthouse_timeout'))
+                ->post(rtrim((string) config('audit.browser.url'), '/').'/lighthouse', [
+                    'url' => $url,
+                    'viewport' => $viewport,
+                ]);
+        } catch (ConnectionException) {
+            return null;
+        }
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $report = $response->json();
+
+        return is_array($report) && isset($report['score']) ? $report : null;
+    }
+
+    /**
      * @return array<string, mixed>|null null — сервис недоступен; это «не проверено»,
      *                                   а не «нарушений нет»
      */

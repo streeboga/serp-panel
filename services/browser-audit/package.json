@@ -10,6 +10,7 @@
     "check": "node math-check.mjs"
   },
   "dependencies": {
-    "playwright-core": "1.49.0"
+    "playwright-core": "1.49.0",
+    "lighthouse": "12.2.1"
   }
 }

@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev --no-audit --no-fund
 
-COPY server.js in-page.js ./
+COPY server.js in-page.js lighthouse.js math-check.mjs ./
 
 ENV PORT=8081
 EXPOSE 8081

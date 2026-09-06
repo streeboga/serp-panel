@@ -69,6 +69,10 @@ return [
         'token' => env('AUDIT_BROWSER_TOKEN'),
         'timeout' => (int) env('AUDIT_BROWSER_TIMEOUT', 90),
         'max_pages' => (int) env('AUDIT_BROWSER_MAX_PAGES', 20),
+        // Lighthouse тяжелее обычного замера в разы: гоняем по короткой выборке.
+        'lighthouse' => (bool) env('AUDIT_LIGHTHOUSE_ENABLED', true),
+        'lighthouse_pages' => (int) env('AUDIT_LIGHTHOUSE_PAGES', 3),
+        'lighthouse_timeout' => (int) env('AUDIT_LIGHTHOUSE_TIMEOUT', 180),
         // ТЗ требует замеров и на десктопе, и на мобильных: каждый вьюпорт — свой
         // проход браузера, поэтому список, а не одно значение.
         'viewports' => array_filter(explode(',', (string) env('AUDIT_BROWSER_VIEWPORTS', 'mobile,desktop'))),
