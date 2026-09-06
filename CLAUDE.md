@@ -126,7 +126,7 @@ Unified registry of tracked pages (own + competitors) with polymorphic attachmen
 - **SiteAudit**: `site_audits` — прогон (scope site/pages/url, статус, batch_id, оценка, находки уровня сайта)
 - **PageAuditResult**: `page_audit_results` — результат по одному URL (findings + metrics в JSONB)
 - **Проверки**: пакет `packages/serp-audit` (`streeboga/serp-audit`, подключён как path-репозиторий).
-  По классу на проверку, 31 штука в 7 категориях (technical, meta, content, links,
+  По классу на проверку, 39 штук в 7 категориях (technical, meta, content, links,
   images, a11y, legal). Один разбор DOM на страницу,
   каждая проверка возвращает `Finding[]` и метрики
 - **Реестр**: `SerpAudit\CheckRegistry` — пакеты кладут туда свои проверки из сервис-провайдера,
@@ -142,7 +142,15 @@ Unified registry of tracked pages (own + competitors) with polymorphic attachmen
 - **Ресурсы**: `audit_resources` — ссылки и картинки прогона, дедуп по `url_hash` через
   `ON CONFLICT`, счётчик `reference_count`. Второй этап (`CheckResourcesJob` →
   батч `CheckResourceJob` на очереди `audit-assets`) даёт битые ссылки и вес картинок
-- **Кросс-страничное**: дубли title и description считает `FinalizeSiteAuditJob`
+- **Кросс-страничное**: `FinalizeSiteAuditJob` плюс `SiteStructure` — полные и частичные
+  дубли title/description, переспам анкор-листа, дубли из-за параметров в адресе
+- **Граф ссылок**: `audit_links` (рёбра с анкорами) + `LinkGraph` — глубина от главной
+  обходом в ширину, сироты, недостижимые островки. Глубина и входящие пишутся в
+  `page_audit_results`
+- **Поведение**: `MetrikaClient` + `CollectBehaviourJob` — счётчик на проекте
+  (`projects.metrika_counter_id`), токен на организации. Без счётчика этап молчит
+- **Выгрузки**: `AuditExportService` — `GET /audits/{id}/export/{pages|meta|broken|findings}`,
+  потоком через курсор, CSV с BOM и точкой с запятой под русский Excel
 - **W3C**: `HtmlValidator` + `ValidateHtmlJob` — эталонный валидатор, ключ не нужен.
   Находкой становится только `type=error`; предупреждения и стилевые замечания живут
   в `metrics.w3c`. Свой лимитер `w3c` — сервер чужой и общий
