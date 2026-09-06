@@ -91,6 +91,34 @@ async function measure({ url, viewport = 'desktop', userAgent }) {
   }
 }
 
+/**
+ * Печать готового HTML в PDF. Отчёт приходит телом запроса, а не ссылкой:
+ * иначе сервису пришлось бы ходить в API с чужим токеном.
+ */
+async function printPdf(html, title) {
+  const context = await (await getBrowser()).newContext({ ...VIEWPORTS.desktop });
+
+  try {
+    const page = await context.newPage();
+    await page.setContent(html, { waitUntil: 'load', timeout: NAV_TIMEOUT });
+    await page.emulateMedia({ media: 'print' });
+
+    pagesServed++;
+
+    return await page.pdf({
+      format: 'A4',
+      printBackground: true,
+      margin: { top: '18mm', right: '14mm', bottom: '18mm', left: '14mm' },
+      displayHeaderFooter: true,
+      headerTemplate: `<div style="font-size:8px;color:#888;width:100%;padding:0 14mm;">${title.replace(/</g, '')}</div>`,
+      footerTemplate: '<div style="font-size:8px;color:#888;width:100%;padding:0 14mm;text-align:right;">'
+        + '<span class="pageNumber"></span> / <span class="totalPages"></span></div>',
+    });
+  } finally {
+    await context.close().catch(() => {});
+  }
+}
+
 const send = (res, code, body) => {
   const payload = JSON.stringify(body);
   res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Length': Buffer.byteLength(payload) });
@@ -103,8 +131,9 @@ createServer(async (req, res) => {
   }
 
   const isLighthouse = req.method === 'POST' && req.url === '/lighthouse';
+  const isPdf = req.method === 'POST' && req.url === '/pdf';
 
-  if (!isLighthouse && !(req.method === 'POST' && req.url === '/measure')) {
+  if (!isLighthouse && !isPdf && !(req.method === 'POST' && req.url === '/measure')) {
     return send(res, 404, { error: 'not found' });
   }
 
@@ -118,7 +147,8 @@ createServer(async (req, res) => {
   let raw = '';
   for await (const chunk of req) {
     raw += chunk;
-    if (raw.length > 8192) return send(res, 413, { error: 'payload too large' });
+    // Отчёт приходит целиком в теле: 8 КБ хватало для замеров, но не для него.
+    if (raw.length > 12 * 1024 * 1024) return send(res, 413, { error: 'payload too large' });
   }
 
   let payload;
@@ -128,13 +158,25 @@ createServer(async (req, res) => {
     return send(res, 400, { error: 'invalid json' });
   }
 
-  if (typeof payload.url !== 'string' || !/^https?:\/\//i.test(payload.url)) {
+  if (isPdf) {
+    if (typeof payload.html !== 'string' || payload.html === '') {
+      return send(res, 422, { error: 'html required' });
+    }
+  } else if (typeof payload.url !== 'string' || !/^https?:\/\//i.test(payload.url)) {
     return send(res, 422, { error: 'url required' });
   }
 
   busy = true;
 
   try {
+    if (isPdf) {
+      const pdf = await printPdf(payload.html, payload.title ?? 'Отчёт');
+
+      res.writeHead(200, { 'Content-Type': 'application/pdf', 'Content-Length': pdf.length });
+
+      return res.end(pdf);
+    }
+
     if (isLighthouse) {
       // Lighthouse поднимает свой Chromium с отладочным портом: два браузера
       // разом эта машина не тянет, поэтому свой закрываем на время прогона.

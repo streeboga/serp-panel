@@ -11,6 +11,9 @@ return [
     'timeout' => (int) env('AUDIT_TIMEOUT', 15),
     'max_redirects' => 5,
     'max_pages' => (int) env('AUDIT_MAX_PAGES', 500),
+
+    // Сколько конкурентов из выдачи мерить для сравнения скорости.
+    'competitors_compared' => (int) env('AUDIT_COMPETITORS_COMPARED', 5),
     'requests_per_second' => (int) env('AUDIT_RPS', 2),
 
     /*

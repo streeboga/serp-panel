@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Jobs;
 
 use App\Contracts\Repositories\SiteAuditRepositoryInterface;
+use App\Enums\AuditScope;
 use App\Models\PageAuditResult;
 use App\Models\SiteAudit;
 use App\Services\Audit\BrowserAudit;
@@ -68,6 +69,11 @@ final class RunBrowserStageJob implements ShouldQueue
 
         if ($audit->project->metrika_counter_id !== null) {
             CollectBehaviourJob::dispatch($audit->id);
+        }
+
+        // Сравнение скорости с конкурентами имеет смысл только для сайта целиком.
+        if ($browser->enabled() && $audit->scope === AuditScope::Site && $this->origin($audit) !== null) {
+            CompareCompetitorSpeedJob::dispatch($audit->id, (string) $this->origin($audit));
         }
 
         if (! $browser->enabled() && ! $validator->enabled()) {

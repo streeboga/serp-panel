@@ -12,6 +12,7 @@ use App\Models\Page;
 use App\Models\Project;
 use App\Models\SiteAudit;
 use App\Services\AuditExportService;
+use App\Services\AuditReportService;
 use App\Services\SiteAuditService;
 use Dedoc\Scramble\Attributes\Group;
 use Dedoc\Scramble\Attributes\PathParameter;
@@ -30,6 +31,7 @@ final class AuditController extends Controller
         private readonly SiteAuditService $service,
         private readonly CheckRegistry $registry,
         private readonly AuditExportService $exports,
+        private readonly AuditReportService $report,
     ) {}
 
     /**
@@ -240,6 +242,40 @@ final class AuditController extends Controller
 
             fclose($handle);
         }, "audit-{$audit->id}-{$dataset}.csv", ['Content-Type' => 'text/csv; charset=utf-8']);
+    }
+
+    /**
+     * Отчёт по прогону
+     *
+     * `?format=pdf` печатает через браузерный сервис, `html` отдаёт вёрстку —
+     * ей же удобно смотреть отчёт в браузере перед отправкой.
+     */
+    #[PathParameter('audit', description: 'ID прогона', example: '1')]
+    #[Response(200, description: 'PDF или HTML отчёта')]
+    #[Response(503, description: 'Сервис печати недоступен')]
+    public function report(Request $request, SiteAudit $audit): mixed
+    {
+        $this->authorizeAudit($request, $audit);
+
+        if ($request->query('format') === 'html') {
+            return response($this->report->html($audit))->header('Content-Type', 'text/html; charset=utf-8');
+        }
+
+        $pdf = $this->report->pdf($audit);
+
+        // Печать делает браузерный сервис: если он не поднят, честно говорим об
+        // этом, а не отдаём пустой файл.
+        if ($pdf === null) {
+            return response()->json([
+                'errors' => [['status' => '503', 'title' => 'Печать недоступна',
+                    'detail' => 'Браузерный сервис не отвечает. HTML-версия доступна через ?format=html.']],
+            ], 503);
+        }
+
+        return response($pdf)->withHeaders([
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="audit-'.$audit->id.'.pdf"',
+        ]);
     }
 
     private function authorizeProject(Request $request, Project $project): void

@@ -25,6 +25,13 @@ final class ForceJsonApiContentType
             return $response;
         }
 
+        // Отчёт и другие уже объявленные типы тоже не трогаем.
+        $declared = (string) $response->headers->get('Content-Type', '');
+
+        if ($declared !== '' && ! str_contains($declared, 'json')) {
+            return $response;
+        }
+
         $response->headers->set('Content-Type', 'application/vnd.api+json');
 
         return $response;
