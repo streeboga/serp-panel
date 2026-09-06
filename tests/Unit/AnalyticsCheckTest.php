@@ -44,13 +44,13 @@ function consentGatedHtml(): string
 }
 
 it('не жалуется, когда счётчик подключается после согласия', function () {
-    $findings = (new AnalyticsCheck())->run(analyticsContext(consentGatedHtml()));
+    $findings = (new AnalyticsCheck)->run(analyticsContext(consentGatedHtml()));
 
     expect($findings)->toBe([]);
 });
 
 it('различает прямое и отложенное подключение в метриках', function () {
-    $metrics = (new AnalyticsCheck())->metrics(analyticsContext(consentGatedHtml()));
+    $metrics = (new AnalyticsCheck)->metrics(analyticsContext(consentGatedHtml()));
 
     expect($metrics['analytics_direct'])->toBe([])
         ->and($metrics['analytics_deferred'])->toContain('Яндекс Метрика')
@@ -60,15 +60,15 @@ it('различает прямое и отложенное подключени
 
 it('по-прежнему видит счётчик, вставленный в разметку напрямую', function () {
     $html = '<html><body><script src="https://mc.yandex.ru/metrika/tag.js"></script></body></html>';
-    $metrics = (new AnalyticsCheck())->metrics(analyticsContext($html));
+    $metrics = (new AnalyticsCheck)->metrics(analyticsContext($html));
 
-    expect((new AnalyticsCheck())->run(analyticsContext($html)))->toBe([])
+    expect((new AnalyticsCheck)->run(analyticsContext($html)))->toBe([])
         ->and($metrics['analytics_direct'])->toContain('Яндекс Метрика');
 });
 
 it('жалуется на странице без единого следа аналитики', function () {
     $html = '<html><body><h1>Ничего нет</h1><p>Текст без счётчиков.</p></body></html>';
-    $findings = (new AnalyticsCheck())->run(analyticsContext($html));
+    $findings = (new AnalyticsCheck)->run(analyticsContext($html));
 
     expect($findings)->toHaveCount(1)
         ->and($findings[0]->code)->toBe('http.analytics.missing');

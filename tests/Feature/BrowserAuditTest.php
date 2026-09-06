@@ -97,7 +97,7 @@ test('находки доливаются в результат страницы
         'severity' => 'warning', 'message' => 'Длинный title', 'value' => 80, 'expected' => '10–70',
     ]]]);
 
-    (new BrowserAuditJob($result->id, $result->url))->handle(app(BrowserAudit::class), new BrowserFindings);
+    runJob(new BrowserAuditJob($result->id, $result->url));
 
     $fresh = $result->refresh();
     $codes = array_column($fresh->findings, 'code');
@@ -118,7 +118,7 @@ test('повторный замер не плодит дубли находок'
     $result = resultFor();
 
     foreach ([1, 2] as $ignored) {
-        (new BrowserAuditJob($result->id, $result->url))->handle(app(BrowserAudit::class), new BrowserFindings);
+        runJob(new BrowserAuditJob($result->id, $result->url));
     }
 
     $codes = array_column($result->refresh()->findings, 'code');
@@ -132,7 +132,7 @@ test('недоступный сервис оставляет страницу н
     $result = resultFor();
     $result->update(['findings' => [], 'score' => 100]);
 
-    (new BrowserAuditJob($result->id, $result->url))->handle(app(BrowserAudit::class), new BrowserFindings);
+    runJob(new BrowserAuditJob($result->id, $result->url));
 
     $fresh = $result->refresh();
 
@@ -169,7 +169,7 @@ test('браузерный этап не теряет пометки заглу�
 
     Http::fake(['browser.test:8081/*' => Http::response(measurement(), 200)]);
 
-    (new BrowserAuditJob($result->id, $result->url))->handle(app(BrowserAudit::class), new BrowserFindings);
+    runJob(new BrowserAuditJob($result->id, $result->url));
 
     $result->refresh();
 

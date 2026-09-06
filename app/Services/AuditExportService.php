@@ -38,6 +38,8 @@ final readonly class AuditExportService
                 'URL' => $result->url,
                 'Код ответа' => $result->http_status,
                 'Редиректов' => $metrics['redirects'] ?? null,
+                'Кликов от главной' => $result->depth,
+                'Входящих ссылок' => $result->inbound_links,
                 'Оценка' => $result->score,
                 'Ошибки' => $result->issues_critical,
                 'Предупреждения' => $result->issues_warning,

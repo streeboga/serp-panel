@@ -15,6 +15,8 @@ use Illuminate\Support\Carbon;
  * @property string $url
  * @property string $url_hash
  * @property string $path
+ * @property int|null $depth
+ * @property int|null $inbound_links
  * @property int|null $http_status
  * @property array<mixed>|null $redirect_chain
  * @property int|null $response_time_ms
@@ -36,7 +38,7 @@ final class PageAuditResult extends Model
     public const UPDATED_AT = null;
 
     protected $fillable = [
-        'site_audit_id', 'page_id', 'url', 'url_hash', 'path',
+        'site_audit_id', 'page_id', 'url', 'url_hash', 'path', 'depth', 'inbound_links',
         'http_status', 'redirect_chain', 'response_time_ms', 'html_size',
         'score', 'issues_critical', 'issues_warning', 'issues_notice', 'issues_muted',
         'findings', 'metrics', 'error',

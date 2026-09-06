@@ -90,7 +90,7 @@ test('scrape page calculates position offset', function () {
 });
 
 test('scrape page returns zero total on empty response', function () {
-    $emptyXml = <<<XML
+    $emptyXml = <<<'XML'
     <yandexsearch>
         <response>
             <found priority="all">0</found>

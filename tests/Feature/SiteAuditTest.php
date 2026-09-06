@@ -2,9 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Contracts\Repositories\AuditResourceRepositoryInterface;
-use App\Contracts\Repositories\PageAuditResultRepositoryInterface;
-use App\Contracts\Repositories\SiteAuditRepositoryInterface;
 use App\Enums\AuditStatus;
 use App\Http\Controllers\Api\V1\AuditController;
 use App\Jobs\AuditPageJob;
@@ -20,9 +17,13 @@ use Illuminate\Support\Facades\Http;
 covers(AuditController::class, SiteAuditService::class);
 
 beforeEach(function () {
-    // Боевой лимит вежливости — 2 запроса в секунду. На sync-очереди отложенная
-    // джоба не возвращается, поэтому в тестах поводок отпускаем.
-    config(['audit.requests_per_second' => 10_000]);
+    // Боевые лимиты — 2 запроса в секунду к сайту и 20 в минуту к W3C. На
+    // sync-очереди отложенная джоба не возвращается, а состояние лимитера общее
+    // на весь файл: без этого тесты глушат друг друга, и батч не закрывается.
+    config([
+        'audit.requests_per_second' => 10_000,
+        'audit.w3c.requests_per_minute' => 10_000,
+    ]);
 });
 
 function goodPage(string $title = 'Разработка сайтов на Laravel под ключ'): string
@@ -264,11 +265,7 @@ test('потерянные страницы не выдаются за успе�
     ]);
 
     // Ни одна страница не записалась — батч отработал, результатов нет.
-    (new FinalizeSiteAuditJob($audit->id))->handle(
-        app(SiteAuditRepositoryInterface::class),
-        app(PageAuditResultRepositoryInterface::class),
-        app(AuditResourceRepositoryInterface::class),
-    );
+    runJob(new FinalizeSiteAuditJob($audit->id));
 
     expect($audit->refresh()->error)->toContain('10 из 10');
 });
@@ -487,11 +484,7 @@ test('политика заглушения проекта попадает в �
     // Сводка прогона складывается из страниц, поэтому заглушённое видно отдельно
     // и в неё не попадает. Финализатор идемпотентен, зовём его явно: батч в
     // тестовой очереди свой finally отдаёт не всегда.
-    (new FinalizeSiteAuditJob($audit->id))->handle(
-        app(SiteAuditRepositoryInterface::class),
-        app(PageAuditResultRepositoryInterface::class),
-        app(AuditResourceRepositoryInterface::class),
-    );
+    runJob(new FinalizeSiteAuditJob($audit->id));
 
     $audit->refresh();
 
@@ -515,4 +508,50 @@ test('код проверки политикой заглушения не пр�
         ['muted_codes' => ['http.analytics.missing' => '']],
         orgHeaders($h['org']),
     )->assertStatus(422);
+});
+
+test('граф ссылок даёт глубину, сирот и входящие', function () {
+    $sitemap = <<<'XML'
+    <?xml version="1.0" encoding="UTF-8"?>
+    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+        <url><loc>https://test.com/</loc></url>
+        <url><loc>https://test.com/catalog/</loc></url>
+        <url><loc>https://test.com/orphan/</loc></url>
+    </urlset>
+    XML;
+
+    $head = '<head><title>Страница про разработку сайтов</title>'
+        .'<meta name="description" content="Описание страницы достаточной длины, чтобы пройти порог проверки."></head>';
+
+    Http::fake([
+        'test.com/robots.txt' => Http::response('', 404),
+        'test.com/sitemap.xml' => Http::response($sitemap, 200, ['Content-Type' => 'application/xml']),
+        // Шаблон обязан заканчиваться слэшем: иначе он не совпадёт с https://test.com/
+        // и главная получит общий ответ без ссылки на каталог.
+        'test.com/' => Http::response("<html lang=\"ru\">{$head}<body><h1>Главная</h1><a href=\"/catalog/\">Каталог</a></body></html>", 200, ['Content-Type' => 'text/html']),
+        '*' => Http::response("<html lang=\"ru\">{$head}<body><h1>Страница</h1><p>Текст</p></body></html>", 200, ['Content-Type' => 'text/html']),
+    ]);
+
+    $h = createFullStack();
+
+    $this->actingAs($h['user'])->postJson(
+        "/api/v1/projects/{$h['project']->id}/audits",
+        ['scope' => 'site', 'domain_id' => $h['domain']->id],
+        orgHeaders($h['org']),
+    )->assertStatus(201);
+
+    $audit = SiteAudit::latest('id')->firstOrFail();
+
+    expect(array_column($audit->findings, 'code'))->toContain('site.structure.orphans');
+
+    $home = $audit->results()->where('url', 'https://test.com/')->firstOrFail();
+    $catalog = $audit->results()->where('url', 'https://test.com/catalog/')->firstOrFail();
+    $orphan = $audit->results()->where('url', 'https://test.com/orphan/')->firstOrFail();
+
+    expect($home->depth)->toBe(0)
+        ->and($catalog->depth)->toBe(1)
+        ->and($catalog->inbound_links)->toBe(1)
+        // На сироту никто не ссылается — от главной до неё не дойти.
+        ->and($orphan->depth)->toBeNull()
+        ->and($orphan->inbound_links)->toBe(0);
 });

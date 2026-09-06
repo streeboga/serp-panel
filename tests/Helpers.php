@@ -41,3 +41,12 @@ function orgHeaders(Organization $org): array
 {
     return ['X-Organization-Id' => (string) $org->id];
 }
+
+/**
+ * Зовёт handle() джобы через контейнер: зависимости резолвятся сами, и добавление
+ * новой не ломает каждый тест, который эту джобу дёргает.
+ */
+function runJob(object $job): void
+{
+    app()->call([$job, 'handle']);
+}

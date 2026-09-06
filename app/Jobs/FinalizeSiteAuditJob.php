@@ -4,10 +4,13 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Contracts\Repositories\AuditLinkRepositoryInterface;
 use App\Contracts\Repositories\AuditResourceRepositoryInterface;
 use App\Contracts\Repositories\PageAuditResultRepositoryInterface;
 use App\Contracts\Repositories\SiteAuditRepositoryInterface;
 use App\Enums\AuditStatus;
+use App\Models\PageAuditResult;
+use App\Services\Audit\LinkGraph;
 use App\Support\MutedCodes;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -34,6 +37,7 @@ final class FinalizeSiteAuditJob implements ShouldQueue
         SiteAuditRepositoryInterface $audits,
         PageAuditResultRepositoryInterface $results,
         AuditResourceRepositoryInterface $resources,
+        AuditLinkRepositoryInterface $links,
     ): void {
         $audit = $audits->findById($this->auditId);
         $aggregate = $results->aggregate($audit->id);
@@ -53,13 +57,15 @@ final class FinalizeSiteAuditJob implements ShouldQueue
         $siteFindings = array_values(array_filter(
             $audit->findings ?? [],
             static fn (array $f): bool => ! str_starts_with((string) ($f['check'] ?? ''), 'site.resources')
-                && ! str_starts_with((string) ($f['check'] ?? ''), 'site.duplicate'),
+                && ! str_starts_with((string) ($f['check'] ?? ''), 'site.duplicate')
+                && ! str_starts_with((string) ($f['check'] ?? ''), 'site.structure'),
         ));
 
         $siteFindings = [
             ...$siteFindings,
             ...$this->resourceFindings($resources, $audit->id),
             ...$this->duplicateFindings($results, $audit->id),
+            ...$this->structureFindings($links, $audit->id),
         ];
 
         // Политика заглушения — та, что записана в прогоне при запуске. Находки
@@ -101,6 +107,109 @@ final class FinalizeSiteAuditJob implements ShouldQueue
         ]);
 
         Log::info("AuditSiteJob batch complete: audit {$audit->id} — {$aggregate['pages']} страниц, оценка {$score}");
+    }
+
+    /**
+     * Битые ссылки и тяжёлые картинки — видны только после второго этапа.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    /**
+     * Граф внутренних ссылок: сироты, недостижимые островки, слишком глубокие
+     * страницы. Считается здесь, потому что до конца обхода графа ещё нет.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function structureFindings(AuditLinkRepositoryInterface $links, int $auditId): array
+    {
+        $pages = PageAuditResult::where('site_audit_id', $auditId)
+            ->get(['id', 'url'])
+            ->map(fn (PageAuditResult $p): array => ['id' => $p->id, 'url' => $p->url])
+            ->all();
+
+        if ($pages === []) {
+            return [];
+        }
+
+        // Главная — самый короткий адрес прогона: у неё пустой путь.
+        $root = collect($pages)
+            ->sortBy(fn (array $p): int => mb_strlen((string) parse_url($p['url'], PHP_URL_PATH)))
+            ->first();
+
+        $graph = (new LinkGraph)->analyse($pages, $links->edges($auditId), $root['url']);
+
+        $urlById = array_column($pages, 'url', 'id');
+
+        $links->saveStructure(array_map(
+            static fn (array $page): array => [
+                'id' => $page['id'],
+                'depth' => $graph['depth'][$page['id']] ?? null,
+                'inbound' => $graph['inbound'][$page['id']] ?? 0,
+            ],
+            $pages,
+        ));
+
+        $findings = [];
+
+        if ($graph['orphans'] !== []) {
+            $findings[] = $this->siteFinding(
+                'site.structure.orphans',
+                'links',
+                'critical',
+                'Страницы, на которые не ведёт ни одна внутренняя ссылка',
+                array_map(static fn (int $id): string => $urlById[$id], array_slice($graph['orphans'], 0, 20)),
+                0,
+            );
+        }
+
+        if ($graph['unreachable'] !== []) {
+            $findings[] = $this->siteFinding(
+                'site.structure.unreachable',
+                'links',
+                'warning',
+                'Страницы ссылаются друг на друга, но от главной до них не дойти',
+                array_map(static fn (int $id): string => $urlById[$id], array_slice($graph['unreachable'], 0, 20)),
+                0,
+            );
+        }
+
+        // Дальше четырёх кликов от главной страницу и робот, и человек находят плохо.
+        $deep = array_keys(array_filter(
+            $graph['depth'],
+            static fn (?int $depth): bool => $depth !== null && $depth > 4,
+        ));
+
+        if ($deep !== []) {
+            $findings[] = $this->siteFinding(
+                'site.structure.too_deep',
+                'links',
+                'notice',
+                'Страницы глубже четырёх кликов от главной',
+                array_map(
+                    static fn (int $id): array => ['url' => $urlById[$id], 'кликов' => $graph['depth'][$id]],
+                    array_slice($deep, 0, 20),
+                ),
+                'до 4 кликов',
+            );
+        }
+
+        return $findings;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function siteFinding(string $code, string $category, string $severity, string $message, mixed $value, mixed $expected): array
+    {
+        return [
+            'check' => $code,
+            'code' => $code,
+            'category' => $category,
+            'severity' => $severity,
+            'message' => $message,
+            'value' => $value,
+            'expected' => $expected,
+        ];
     }
 
     /**

@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Jobs;
 
+use App\Contracts\Repositories\AuditLinkRepositoryInterface;
 use App\Contracts\Repositories\AuditResourceRepositoryInterface;
 use App\Contracts\Repositories\PageAuditResultRepositoryInterface;
 use App\Contracts\Repositories\PageRepositoryInterface;
@@ -65,6 +66,7 @@ final class AuditPageJob implements ShouldQueue
         PageRepositoryInterface $pages,
         PageAuditResultRepositoryInterface $results,
         AuditResourceRepositoryInterface $auditResources,
+        AuditLinkRepositoryInterface $auditLinks,
         PageFetcher $fetcher,
         PageAuditor $auditor,
     ): void {
@@ -121,6 +123,16 @@ final class AuditPageJob implements ShouldQueue
         ]);
 
         $auditResources->record($this->auditId, $resultId, $this->resourcesOf($context));
+
+        // Рёбра графа: только внутренние, только навигационные.
+        $auditLinks->record($this->auditId, $resultId, array_values(array_map(
+            static fn (array $link): array => [
+                'url' => strtok($link['url'], '#') ?: $link['url'],
+                'anchor' => $link['anchor'],
+                'nofollow' => $link['nofollow'],
+            ],
+            array_filter($context->links(), static fn (array $link): bool => $link['internal']),
+        )));
 
         $audit->increment('pages_done');
     }

@@ -2,7 +2,6 @@
 
 declare(strict_types=1);
 
-use App\Contracts\Repositories\SiteAuditRepositoryInterface;
 use App\Jobs\CollectFieldDataJob;
 use App\Jobs\ValidateHtmlJob;
 use App\Models\PageAuditResult;
@@ -50,7 +49,7 @@ test('предпочтения линтера не выдаются за нар�
         ->and($outcome['info'])->toBe(36);
 
     $result = pageResult();
-    (new ValidateHtmlJob($result->id, $result->url))->handle(app(HtmlValidator::class));
+    runJob(new ValidateHtmlJob($result->id, $result->url));
 
     $fresh = $result->refresh();
 
@@ -71,7 +70,7 @@ test('настоящие нарушения спецификации стано�
     ]))]);
 
     $result = pageResult();
-    (new ValidateHtmlJob($result->id, $result->url))->handle(app(HtmlValidator::class));
+    runJob(new ValidateHtmlJob($result->id, $result->url));
 
     $fresh = $result->refresh();
     $finding = collect($fresh->findings)->firstWhere('code', 'w3c.validation.errors');
@@ -88,7 +87,7 @@ test('молчание валидатора оставляет страницу 
     Http::fake(['validator.w3.org/*' => Http::response('', 503)]);
 
     $result = pageResult();
-    (new ValidateHtmlJob($result->id, $result->url))->handle(app(HtmlValidator::class));
+    runJob(new ValidateHtmlJob($result->id, $result->url));
 
     expect($result->refresh()->metrics)->not->toHaveKey('w3c');
 });
@@ -133,10 +132,7 @@ test('плохой полевой LCP становится находкой пр
     $result = pageResult();
     $audit = $result->audit;
 
-    (new CollectFieldDataJob($audit->id, 'https://test.com'))->handle(
-        app(SiteAuditRepositoryInterface::class),
-        app(CruxClient::class),
-    );
+    runJob(new CollectFieldDataJob($audit->id, 'https://test.com'));
 
     $codes = array_column($audit->refresh()->findings, 'code');
 
