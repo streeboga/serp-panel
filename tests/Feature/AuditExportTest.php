@@ -163,3 +163,21 @@ test('чужой прогон не выгружается', function () {
         ->get("/api/v1/audits/{$audit->id}/export/pages", orgHeaders($mine['org']))
         ->assertNotFound();
 });
+
+it('с include_passed выгрузка показывает и то, что на странице в порядке', function () {
+    $audit = auditWithData();
+    $rows = iterator_to_array(app(AuditExportService::class)->dataset($audit, 'findings', includePassed: true), false);
+
+    $ok = array_values(array_filter($rows, static fn (array $r): bool => $r['Важность'] === 'ОК'));
+    $okChecks = array_column($ok, 'Проверка');
+
+    // Проверка, которая нашла дефект, в «ОК» не попадает; остальные — попадают.
+    expect($okChecks)->not->toContain('meta.headings')
+        ->and($okChecks)->toContain('meta.title')
+        ->and($ok[0]['URL'])->toBe('https://test.com/uslugi/')
+        ->and(count($ok))->toBeGreaterThan(30);
+
+    // Без флага — как раньше, только находки.
+    $plain = iterator_to_array(app(AuditExportService::class)->dataset($audit, 'findings'), false);
+    expect(array_column($plain, 'Важность'))->not->toContain('ОК');
+});

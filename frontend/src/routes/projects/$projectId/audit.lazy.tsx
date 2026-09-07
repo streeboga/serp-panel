@@ -17,6 +17,7 @@ import { useDomains } from '@/hooks/useDomains'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
+import { Switch } from '@/components/ui/switch'
 import { AuditFindingValue } from '@/components/AuditFindingValue'
 import { EmptyState } from '@/components/EmptyState'
 import { TableSkeleton } from '@/components/PageSkeleton'
@@ -71,6 +72,28 @@ function scoreClass(score: number | null): string {
   return 'text-red-600 dark:text-red-400'
 }
 
+/**
+ * Две колонки фиксированной сетки: значок важности и текст. Ширина первой
+ * колонки одна на все строки, поэтому описание всегда начинается с одного
+ * отступа — «Замечание» и «Предупреждение» разной длины его не сдвигают.
+ */
+const ROW_GRID = 'grid grid-cols-[8.5rem_minmax(0,1fr)] items-start gap-x-3 py-1 text-sm'
+
+/** Проверка, которая на странице запускалась и ничего не нашла. */
+function PassedRow({ code, title }: { code: string; title: string }) {
+  return (
+    <div className={ROW_GRID} title={code}>
+      <Badge
+        variant="outline"
+        className="justify-self-start border-emerald-300 text-emerald-700 dark:border-emerald-800 dark:text-emerald-400"
+      >
+        ОК
+      </Badge>
+      <div className="min-w-0 text-muted-foreground">{title}</div>
+    </div>
+  )
+}
+
 function FindingRow({ finding }: { finding: Finding }) {
   const scalar =
     finding.value !== null &&
@@ -80,11 +103,11 @@ function FindingRow({ finding }: { finding: Finding }) {
   return (
     // Код проверки не показываем, но держим в подсказке: он нужен, когда надо
     // сузить прогон через check_codes.
-    <div className="flex items-start gap-2 py-1 text-sm" title={finding.check}>
-      <Badge variant={SEVERITY_VARIANT[finding.severity]} className="shrink-0">
+    <div className={ROW_GRID} title={finding.check}>
+      <Badge variant={SEVERITY_VARIANT[finding.severity]} className="justify-self-start">
         {SEVERITY_LABELS[finding.severity]}
       </Badge>
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0">
         <span>{finding.message}</span>
         {scalar && (
           <span className="text-muted-foreground">
@@ -110,9 +133,21 @@ function FindingRow({ finding }: { finding: Finding }) {
   )
 }
 
-function ResultRow({ result }: { result: PageAuditResult }) {
+function ResultRow({
+  result,
+  ranChecks,
+}: {
+  result: PageAuditResult
+  /** Проверки, которые прогон запускал на каждой странице; null — не показывать пройденные. */
+  ranChecks: Array<{ code: string; title: string }> | null
+}) {
   const [open, setOpen] = useState(false)
   const findings = result.findings ?? []
+  // Страница без ответа проверок не проходила — «ОК» на ней врал бы.
+  const passed =
+    ranChecks && !result.error
+      ? ranChecks.filter((c) => !findings.some((f) => f.check === c.code))
+      : []
 
   return (
     <>
@@ -140,11 +175,14 @@ function ResultRow({ result }: { result: PageAuditResult }) {
         <TableRow>
           <TableCell colSpan={6} className="bg-muted/40">
             {result.error && <p className="text-sm text-red-600">{result.error}</p>}
-            {findings.length === 0 && !result.error && (
+            {findings.length === 0 && !result.error && passed.length === 0 && (
               <p className="text-sm text-muted-foreground">Замечаний нет.</p>
             )}
             {findings.map((finding, i) => (
               <FindingRow key={`${finding.check}-${i}`} finding={finding} />
+            ))}
+            {passed.map((c) => (
+              <PassedRow key={c.code} code={c.code} title={c.title} />
             ))}
           </TableCell>
         </TableRow>
@@ -158,6 +196,7 @@ function AuditPage() {
 
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [severity, setSeverity] = useState<Severity | ''>('')
+  const [showPassed, setShowPassed] = useState(false)
   const [search, setSearch] = useState('')
   const [scope, setScope] = useState<'site' | 'url'>('site')
   const [enabled, setEnabled] = useState<Set<string> | null>(null)
@@ -217,6 +256,15 @@ function AuditPage() {
 
   const currentId = selectedId ?? audits[0]?.id ?? null
   const { data: auditData } = useAudit(currentId)
+  // Что именно запускал этот прогон: каталог, суженный его groups и check_codes.
+  const ranChecks = useMemo(() => {
+    const audit = auditData?.data
+    if (!showPassed || !audit) return null
+    return catalog
+      .filter((entry) => !audit.groups?.length || audit.groups.includes(entry.category))
+      .flatMap((entry) => entry.checks)
+      .filter((c) => !audit.check_codes?.length || audit.check_codes.includes(c.code))
+  }, [showPassed, auditData, catalog])
   const audit: SiteAudit | undefined = auditData?.data ?? auditData
 
   const { data: resultsData, isFetching: resultsLoading } = useAuditResults(currentId, {
@@ -444,6 +492,10 @@ function AuditPage() {
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <Switch checked={showPassed} onCheckedChange={setShowPassed} />
+                Показывать пройденные
+              </label>
             </div>
 
             {resultsLoading && results.length === 0 ? (
@@ -471,7 +523,7 @@ function AuditPage() {
                 </TableHeader>
                 <TableBody>
                   {results.map((result) => (
-                    <ResultRow key={result.id} result={result} />
+                    <ResultRow key={result.id} result={result} ranChecks={ranChecks} />
                   ))}
                 </TableBody>
               </Table>

@@ -29,6 +29,7 @@ final class SiteAuditResource extends JsonApiResource
             'scope' => $this->scope->value,
             'status' => $this->status->value,
             'groups' => $this->groups,
+            'check_codes' => $this->check_codes,
             'progress' => $this->resource->progress(),
             'pages_total' => $this->pages_total,
             'pages_done' => $this->pages_done,

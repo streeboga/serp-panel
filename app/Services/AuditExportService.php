@@ -9,6 +9,7 @@ use App\Contracts\Repositories\PageAuditResultRepositoryInterface;
 use App\Models\AuditResource;
 use App\Models\SiteAudit;
 use Generator;
+use SerpAudit\CheckRegistry;
 use SerpAudit\Remediation;
 
 /**
@@ -23,6 +24,7 @@ final readonly class AuditExportService
     public function __construct(
         private PageAuditResultRepositoryInterface $results,
         private AuditResourceRepositoryInterface $resources,
+        private CheckRegistry $registry,
     ) {}
 
     /**
@@ -125,17 +127,51 @@ final readonly class AuditExportService
      *
      * @return Generator<int, array<string, mixed>>
      */
-    public function findings(SiteAudit $audit): Generator
+    public function findings(SiteAudit $audit, bool $includePassed = false): Generator
     {
         foreach ($audit->findings ?? [] as $finding) {
             yield $this->row('весь сайт', $finding);
         }
 
+        // Пройденные проверки — те, что прогон запускал на странице и которые
+        // ничего не нашли. Без них выгрузка показывает только плохое, а заказчику
+        // важно видеть и то, что на сайте настроено правильно.
+        $ran = $includePassed ? $this->registry->select($audit->groups, $audit->check_codes) : [];
+
         foreach ($this->results->lazyForAudit($audit->id) as $result) {
             foreach ($result->findings ?? [] as $finding) {
                 yield $this->row($result->url, $finding);
             }
+
+            // Страница без ответа проверок не проходила — «ОК» там врал бы.
+            if ($ran === [] || $result->error !== null) {
+                continue;
+            }
+
+            $fired = array_flip(array_column($result->findings ?? [], 'check'));
+
+            foreach ($ran as $check) {
+                if (! isset($fired[$check->code()])) {
+                    yield $this->passedRow($result->url, $check->code(), $check->title(), $check->category());
+                }
+            }
         }
+    }
+
+    /** @return array<string, mixed> */
+    private function passedRow(string $url, string $code, string $title, string $category): array
+    {
+        return [
+            'URL' => $url,
+            'Важность' => 'ОК',
+            'Категория' => $category,
+            'Проверка' => $code,
+            'Код' => $code,
+            'Описание' => $title,
+            'Значение' => null,
+            'Ожидается' => null,
+            'Как исправить' => null,
+        ];
     }
 
     /**
@@ -180,13 +216,13 @@ final readonly class AuditExportService
     }
 
     /** @return Generator<int, array<string, mixed>> */
-    public function dataset(SiteAudit $audit, string $name): Generator
+    public function dataset(SiteAudit $audit, string $name, bool $includePassed = false): Generator
     {
         yield from match ($name) {
             'pages' => $this->pages($audit),
             'meta' => $this->meta($audit),
             'broken' => $this->broken($audit),
-            'findings' => $this->findings($audit),
+            'findings' => $this->findings($audit, $includePassed),
             default => throw new \InvalidArgumentException("Неизвестная выгрузка [{$name}]"),
         };
     }

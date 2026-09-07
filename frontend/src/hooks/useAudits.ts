@@ -29,6 +29,9 @@ export interface SiteAudit {
   scope: AuditScope
   status: 'pending' | 'running' | 'completed' | 'failed' | 'cancelled'
   progress: number
+  /** Чем сузили прогон; null — запускали всё. Нужно, чтобы понять, какие проверки пройдены. */
+  groups: string[] | null
+  check_codes: string[] | null
   pages_total: number
   pages_done: number
   score: number | null

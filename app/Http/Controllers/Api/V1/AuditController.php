@@ -201,7 +201,8 @@ final class AuditController extends Controller
      *
      * Наборы: `pages` — все проверенные URL с кодами ответов, `meta` — Title,
      * Description и заголовки, `broken` — битые ссылки и файлы, `findings` —
-     * все находки построчно. Ровно те выгрузки, которые просят в закупках.
+     * все находки построчно (с `?include_passed=1` — и пройденные проверки строками «ОК»).
+     * Ровно те выгрузки, которые просят в закупках.
      */
     #[PathParameter('audit', description: 'ID прогона', example: '1')]
     #[PathParameter('dataset', description: 'Набор: pages, meta, broken, findings', example: 'pages')]
@@ -213,7 +214,7 @@ final class AuditController extends Controller
 
         abort_unless(array_key_exists($dataset, $this->exports->datasets()), 404);
 
-        $rows = $this->exports->dataset($audit, $dataset);
+        $rows = $this->exports->dataset($audit, $dataset, $request->boolean('include_passed'));
 
         return response()->streamDownload(function () use ($rows): void {
             $handle = fopen('php://output', 'w');
