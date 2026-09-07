@@ -9,6 +9,7 @@ use App\Contracts\Repositories\PageAuditResultRepositoryInterface;
 use App\Models\AuditResource;
 use App\Models\SiteAudit;
 use Generator;
+use SerpAudit\Remediation;
 
 /**
  * Выгрузки прогона в том разрезе, в каком их просят в закупках: список URL с кодами,
@@ -163,6 +164,7 @@ final readonly class AuditExportService
             'Ожидается' => is_array($finding['expected'] ?? null)
                 ? json_encode($finding['expected'], JSON_UNESCAPED_UNICODE)
                 : ($finding['expected'] ?? null),
+            'Как исправить' => Remediation::for((string) ($finding['code'] ?? '')),
         ];
     }
 

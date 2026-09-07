@@ -628,3 +628,42 @@ test('согласованная карта сайта претензий не �
 
     expect($codes)->not->toContain('site.sitemap.blocked_by_robots');
 });
+
+test('карта сайта против страниц: noindex и чужой canonical в карте', function () {
+    $sitemap = <<<'XML'
+    <?xml version="1.0" encoding="UTF-8"?>
+    <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+        <url><loc>https://test.com/</loc></url>
+        <url><loc>https://test.com/hidden/</loc></url>
+        <url><loc>https://test.com/copy/</loc></url>
+    </urlset>
+    XML;
+
+    $head = '<title>Страница про разработку сайтов</title>'
+        .'<meta name="description" content="Описание страницы достаточной длины, чтобы пройти порог проверки.">';
+
+    Http::fake([
+        'test.com/robots.txt' => Http::response('', 404),
+        'test.com/sitemap.xml' => Http::response($sitemap, 200, ['Content-Type' => 'application/xml']),
+        'test.com/hidden/' => Http::response("<html lang=\"ru\"><head>{$head}<meta name=\"robots\" content=\"noindex\"></head><body><h1>Скрытая</h1><a href=\"/\">Главная</a></body></html>", 200, ['Content-Type' => 'text/html']),
+        'test.com/copy/' => Http::response("<html lang=\"ru\"><head>{$head}<link rel=\"canonical\" href=\"https://test.com/\"></head><body><h1>Копия</h1><a href=\"/\">Главная</a></body></html>", 200, ['Content-Type' => 'text/html']),
+        '*' => Http::response("<html lang=\"ru\"><head>{$head}</head><body><h1>Главная</h1><a href=\"/hidden/\">x</a><a href=\"/copy/\">y</a></body></html>", 200, ['Content-Type' => 'text/html']),
+    ]);
+
+    $h = createFullStack();
+
+    $this->actingAs($h['user'])->postJson(
+        "/api/v1/projects/{$h['project']->id}/audits",
+        ['scope' => 'site', 'domain_id' => $h['domain']->id],
+        orgHeaders($h['org']),
+    )->assertStatus(201);
+
+    $audit = SiteAudit::latest('id')->firstOrFail();
+    $byCode = collect($audit->findings)->keyBy('code');
+
+    expect($byCode)->toHaveKeys(['site.sitemap.noindex_pages', 'site.sitemap.non_canonical'])
+        ->and($byCode['site.sitemap.noindex_pages']['value'])->toBe(['https://test.com/hidden/'])
+        ->and($byCode['site.sitemap.non_canonical']['value'][0]['url'])->toBe('https://test.com/copy/')
+        // Страницы из карты помечены, а сама главная — тоже из карты.
+        ->and($audit->results()->where('in_sitemap', true)->count())->toBe(3);
+});

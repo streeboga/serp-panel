@@ -109,6 +109,24 @@ function IntegrationsPage() {
         </div>
 
         <Card>
+          <CardHeader>
+            <CardTitle>MCP для агентов</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2 text-sm">
+            <p className="text-muted-foreground">
+              Claude Code, Cursor и другие агенты могут читать позиции, ключи, конкурентов и запускать
+              аудит напрямую. Токен — тот же, что для API (Настройки → API-токены).
+            </p>
+            <pre className="rounded-md bg-muted p-3 text-xs overflow-x-auto">{`claude mcp add serp-panel ${window.location.origin.replace(/^https?:\/\//, 'https://api-')}/mcp \\
+  --transport http --header "Authorization: Bearer <token>"`}</pre>
+            <p className="text-muted-foreground">
+              Инструменты: whoami, list_projects, get_positions, list_keywords, get_keyword_frequency,
+              get_competitors, get_dashboard, run_site_audit, get_audit, get_audit_issues, check_url.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle>Сопоставление доменов</CardTitle>
             {hasSuggestions && (

@@ -20,6 +20,8 @@ use SerpAudit\Checks\Content\WaterCheck;
 use SerpAudit\Checks\Http\AnalyticsCheck;
 use SerpAudit\Checks\Http\AssetsCheck;
 use SerpAudit\Checks\Http\CachingCheck;
+use SerpAudit\Checks\Http\DomSizeCheck;
+use SerpAudit\Checks\Http\FormSecurityCheck;
 use SerpAudit\Checks\Http\IndexingHeaderCheck;
 use SerpAudit\Checks\Http\MixedContentCheck;
 use SerpAudit\Checks\Http\PayloadCheck;
@@ -28,19 +30,24 @@ use SerpAudit\Checks\Http\SecurityHeadersCheck;
 use SerpAudit\Checks\Http\StatusCheck;
 use SerpAudit\Checks\Http\TechnologyCheck;
 use SerpAudit\Checks\Images\AltCheck;
+use SerpAudit\Checks\Images\AttributesCheck;
 use SerpAudit\Checks\Images\DeliveryCheck;
 use SerpAudit\Checks\Images\SourceCheck;
 use SerpAudit\Checks\Legal\ConsentCheck;
 use SerpAudit\Checks\Legal\PolicyLinkCheck;
 use SerpAudit\Checks\Links\AnchorCheck;
 use SerpAudit\Checks\Links\ExternalLinkCheck;
+use SerpAudit\Checks\Links\VolumeCheck;
 use SerpAudit\Checks\Meta\DescriptionCheck;
 use SerpAudit\Checks\Meta\DocumentCheck;
+use SerpAudit\Checks\Meta\DuplicateTagsCheck;
 use SerpAudit\Checks\Meta\HeadingsCheck;
+use SerpAudit\Checks\Meta\HreflangCheck;
 use SerpAudit\Checks\Meta\IndexingCheck;
 use SerpAudit\Checks\Meta\LanguageCheck;
 use SerpAudit\Checks\Meta\LegacyCheck;
 use SerpAudit\Checks\Meta\SchemaCheck;
+use SerpAudit\Checks\Meta\SnippetCheck;
 use SerpAudit\Checks\Meta\SocialCheck;
 use SerpAudit\Checks\Meta\TitleCheck;
 use SerpAudit\Checks\Meta\UrlStructureCheck;
@@ -64,6 +71,8 @@ final class StandardChecksServiceProvider extends ServiceProvider
         CachingCheck::class,
         IndexingHeaderCheck::class,
         MixedContentCheck::class,
+        DomSizeCheck::class,
+        FormSecurityCheck::class,
         UrlStructureCheck::class,
         SchemaCheck::class,
         DeliveryCheck::class,
@@ -83,10 +92,15 @@ final class StandardChecksServiceProvider extends ServiceProvider
         SocialCheck::class,
         LegacyCheck::class,
         LanguageCheck::class,
+        DuplicateTagsCheck::class,
+        HreflangCheck::class,
+        SnippetCheck::class,
         ExternalLinkCheck::class,
         AnchorCheck::class,
+        VolumeCheck::class,
         AltCheck::class,
         SourceCheck::class,
+        AttributesCheck::class,
     ];
 
     /** @var array<int, class-string<Contracts\PageCheck>> Проверки, которым нужен разбор текста. */

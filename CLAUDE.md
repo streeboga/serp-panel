@@ -166,6 +166,29 @@ Unified registry of tracked pages (own + competitors) with polymorphic attachmen
   общий для обоих этапов — вежливость считается на сайт, а не на очередь,
   уважение `Disallow`, потолок `audit.max_pages`
 - **Разовая проверка**: `POST /api/v1/audit/url` — синхронно, без записи в БД (воротца перед публикацией страницы)
+- **«Как исправить»**: `SerpAudit\Remediation` — подсказка по коду находки, подбирается при выводе (API, CSV, PDF, UI), в базе не хранится
+- **Карта против страниц**: `page_audit_results.in_sitemap` ставится при отборе адресов; финализатор даёт `site.sitemap.noindex_pages` и `site.sitemap.non_canonical`
+- **Перенесено из SEOnaut/open-seo** (MIT): `links.volume`, `images.attributes`, `meta.duplicates`, `meta.hreflang`, `meta.snippet`, `http.dom`, `http.forms`
+
+## Интеграции и панели вебмастера
+
+- **OAuth**: Яндекс (`organizations.yandex_token`, общий для Wordstat, Метрики и Вебмастера — приложению нужно право `webmaster:hostinfo`)
+  и Google (`organizations.google_*`, refresh-токен; `GOOGLE_CLIENT_ID/SECRET/REDIRECT_URI`)
+- **Привязки — на доменах**: `domains.webmaster_host_id`, `search_console_site`, `metrika_counter_id`. Не на проектах: аудит адресует `domain_id`
+- **Сопоставление**: `GET /api/v1/integrations/sites` отдаёт ресурсы обоих сервисов, свои домены и подсказки по совпадению хоста; UI — `/settings/integrations`
+- **Сбор**: `CollectSearchDataJob` (Вебмастер + Search Console), `CollectBehaviourJob` (Метрика) — внутри батча браузерного этапа, оба `Batchable`
+- **«Не проверено»**: `App\Services\Audit\Unchecked` пишет причину в `metrics.unchecked[stage]`; блок в отчёте. Молча пропускать этап нельзя
+
+## MCP-сервер
+
+`routes/ai.php` → `Mcp::web('/mcp', SerpPanelServer::class)`, auth — тот же Bearer-токен Sanctum.
+Инструменты в `app/Mcp/Tools/`: организация берётся из `organization_id` или первая у пользователя (`ResolvesOrganization`),
+членство проверяется всегда. Тесты — `SerpPanelServer::actingAs($user)->tool(Tool::class, [...])`.
+
+## AI-видимость
+
+`POST /api/v1/ai-visibility/lookup` — синхронно: вопросы покупателя → доля голоса бренда против конкурентов, цитирования сайта.
+Провайдер — Anthropic Messages API без SDK (`services.anthropic`), без ключа — 422 с причиной. UI — `/ai-visibility`.
 
 ## Testing
 

@@ -3,6 +3,8 @@
     "name": "SEO Monitor"
   },
   "nav": {
+    "aiVisibility": "AI-видимость",
+    "integrations": "Интеграции",
     "dashboard": "Дашборд",
     "projects": "Проекты",
     "classification": "Классификация",

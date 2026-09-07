@@ -24,6 +24,9 @@ final readonly class Thresholds
         'academic_nausea_max' => 30.0,
         'keyword_density_max' => 5.0,
         'words_min' => 300,
+        'links_max' => 100,
+        'alt_max' => 100,
+        'dom_nodes_max' => 1500,
     ];
 
     /** @var array<string, int|float> */

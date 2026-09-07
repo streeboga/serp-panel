@@ -41,12 +41,13 @@ final class PageAuditResult extends Model
         'site_audit_id', 'page_id', 'url', 'url_hash', 'path', 'depth', 'inbound_links',
         'http_status', 'redirect_chain', 'response_time_ms', 'html_size',
         'score', 'issues_critical', 'issues_warning', 'issues_notice', 'issues_muted',
-        'findings', 'metrics', 'error',
+        'findings', 'metrics', 'error', 'in_sitemap',
     ];
 
     protected $casts = [
         'redirect_chain' => 'array',
         'findings' => 'array',
+        'in_sitemap' => 'boolean',
         'metrics' => 'array',
     ];
 

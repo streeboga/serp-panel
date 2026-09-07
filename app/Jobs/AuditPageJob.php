@@ -47,11 +47,20 @@ final class AuditPageJob implements ShouldQueue
         return now()->addHour();
     }
 
+    /**
+     * Обычное свойство с дефолтом, а не продвинутый параметр: джоба, снятая из
+     * очереди без этого поля (выкатка посреди прогона), иначе приезжает
+     * неинициализированной — см. BrowserAuditJob::$viewport.
+     */
+    public bool $inSitemap = false;
+
     public function __construct(
         public readonly int $auditId,
         public readonly string $url,
         public readonly ?int $pageId = null,
+        bool $inSitemap = false,
     ) {
+        $this->inSitemap = $inSitemap;
         $this->onQueue('audit');
     }
 
@@ -91,6 +100,7 @@ final class AuditPageJob implements ShouldQueue
 
             $results->store($this->auditId, $this->url, [
                 'page_id' => $this->pageId,
+                'in_sitemap' => $this->inSitemap,
                 'path' => $path,
                 'error' => $exception->getMessage(),
                 ...$summary,
@@ -113,6 +123,7 @@ final class AuditPageJob implements ShouldQueue
 
         $resultId = $results->store($this->auditId, $this->url, [
             'page_id' => $this->pageId,
+            'in_sitemap' => $this->inSitemap,
             'path' => $path,
             'http_status' => $response->status,
             'redirect_chain' => $response->redirectChain,

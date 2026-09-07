@@ -92,6 +92,7 @@ final class AuditSiteJob implements ShouldQueue
                 auditId: $audit->id,
                 url: $target['url'],
                 pageId: $target['page_id'],
+                inSitemap: (bool) ($target['in_sitemap'] ?? false),
             ),
             $urls,
         );

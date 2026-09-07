@@ -13,6 +13,7 @@
         "dedoc/scramble": "^0.13.16",
         "laravel/framework": "^13.0",
         "laravel/horizon": "^5.45",
+        "laravel/mcp": "^1.0@beta",
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^3.0",
         "spatie/laravel-data": "^4.20",

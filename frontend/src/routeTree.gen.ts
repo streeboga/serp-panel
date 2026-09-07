@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as AiVisibilityRouteImport } from './routes/ai-visibility'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as WordstatSchedulesIndexRouteImport } from './routes/wordstat-schedules/index'
 import { Route as SettingsIndexRouteImport } from './routes/settings/index'
@@ -42,6 +43,11 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AiVisibilityRoute = AiVisibilityRouteImport.update({
+  id: '/ai-visibility',
+  path: '/ai-visibility',
+  getParentRoute: () => rootRouteImport,
+} as any).lazy(() => import('./routes/ai-visibility.lazy').then((d) => d.Route))
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -177,6 +183,7 @@ const ProjectsProjectIdDomainsDomainIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ai-visibility': typeof AiVisibilityRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/classification/domains': typeof ClassificationDomainsRoute
@@ -201,6 +208,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ai-visibility': typeof AiVisibilityRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/classification/domains': typeof ClassificationDomainsRoute
@@ -225,6 +233,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ai-visibility': typeof AiVisibilityRoute
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/classification/domains': typeof ClassificationDomainsRoute
@@ -251,6 +260,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/ai-visibility'
     | '/login'
     | '/register'
     | '/classification/domains'
@@ -275,6 +285,7 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/ai-visibility'
     | '/login'
     | '/register'
     | '/classification/domains'
@@ -298,6 +309,7 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/ai-visibility'
     | '/login'
     | '/register'
     | '/classification/domains'
@@ -323,6 +335,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AiVisibilityRoute: typeof AiVisibilityRoute
   LoginRoute: typeof LoginRoute
   RegisterRoute: typeof RegisterRoute
   ClassificationDomainsRoute: typeof ClassificationDomainsRoute
@@ -351,6 +364,13 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-visibility': {
+      id: '/ai-visibility'
+      path: '/ai-visibility'
+      fullPath: '/ai-visibility'
+      preLoaderRoute: typeof AiVisibilityRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -551,6 +571,7 @@ const ProjectsProjectIdRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AiVisibilityRoute: AiVisibilityRoute,
   LoginRoute: LoginRoute,
   RegisterRoute: RegisterRoute,
   ClassificationDomainsRoute: ClassificationDomainsRoute,

@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\Api\V1\AiVisibilityController;
 use App\Http\Controllers\Api\V1\AlertController;
 use App\Http\Controllers\Api\V1\ApiTokenController;
 use App\Http\Controllers\Api\V1\AuditController;
@@ -70,6 +71,9 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::get('organization/yandex/status', [YandexOAuthController::class, 'status']);
         Route::get('organization/google/status', [GoogleOAuthController::class, 'status']);
         Route::get('auth/google/redirect', [GoogleOAuthController::class, 'redirect']);
+
+        // AI-видимость: синхронная проверка бренда в ответах модели
+        Route::post('ai-visibility/lookup', [AiVisibilityController::class, 'lookup']);
 
         // Сопоставление внешних ресурсов с доменами
         Route::get('integrations/sites', [IntegrationController::class, 'index']);

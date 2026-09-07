@@ -71,6 +71,7 @@ final class FinalizeSiteAuditJob implements ShouldQueue
             ...$this->duplicateFindings($results, $audit->id),
             ...$this->structureFindings($links, $audit->id),
             ...$this->crossPageFindings($links, $audit->id),
+            ...$this->sitemapFindings($results, $audit->id),
         ];
 
         // Политика заглушения — та, что записана в прогоне при запуске. Находки
@@ -112,6 +113,59 @@ final class FinalizeSiteAuditJob implements ShouldQueue
         ]);
 
         Log::info("AuditSiteJob batch complete: audit {$audit->id} — {$aggregate['pages']} страниц, оценка {$score}");
+    }
+
+    /**
+     * Карта сайта против самих страниц: адрес заявлен в карте, а страница
+     * закрыта от индексации или отсылает canonical'ом на другой URL. Роботу
+     * такие обещания только мешают — он тратит обход и ничего не индексирует.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function sitemapFindings(PageAuditResultRepositoryInterface $results, int $auditId): array
+    {
+        $noindex = [];
+        $nonCanonical = [];
+
+        foreach ($results->lazyForAudit($auditId) as $result) {
+            if (! $result->in_sitemap) {
+                continue;
+            }
+
+            $robots = mb_strtolower((string) ($result->metrics['robots'] ?? ''));
+
+            if (str_contains($robots, 'noindex')) {
+                $noindex[] = $result->url;
+
+                continue;
+            }
+
+            $canonical = (string) ($result->metrics['canonical'] ?? '');
+
+            if ($canonical !== '' && rtrim($canonical, '/') !== rtrim($result->url, '/')) {
+                $nonCanonical[] = ['url' => $result->url, 'canonical' => $canonical];
+            }
+        }
+
+        $findings = [];
+
+        if ($noindex !== []) {
+            $findings[] = $this->siteFinding(
+                'site.sitemap.noindex_pages', 'technical', 'warning',
+                'В карте сайта есть страницы, закрытые от индексации meta robots',
+                array_slice($noindex, 0, 15), 'в карте — только индексируемые адреса',
+            );
+        }
+
+        if ($nonCanonical !== []) {
+            $findings[] = $this->siteFinding(
+                'site.sitemap.non_canonical', 'technical', 'notice',
+                'В карте сайта есть адреса, чей canonical указывает на другую страницу',
+                array_slice($nonCanonical, 0, 15), 'в карте — канонические адреса',
+            );
+        }
+
+        return $findings;
     }
 
     /**

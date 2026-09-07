@@ -26,7 +26,7 @@ final readonly class UrlSource
 
     /**
      * @param  array<int, string>  $sitemapUrls
-     * @return array<int, array{url: string, page_id: int|null}>
+     * @return array<int, array{url: string, page_id: int|null, in_sitemap?: bool}>
      */
     public function resolve(SiteAudit $audit, array $sitemapUrls, RobotsTxt $robots, ?string $origin = null): array
     {
@@ -52,7 +52,7 @@ final readonly class UrlSource
 
         if ($audit->scope === AuditScope::Site) {
             foreach ($sitemapUrls as $url) {
-                $candidates[] = ['url' => $url, 'page_id' => null];
+                $candidates[] = ['url' => $url, 'page_id' => null, 'in_sitemap' => true];
             }
 
             foreach ($this->indexedUrls($audit) as $url) {
@@ -94,10 +94,10 @@ final readonly class UrlSource
      * Заодно подтягивает page_id к URL, пришедшим из карты сайта, — чтобы у них
      * тоже считалась релевантность.
      *
-     * @param  array<int, array{url: string, page_id: int|null}>  $candidates
+     * @param  array<int, array{url: string, page_id: int|null, in_sitemap?: bool}>  $candidates
      * @param  array<string, int>  $pageIdsByPath
      * @param  string|null  $host  ограничение по хосту; null — не ограничивать
-     * @return array<int, array{url: string, page_id: int|null}>
+     * @return array<int, array{url: string, page_id: int|null, in_sitemap?: bool}>
      */
     private function clean(array $candidates, RobotsTxt $robots, array $pageIdsByPath, ?string $host = null): array
     {
@@ -136,6 +136,7 @@ final readonly class UrlSource
             $result[] = [
                 'url' => $url,
                 'page_id' => $candidate['page_id'] ?? $pageIdsByPath[$this->normalizePath($path)] ?? null,
+                'in_sitemap' => (bool) ($candidate['in_sitemap'] ?? false),
             ];
 
             if (count($result) >= $limit) {

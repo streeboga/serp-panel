@@ -29,7 +29,8 @@
         .finding .detail { color: #4a545e; font-size: 8.5pt; }
         .muted { color: #78838e; }
         .break { page-break-before: always; }
-    </style>
+        .fix { color: #555; font-size: 9pt; margin-top: 2px; }
+</style>
 </head>
 <body>
 
@@ -104,7 +105,7 @@
             <tbody>
             @foreach(array_slice($grouped[$severity], 0, 30) as $row)
                 <tr>
-                    <td>{{ $row['message'] }}</td>
+                    <td>{{ $row['message'] }}@if(! empty($row['fix']))<div class="fix">{{ $row['fix'] }}</div>@endif</td>
                     <td class="num">{{ $row['pages'] }}</td>
                     <td class="url">{{ \Illuminate\Support\Str::limit($row['example'], 60) }}</td>
                 </tr>

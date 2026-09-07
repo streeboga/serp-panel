@@ -95,6 +95,11 @@ function FindingRow({ finding }: { finding: Finding }) {
         {finding.expected !== null && finding.expected !== undefined && (
           <span className="text-muted-foreground"> (ожидается {String(finding.expected)})</span>
         )}
+        {finding.fix && (
+          <div className="mt-0.5 text-xs text-muted-foreground">
+            <span className="font-medium">Как исправить:</span> {finding.fix}
+          </div>
+        )}
         {!scalar && (
           <div className="mt-1">
             <AuditFindingValue value={finding.value} />

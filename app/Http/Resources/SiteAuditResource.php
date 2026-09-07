@@ -7,6 +7,7 @@ namespace App\Http\Resources;
 use App\Models\SiteAudit;
 use App\Support\JsonApiResource;
 use Illuminate\Http\Request;
+use SerpAudit\Remediation;
 
 /** @mixin SiteAudit */
 final class SiteAuditResource extends JsonApiResource
@@ -37,7 +38,7 @@ final class SiteAuditResource extends JsonApiResource
             'issues_notice' => $this->issues_notice,
             'issues_muted' => $this->issues_muted,
             'muted_codes' => $this->muted_codes ?? [],
-            'findings' => $this->findings ?? [],
+            'findings' => Remediation::attach($this->findings ?? []),
             'metrics' => $this->metrics ?? [],
             'error' => $this->error,
             'started_at' => $this->started_at,

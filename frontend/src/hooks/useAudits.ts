@@ -14,6 +14,8 @@ export interface Finding {
   message: string
   value: unknown
   expected: unknown
+  /** «Как исправить» — подбирается на сервере по коду находки, есть не у всех. */
+  fix?: string
 }
 
 export interface CheckCatalogEntry {

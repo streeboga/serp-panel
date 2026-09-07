@@ -22,6 +22,8 @@ import {
   LogOut,
   PanelLeftClose,
   PanelLeft,
+  Sparkles,
+  Link2,
 } from 'lucide-react'
 
 interface NavItem {
@@ -42,6 +44,8 @@ const configNavItems: NavItem[] = [
   { labelKey: 'nav.schedules', to: '/schedules', icon: <CalendarClock className="size-4" />, prefetchKey: queryKeys.schedules.all },
   { labelKey: 'nav.wordstatSchedules', to: '/wordstat-schedules', icon: <BarChart3 className="size-4" />, prefetchKey: queryKeys.wordstatSchedules.all },
   { labelKey: 'nav.classification', to: '/classification', icon: <Tag className="size-4" />, prefetchKey: queryKeys.classification.rules },
+  { labelKey: 'nav.aiVisibility', to: '/ai-visibility', icon: <Sparkles className="size-4" /> },
+  { labelKey: 'nav.integrations', to: '/settings/integrations', icon: <Link2 className="size-4" />, prefetchKey: queryKeys.integrations.all },
 ]
 
 const prefetchApis: Record<string, string> = {

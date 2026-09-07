@@ -12,6 +12,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\View;
 use SerpAudit\CheckRegistry;
+use SerpAudit\Remediation;
 
 /**
  * Печатный отчёт по прогону: HTML собирается здесь, в PDF его превращает тот же
@@ -111,6 +112,7 @@ final readonly class AuditReportService
                     'category' => (string) ($finding['category'] ?? ''),
                     'pages' => 0,
                     'example' => $result->url,
+                    'fix' => Remediation::for($code),
                 ];
 
                 $byCode[$code]['pages']++;
