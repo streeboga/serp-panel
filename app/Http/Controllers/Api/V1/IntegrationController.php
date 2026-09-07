@@ -36,7 +36,10 @@ final class IntegrationController extends Controller
         $webmaster = $this->webmasterSites((string) ($org->yandex_token ?? ''));
         $console = $this->consoleSites($org);
 
+        // Только свои сайты: права в Вебмастере и Search Console подтверждают на
+        // собственный ресурс, а в реестре доменов лежат ещё и конкуренты из выдачи.
         $domains = Domain::query()
+            ->where('is_own', true)
             ->whereHas('project', fn ($q) => $q->where('organization_id', $org->id))
             ->with('project:id,name')
             ->orderBy('name')
