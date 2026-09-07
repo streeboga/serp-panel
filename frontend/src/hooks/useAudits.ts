@@ -89,23 +89,67 @@ export function useAudit(auditId: number | null) {
   })
 }
 
+export interface PageMeta {
+  current_page: number
+  last_page: number
+  per_page: number
+  total: number
+}
+
+export const RESULTS_PER_PAGE = 50
+
 export function useAuditResults(
   auditId: number | null,
   filters: { severity?: Severity | ''; search?: string } = {},
+  page = 1,
 ) {
-  return useQuery({
-    queryKey: ['audits', 'results', auditId, filters],
+  return useQuery<{ data: PageAuditResult[]; meta?: PageMeta }>({
+    queryKey: ['audits', 'results', auditId, filters, page],
     queryFn: () =>
       api
         .get(`/audits/${auditId}/results`, {
           params: {
             severity: filters.severity || undefined,
             search: filters.search || undefined,
+            page,
+            per_page: RESULTS_PER_PAGE,
           },
         })
         .then((r) => r.data),
     enabled: !!auditId,
+    // Прошлая страница остаётся на экране, пока грузится следующая — без мигания.
+    placeholderData: (previous) => previous,
   })
+}
+
+/** Наборы выгрузки — те же, что отдаёт API. */
+export const EXPORT_DATASETS = [
+  { key: 'pages', label: 'Страницы с кодами ответов' },
+  { key: 'meta', label: 'Title, Description и заголовки' },
+  { key: 'broken', label: 'Битые ссылки и файлы' },
+  { key: 'findings', label: 'Находки построчно' },
+  { key: 'findings', label: 'Находки + пройденные проверки', includePassed: true },
+] as const
+
+/**
+ * Скачивание CSV: ссылка <a href> не понесёт Bearer-токен, поэтому файл тянем
+ * через axios и отдаём браузеру как blob.
+ */
+export async function downloadAuditExport(
+  auditId: number,
+  dataset: string,
+  includePassed = false,
+): Promise<void> {
+  const response = await api.get(`/audits/${auditId}/export/${dataset}`, {
+    params: includePassed ? { include_passed: 1 } : undefined,
+    responseType: 'blob',
+  })
+  const url = URL.createObjectURL(response.data as Blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `audit-${auditId}-${dataset}${includePassed ? '-with-passed' : ''}.csv`
+  a.click()
+  URL.revokeObjectURL(url)
 }
 
 export function useStartAudit(projectId: string) {

@@ -1,9 +1,12 @@
 import { createLazyFileRoute } from '@tanstack/react-router'
-import { useMemo, useState } from 'react'
+import { useDeferredValue, useEffect, useMemo, useState } from 'react'
 import {
   useAudit,
   useAudits,
   useAuditResults,
+  downloadAuditExport,
+  EXPORT_DATASETS,
+  RESULTS_PER_PAGE,
   useCancelAudit,
   useCheckCatalog,
   useStartAudit,
@@ -18,6 +21,12 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
 import { Switch } from '@/components/ui/switch'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { AuditFindingValue } from '@/components/AuditFindingValue'
 import { EmptyState } from '@/components/EmptyState'
 import { TableSkeleton } from '@/components/PageSkeleton'
@@ -37,7 +46,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { parseApiError } from '@/lib/api'
-import { ChevronDown, ChevronRight, Play, SlidersHorizontal, X } from 'lucide-react'
+import { ChevronDown, ChevronLeft, ChevronRight, Download, Play, SlidersHorizontal, X } from 'lucide-react'
 import type { Domain } from '@/types/api'
 
 export const Route = createLazyFileRoute('/projects/$projectId/audit')({
@@ -197,6 +206,8 @@ function AuditPage() {
   const [selectedId, setSelectedId] = useState<number | null>(null)
   const [severity, setSeverity] = useState<Severity | ''>('')
   const [showPassed, setShowPassed] = useState(false)
+  const [page, setPage] = useState(1)
+  const [exporting, setExporting] = useState(false)
   const [search, setSearch] = useState('')
   const [scope, setScope] = useState<'site' | 'url'>('site')
   const [enabled, setEnabled] = useState<Set<string> | null>(null)
@@ -267,15 +278,36 @@ function AuditPage() {
   }, [showPassed, auditData, catalog])
   const audit: SiteAudit | undefined = auditData?.data ?? auditData
 
-  const { data: resultsData, isFetching: resultsLoading } = useAuditResults(currentId, {
-    severity,
-    search,
-  })
+  // Поиск — отложенный: запрос уходит, когда пользователь перестал печатать,
+  // а не на каждую букву.
+  const deferredSearch = useDeferredValue(search)
 
-  const results: PageAuditResult[] = useMemo(() => {
-    const d = resultsData?.data ?? resultsData
-    return Array.isArray(d) ? d : []
-  }, [resultsData])
+  // Смена фильтра или прогона возвращает на первую страницу.
+  useEffect(() => {
+    setPage(1)
+  }, [severity, deferredSearch, currentId])
+
+  const { data: resultsData, isFetching: resultsLoading } = useAuditResults(
+    currentId,
+    { severity, search: deferredSearch },
+    page,
+  )
+
+  const results: PageAuditResult[] = useMemo(() => resultsData?.data ?? [], [resultsData])
+  const meta = resultsData?.meta
+  const lastPage = meta?.last_page ?? 1
+
+  const handleExport = async (dataset: string, includePassed = false) => {
+    if (!currentId) return
+    setExporting(true)
+    try {
+      await downloadAuditExport(currentId, dataset, includePassed)
+    } catch (e) {
+      setError(parseApiError(e))
+    } finally {
+      setExporting(false)
+    }
+  }
 
   const isRunning = audit ? ['pending', 'running'].includes(audit.status) : false
 
@@ -496,6 +528,29 @@ function AuditPage() {
                 <Switch checked={showPassed} onCheckedChange={setShowPassed} />
                 Показывать пройденные
               </label>
+              {meta && (
+                <span className="text-sm text-muted-foreground">
+                  {meta.total} стр.
+                </span>
+              )}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={<Button variant="outline" size="sm" disabled={exporting} />}
+                >
+                  <Download className="size-4 mr-2" />
+                  {exporting ? 'Готовим…' : 'Выгрузить CSV'}
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {EXPORT_DATASETS.map((d) => (
+                    <DropdownMenuItem
+                      key={d.label}
+                      onClick={() => handleExport(d.key, 'includePassed' in d && d.includePassed)}
+                    >
+                      {d.label}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             {resultsLoading && results.length === 0 ? (
@@ -527,6 +582,36 @@ function AuditPage() {
                   ))}
                 </TableBody>
               </Table>
+            )}
+
+            {meta && meta.total > RESULTS_PER_PAGE && (
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
+                <span>
+                  {(meta.current_page - 1) * meta.per_page + 1}–
+                  {Math.min(meta.current_page * meta.per_page, meta.total)} из {meta.total}
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page <= 1 || resultsLoading}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  >
+                    <ChevronLeft className="size-4" />
+                  </Button>
+                  <span>
+                    {page} / {lastPage}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page >= lastPage || resultsLoading}
+                    onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
+                  >
+                    <ChevronRight className="size-4" />
+                  </Button>
+                </div>
+              </div>
             )}
           </div>
         </>
