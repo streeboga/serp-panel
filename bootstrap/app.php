@@ -8,6 +8,7 @@ use App\Http\Middleware\SetOrganization;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -26,7 +27,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->api(prepend: [
             SetLocale::class,
-            \Illuminate\Routing\Middleware\ThrottleRequests::class.':api',
+            ThrottleRequests::class.':api',
         ]);
 
         $middleware->api(append: [
@@ -34,5 +35,9 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        // MCP и API — только JSON: без этого неавторизованный запрос без Accept
+        // уходит в редирект на несуществующий route('login') и отвечает 500.
+        $exceptions->shouldRenderJsonWhen(
+            fn ($request): bool => $request->is('mcp*') || $request->is('api/*') || $request->expectsJson(),
+        );
     })->create();
