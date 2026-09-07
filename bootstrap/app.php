@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Страницы входа у API нет: гостя не редиректим, а отвечаем 401.
+        // Иначе Authenticate ищет route('login') и падает в 500.
+        $middleware->redirectGuestsTo(fn () => null);
+
         $middleware->alias([
             'org' => SetOrganization::class,
             'org.role' => CheckOrganizationRole::class,
