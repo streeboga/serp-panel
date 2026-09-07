@@ -3,13 +3,15 @@
 declare(strict_types=1);
 
 use App\Jobs\CollectSearchDataJob;
+use App\Jobs\ValidateHtmlJob;
+use App\Models\PageAuditResult;
 use App\Models\SiteAudit;
 use App\Services\Integrations\GoogleOAuth;
 use App\Services\Integrations\SearchConsoleClient;
 use App\Services\Integrations\WebmasterClient;
 use Illuminate\Support\Facades\Http;
 
-covers(WebmasterClient::class, SearchConsoleClient::class, GoogleOAuth::class, CollectSearchDataJob::class);
+covers(WebmasterClient::class, SearchConsoleClient::class, GoogleOAuth::class, CollectSearchDataJob::class, ValidateHtmlJob::class);
 
 function searchAudit(array $domainAttributes = []): array
 {
@@ -117,4 +119,27 @@ it('обновляет протухший токен Google, а без refresh-�
 
     expect($oauth->accessToken($h['org']->fresh()))->toBe('fresh')
         ->and($h['org']->fresh()->google_token)->toBe('fresh');
+});
+
+it('молчание валидатора W3C становится пометкой «не проверено», а не чистой страницей', function (): void {
+    $h = searchAudit();
+
+    $result = PageAuditResult::create([
+        'site_audit_id' => $h['audit']->id,
+        'url' => 'https://test.com/',
+        'url_hash' => sha1('https://test.com/'),
+        'path' => '/',
+        'http_status' => 200,
+    ]);
+
+    // Валидатор за Cloudflare отвечает проверочной страницей с кодом 429.
+    Http::fake(['validator.w3.org/*' => Http::response('<html>Just a moment...</html>', 429)]);
+
+    runJob(new ValidateHtmlJob($result->id, 'https://test.com/'));
+
+    $audit = $h['audit']->fresh();
+
+    expect($audit->metrics['unchecked']['w3c'] ?? null)->toContain('не ответил')
+        // Страница обязана остаться без выдуманного «ошибок нет».
+        ->and($result->fresh()->metrics['w3c'] ?? null)->toBeNull();
 });

@@ -7,6 +7,7 @@ namespace App\Jobs;
 use App\Models\PageAuditResult;
 use App\Services\Audit\HtmlValidator;
 use App\Services\Audit\PageAuditor;
+use App\Services\Audit\Unchecked;
 use DateTimeInterface;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
@@ -49,23 +50,26 @@ final class ValidateHtmlJob implements ShouldQueue
         return [new RateLimitedWithRedis('w3c')];
     }
 
-    public function handle(HtmlValidator $validator): void
+    public function handle(HtmlValidator $validator, Unchecked $unchecked): void
     {
         if ($this->batch()?->cancelled()) {
-            return;
-        }
-
-        $outcome = $validator->validate($this->url);
-
-        // Валидатор не ответил — страница осталась непроверенной. Писать «ошибок нет»
-        // нельзя: это ровно то враньё, из-за которого отчёты и расходятся.
-        if ($outcome === null) {
             return;
         }
 
         $result = PageAuditResult::find($this->resultId);
 
         if ($result === null) {
+            return;
+        }
+
+        $outcome = $validator->validate($this->url);
+
+        // Валидатор не ответил — страница осталась непроверенной. Писать «ошибок нет»
+        // нельзя: это ровно то враньё, из-за которого отчёты и расходятся. Причину
+        // пишем в прогон, иначе целый этап пропадает беззвучно.
+        if ($outcome === null) {
+            $unchecked->record($result->audit, 'w3c', 'Валидатор W3C не ответил (лимит или защита от ботов)');
+
             return;
         }
 

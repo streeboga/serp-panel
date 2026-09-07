@@ -8,6 +8,7 @@ use App\Models\PageAuditResult;
 use App\Services\Audit\BrowserAudit;
 use App\Services\Audit\BrowserFindings;
 use App\Services\Audit\PageAuditor;
+use App\Services\Audit\Unchecked;
 use DateTimeInterface;
 use Illuminate\Bus\Batchable;
 use Illuminate\Bus\Queueable;
@@ -53,9 +54,15 @@ final class BrowserAuditJob implements ShouldQueue
         return now()->addHour();
     }
 
-    public function handle(BrowserAudit $browser, BrowserFindings $mapper): void
+    public function handle(BrowserAudit $browser, BrowserFindings $mapper, Unchecked $unchecked): void
     {
         if ($this->batch()?->cancelled()) {
+            return;
+        }
+
+        $result = PageAuditResult::find($this->resultId);
+
+        if ($result === null) {
             return;
         }
 
@@ -64,12 +71,8 @@ final class BrowserAuditJob implements ShouldQueue
         // Сервис недоступен — это «не проверено». Молча писать «нарушений нет»
         // нельзя: страница осталась непроверенной, а выглядела бы чистой.
         if ($measurement === null) {
-            return;
-        }
+            $unchecked->record($result->audit, 'browser', 'Браузерный сервис не ответил');
 
-        $result = PageAuditResult::find($this->resultId);
-
-        if ($result === null) {
             return;
         }
 
