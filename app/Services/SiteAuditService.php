@@ -73,6 +73,12 @@ final readonly class SiteAuditService
         return $this->audits->paginateForProject($project->id, $perPage);
     }
 
+    /** Публичная ссылка показывает только завершённый аудит всего сайта. */
+    public function latestPublic(Project $project): ?SiteAudit
+    {
+        return $this->audits->latestCompletedSiteAudit($project->id);
+    }
+
     public function find(int $id): SiteAudit
     {
         return $this->audits->findById($id);

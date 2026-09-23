@@ -4,7 +4,9 @@ declare(strict_types=1);
 
 use App\Http\Controllers\Api\V1\ProjectController;
 use App\Http\Controllers\Api\V1\PublicProjectController;
+use App\Models\PageAuditResult;
 use App\Models\Project;
+use App\Models\SiteAudit;
 use App\Services\ProjectService;
 use Illuminate\Support\Str;
 
@@ -178,4 +180,38 @@ test('public slug is stored as string type', function () {
     $h['project']->refresh();
     expect($h['project']->public_slug)->toBeString();
     expect($h['project']->public_slug)->toMatch('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/');
+});
+
+test('public audit shows the latest completed site audit only', function () {
+    $h = createFullStack('admin');
+    $slug = Str::uuid()->toString();
+    $h['project']->update(['is_public' => true, 'public_slug' => $slug]);
+
+    $done = SiteAudit::create(['project_id' => $h['project']->id, 'scope' => 'site', 'status' => 'completed']);
+    SiteAudit::create(['project_id' => $h['project']->id, 'scope' => 'site', 'status' => 'running']);
+    SiteAudit::create(['project_id' => $h['project']->id, 'scope' => 'url', 'status' => 'completed']);
+    PageAuditResult::create([
+        'site_audit_id' => $done->id, 'url' => 'https://test.com/', 'url_hash' => sha1('https://test.com/'),
+        'path' => '/', 'http_status' => 200, 'score' => 90,
+        'issues_critical' => 0, 'issues_warning' => 0, 'issues_notice' => 0, 'findings' => [], 'metrics' => [],
+    ]);
+
+    $this->getJson("/api/v1/public/{$slug}/audit")->assertOk()->assertJsonPath('data.id', (string) $done->id);
+    $this->getJson("/api/v1/public/{$slug}/audit/results")->assertOk()->assertJsonCount(1, 'data');
+});
+
+test('public audit is null without a completed audit and results 404', function () {
+    $h = createFullStack('admin');
+    $slug = Str::uuid()->toString();
+    $h['project']->update(['is_public' => true, 'public_slug' => $slug]);
+
+    $this->getJson("/api/v1/public/{$slug}/audit")->assertOk()->assertJsonPath('data', null);
+    $this->getJson("/api/v1/public/{$slug}/audit/results")->assertNotFound();
+});
+
+test('public audit of a private project is 404', function () {
+    $h = createFullStack('admin');
+    $h['project']->update(['is_public' => false, 'public_slug' => $slug = Str::uuid()->toString()]);
+
+    $this->getJson("/api/v1/public/{$slug}/audit")->assertNotFound();
 });

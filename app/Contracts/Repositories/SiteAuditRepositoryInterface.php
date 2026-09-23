@@ -21,4 +21,6 @@ interface SiteAuditRepositoryInterface
     public function paginateForProject(int $projectId, int $perPage = 20): LengthAwarePaginator;
 
     public function hasRunningForProject(int $projectId): bool;
+
+    public function latestCompletedSiteAudit(int $projectId): ?SiteAudit;
 }

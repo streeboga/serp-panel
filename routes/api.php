@@ -43,6 +43,8 @@ Route::prefix('v1')->middleware('json-api')->group(function () {
         Route::get('public/{slug}', [PublicProjectController::class, 'show']);
         Route::get('public/{slug}/positions', [PublicProjectController::class, 'positions']);
         Route::get('public/{slug}/domains', [PublicProjectController::class, 'domains']);
+        Route::get('public/{slug}/audit', [PublicProjectController::class, 'audit']);
+        Route::get('public/{slug}/audit/results', [PublicProjectController::class, 'auditResults']);
     });
 
     Route::post('/auth/register', [AuthController::class, 'register']);

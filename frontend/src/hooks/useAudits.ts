@@ -98,16 +98,17 @@ export interface PageMeta {
 
 export const RESULTS_PER_PAGE = 50
 
+/** resultsUrl — `/audits/{id}/results` в панели или `/public/{slug}/audit/results` по публичной ссылке. */
 export function useAuditResults(
-  auditId: number | null,
+  resultsUrl: string | null,
   filters: { severity?: Severity | ''; search?: string } = {},
   page = 1,
 ) {
   return useQuery<{ data: PageAuditResult[]; meta?: PageMeta }>({
-    queryKey: ['audits', 'results', auditId, filters, page],
+    queryKey: ['audits', 'results', resultsUrl, filters, page],
     queryFn: () =>
       api
-        .get(`/audits/${auditId}/results`, {
+        .get(resultsUrl!, {
           params: {
             severity: filters.severity || undefined,
             search: filters.search || undefined,
@@ -116,7 +117,7 @@ export function useAuditResults(
           },
         })
         .then((r) => r.data),
-    enabled: !!auditId,
+    enabled: !!resultsUrl,
     // Прошлая страница остаётся на экране, пока грузится следующая — без мигания.
     placeholderData: (previous) => previous,
   })

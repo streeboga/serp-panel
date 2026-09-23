@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Repositories\Eloquent;
 
 use App\Contracts\Repositories\SiteAuditRepositoryInterface;
+use App\Enums\AuditScope;
 use App\Enums\AuditStatus;
 use App\Models\SiteAudit;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -46,5 +47,16 @@ final class SiteAuditRepository implements SiteAuditRepositoryInterface
             ->where('project_id', $projectId)
             ->whereIn('status', [AuditStatus::Pending->value, AuditStatus::Running->value])
             ->exists();
+    }
+
+    public function latestCompletedSiteAudit(int $projectId): ?SiteAudit
+    {
+        return SiteAudit::query()
+            ->where('project_id', $projectId)
+            ->where('scope', AuditScope::Site->value)
+            ->where('status', AuditStatus::Completed->value)
+            ->with('domain')
+            ->latest('id')
+            ->first();
     }
 }
