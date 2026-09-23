@@ -11,12 +11,17 @@ import { EngineBadge } from '@/components/EngineBadge'
 import { PositionBadge } from '@/components/PositionBadge'
 import { PageSkeleton } from '@/components/PageSkeleton'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 export const Route = createFileRoute('/public/$slug')({
   component: PublicProjectPage,
 })
 
-const formatDate = (d: string) => new Date(d).toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+const formatDate = (d: string) =>
+  new Date(d).toLocaleDateString('ru-RU', {
+    day: '2-digit',
+    month: '2-digit',
+  })
 
 function fmtFreq(n: number | null): string {
   if (n == null) return '—'
@@ -67,6 +72,13 @@ function PublicProjectPage() {
   )
 }
 
+const GROUPS = {
+  none: 'Без группировки',
+  category: 'По категориям',
+  cluster: 'По кластерам',
+} as const
+type GroupBy = keyof typeof GROUPS
+
 /** 'found' — порядок по умолчанию; остальное — колонка, дата тоже колонка. */
 type Sort = { key: string; dir: 1 | -1 }
 
@@ -79,6 +91,7 @@ function sortValue(r: KeywordRow, key: string): string | number | null {
 
 function PositionsTab({ slug }: { slug: string }) {
   const [sort, setSort] = useState<Sort>({ key: 'found', dir: 1 })
+  const [groupBy, setGroupBy] = useState<GroupBy>('none')
   const matrix = useQuery<PositionMatrixResponse>({
     queryKey: ['public', slug, 'positions'],
     queryFn: () => api.get(`/public/${slug}/positions`, { params: { days: 30 } }).then((r) => r.data.data),
@@ -129,6 +142,17 @@ function PositionsTab({ slug }: { slug: string }) {
     })
   }, [monitored, sort])
 
+  // Группы идут в порядке первого появления, так сортировка решает и порядок групп.
+  const groups = useMemo(() => {
+    if (groupBy === 'none') return [{ label: '', rows }]
+    const map = new Map<string, KeywordRow[]>()
+    for (const r of rows) {
+      const label = r[groupBy] ?? 'Без группы'
+      map.set(label, [...(map.get(label) ?? []), r])
+    }
+    return [...map].map(([label, rows]) => ({ label, rows }))
+  }, [rows, groupBy])
+
   // Частоту смотрят от большей, позиции и текст — от меньшей.
   const toggleSort = (key: string) =>
     setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: key === 'frequency' ? -1 : 1 }))
@@ -151,54 +175,84 @@ function PositionsTab({ slug }: { slug: string }) {
   if (rows.length === 0) return <p className="text-sm text-muted-foreground">Данных о позициях пока нет.</p>
 
   return (
-    <div className="overflow-x-auto border rounded-md">
-      <table className="text-sm w-full">
-        <thead className="bg-muted/50 text-muted-foreground">
-          <tr>
-            {head('keyword', 'Запрос', 'text-left px-3 sticky left-0 bg-muted')}
-            {head('engine', 'ПС')}
-            {head('frequency', 'Частота', 'text-right')}
-            {dates.map((d) => head(d, formatDate(d), 'text-xs tabular-nums'))}
-          </tr>
-          {visibility.map((v) => (
-            <tr key={v.engine} className="border-t">
-              <td className="px-3 py-1.5 sticky left-0 bg-muted text-xs" title="Доля проверенных запросов в ТОП-10">
-                Видимость
-              </td>
-              <td className="px-2 py-1.5"><EngineBadge engine={v.engine} /></td>
-              <td />
-              {dates.map((d) => (
-                <td key={d} className="px-2 py-1.5 text-center text-xs font-medium tabular-nums text-foreground">
-                  {v.byDate[d] == null ? '—' : `${v.byDate[d]}%`}
-                </td>
-              ))}
-            </tr>
+    <div className="space-y-3">
+      <Select items={GROUPS} value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
+        <SelectTrigger className="w-52">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {(Object.keys(GROUPS) as GroupBy[]).map((g) => (
+            <SelectItem key={g} value={g} label={GROUPS[g]}>
+              {GROUPS[g]}
+            </SelectItem>
           ))}
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={`${r.keyword_id}-${r.engine}-${r.device}`} className="border-t">
-              <td className="px-3 py-1.5 sticky left-0 bg-background">{r.keyword}</td>
-              <td className="px-2 py-1.5"><EngineBadge engine={r.engine} /></td>
-              <td
-                className="px-2 py-1.5 text-right tabular-nums text-muted-foreground"
-                title={r.frequency_exact != null ? `Точная: ${r.frequency_exact}` : undefined}
-              >
-                {fmtFreq(r.frequency)}
-              </td>
-              {dates.map((d) => (
-                <td key={d} className="px-2 py-1.5 text-center">
-                  {r.positions[d]?.position == null && r.positions[d]?.monitored ? (
-                    <span className="text-muted-foreground text-xs">&gt;100</span>
-                  ) : (
-                    <PositionBadge position={r.positions[d]?.position ?? null} change={r.positions[d]?.delta ?? null} />
-                  )}
-                </td>
-              ))}
+        </SelectContent>
+      </Select>
+      <div className="overflow-x-auto border rounded-md">
+        <table className="text-sm w-full">
+          <thead className="bg-muted/50 text-muted-foreground">
+            <tr>
+              {head('keyword', 'Запрос', 'text-left px-3 sticky left-0 bg-muted')}
+              {head('engine', 'ПС')}
+              {head('frequency', 'Частота', 'text-right')}
+              {dates.map((d) => head(d, formatDate(d), 'text-xs tabular-nums'))}
             </tr>
+            {visibility.map((v) => (
+              <tr key={v.engine} className="border-t">
+                <td className="px-3 py-1.5 sticky left-0 bg-muted text-xs" title="Доля проверенных запросов в ТОП-10">
+                  Видимость
+                </td>
+                <td className="px-2 py-1.5">
+                  <EngineBadge engine={v.engine} />
+                </td>
+                <td />
+                {dates.map((d) => (
+                  <td key={d} className="px-2 py-1.5 text-center text-xs font-medium tabular-nums text-foreground">
+                    {v.byDate[d] == null ? '—' : `${v.byDate[d]}%`}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          {groups.map((g) => (
+            <tbody key={g.label}>
+              {g.label && (
+                <tr className="border-t bg-muted/30">
+                  <td colSpan={3 + dates.length} className="px-3 py-1.5 font-medium sticky left-0">
+                    {g.label} <span className="text-muted-foreground font-normal">· {g.rows.length}</span>
+                  </td>
+                </tr>
+              )}
+              {g.rows.map((r) => (
+                <tr key={`${r.keyword_id}-${r.engine}-${r.device}`} className="border-t">
+                  <td className="px-3 py-1.5 sticky left-0 bg-background">{r.keyword}</td>
+                  <td className="px-2 py-1.5">
+                    <EngineBadge engine={r.engine} />
+                  </td>
+                  <td
+                    className="px-2 py-1.5 text-right tabular-nums text-muted-foreground"
+                    title={r.frequency_exact != null ? `Точная: ${r.frequency_exact}` : undefined}
+                  >
+                    {fmtFreq(r.frequency)}
+                  </td>
+                  {dates.map((d) => (
+                    <td key={d} className="px-2 py-1.5 text-center">
+                      {r.positions[d]?.position == null && r.positions[d]?.monitored ? (
+                        <span className="text-muted-foreground text-xs">&gt;100</span>
+                      ) : (
+                        <PositionBadge
+                          position={r.positions[d]?.position ?? null}
+                          change={r.positions[d]?.delta ?? null}
+                        />
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
           ))}
-        </tbody>
-      </table>
+        </table>
+      </div>
     </div>
   )
 }
