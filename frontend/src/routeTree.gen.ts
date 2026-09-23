@@ -21,6 +21,7 @@ import { Route as ProjectsIndexRouteImport } from './routes/projects/index'
 import { Route as ClassificationIndexRouteImport } from './routes/classification/index'
 import { Route as AlertsIndexRouteImport } from './routes/alerts/index'
 import { Route as SettingsIntegrationsRouteImport } from './routes/settings/integrations'
+import { Route as PublicSlugRouteImport } from './routes/public/$slug'
 import { Route as ProjectsProjectIdRouteImport } from './routes/projects/$projectId'
 import { Route as ClassificationDomainsRouteImport } from './routes/classification/domains'
 import { Route as ProjectsProjectIdIndexRouteImport } from './routes/projects/$projectId/index'
@@ -99,6 +100,11 @@ const SettingsIntegrationsRoute = SettingsIntegrationsRouteImport.update({
 } as any).lazy(() =>
   import('./routes/settings/integrations.lazy').then((d) => d.Route),
 )
+const PublicSlugRoute = PublicSlugRouteImport.update({
+  id: '/public/$slug',
+  path: '/public/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
   id: '/projects/$projectId',
   path: '/projects/$projectId',
@@ -188,6 +194,7 @@ export interface FileRoutesByFullPath {
   '/register': typeof RegisterRoute
   '/classification/domains': typeof ClassificationDomainsRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/public/$slug': typeof PublicSlugRoute
   '/settings/integrations': typeof SettingsIntegrationsRoute
   '/alerts/': typeof AlertsIndexRoute
   '/classification/': typeof ClassificationIndexRoute
@@ -212,6 +219,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/register': typeof RegisterRoute
   '/classification/domains': typeof ClassificationDomainsRoute
+  '/public/$slug': typeof PublicSlugRoute
   '/settings/integrations': typeof SettingsIntegrationsRoute
   '/alerts': typeof AlertsIndexRoute
   '/classification': typeof ClassificationIndexRoute
@@ -238,6 +246,7 @@ export interface FileRoutesById {
   '/register': typeof RegisterRoute
   '/classification/domains': typeof ClassificationDomainsRoute
   '/projects/$projectId': typeof ProjectsProjectIdRouteWithChildren
+  '/public/$slug': typeof PublicSlugRoute
   '/settings/integrations': typeof SettingsIntegrationsRoute
   '/alerts/': typeof AlertsIndexRoute
   '/classification/': typeof ClassificationIndexRoute
@@ -265,6 +274,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/classification/domains'
     | '/projects/$projectId'
+    | '/public/$slug'
     | '/settings/integrations'
     | '/alerts/'
     | '/classification/'
@@ -289,6 +299,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/register'
     | '/classification/domains'
+    | '/public/$slug'
     | '/settings/integrations'
     | '/alerts'
     | '/classification'
@@ -314,6 +325,7 @@ export interface FileRouteTypes {
     | '/register'
     | '/classification/domains'
     | '/projects/$projectId'
+    | '/public/$slug'
     | '/settings/integrations'
     | '/alerts/'
     | '/classification/'
@@ -340,6 +352,7 @@ export interface RootRouteChildren {
   RegisterRoute: typeof RegisterRoute
   ClassificationDomainsRoute: typeof ClassificationDomainsRoute
   ProjectsProjectIdRoute: typeof ProjectsProjectIdRouteWithChildren
+  PublicSlugRoute: typeof PublicSlugRoute
   SettingsIntegrationsRoute: typeof SettingsIntegrationsRoute
   AlertsIndexRoute: typeof AlertsIndexRoute
   ClassificationIndexRoute: typeof ClassificationIndexRoute
@@ -434,6 +447,13 @@ declare module '@tanstack/react-router' {
       path: '/settings/integrations'
       fullPath: '/settings/integrations'
       preLoaderRoute: typeof SettingsIntegrationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/public/$slug': {
+      id: '/public/$slug'
+      path: '/public/$slug'
+      fullPath: '/public/$slug'
+      preLoaderRoute: typeof PublicSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/projects/$projectId': {
@@ -576,6 +596,7 @@ const rootRouteChildren: RootRouteChildren = {
   RegisterRoute: RegisterRoute,
   ClassificationDomainsRoute: ClassificationDomainsRoute,
   ProjectsProjectIdRoute: ProjectsProjectIdRouteWithChildren,
+  PublicSlugRoute: PublicSlugRoute,
   SettingsIntegrationsRoute: SettingsIntegrationsRoute,
   AlertsIndexRoute: AlertsIndexRoute,
   ClassificationIndexRoute: ClassificationIndexRoute,

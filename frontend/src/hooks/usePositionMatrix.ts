@@ -5,6 +5,7 @@ import { queryKeys } from '@/lib/query-keys'
 export interface PositionCell {
   position: number | null
   delta: number | null
+  monitored?: boolean
 }
 
 export interface KeywordRow {

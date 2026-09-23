@@ -122,7 +122,7 @@ test('public url contains the slug', function () {
     $slug = $response->json('data.attributes.public_slug');
     $url = $response->json('data.attributes.public_url');
     expect($url)->toContain($slug);
-    expect($url)->toContain('/api/v1/public/');
+    expect($url)->toBe(config('app.frontend_url')."/public/{$slug}");
 });
 
 test('toggle public requires is_public field', function () {
