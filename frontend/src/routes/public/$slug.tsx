@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useMemo, useState } from 'react'
-import { ArrowDown, ArrowUp } from 'lucide-react'
+import { ArrowDown, ArrowUp, ChevronDown, ChevronRight } from 'lucide-react'
 import api, { parseApiError } from '@/lib/api'
 import type { Project } from '@/types/api'
 import type { KeywordRow, PositionMatrixResponse } from '@/hooks/usePositionMatrix'
@@ -10,6 +10,7 @@ import { AuditReport } from '@/components/AuditReport'
 import { EngineBadge } from '@/components/EngineBadge'
 import { PositionBadge } from '@/components/PositionBadge'
 import { PageSkeleton } from '@/components/PageSkeleton'
+import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
@@ -79,19 +80,27 @@ const GROUPS = {
 } as const
 type GroupBy = keyof typeof GROUPS
 
+// Три частоты Вордстата, как во внутренней таблице: точная, фразовая, широкая.
+const FREQS = [
+  { key: 'frequency_exact', label: '!', title: 'Точная частота' },
+  { key: 'frequency_phrase', label: '«»', title: 'Фразовая частота' },
+  { key: 'frequency_broad', label: '~', title: 'Широкая частота' },
+] as const
+
 /** 'found' — порядок по умолчанию; остальное — колонка, дата тоже колонка. */
 type Sort = { key: string; dir: 1 | -1 }
 
 function sortValue(r: KeywordRow, key: string): string | number | null {
   if (key === 'keyword') return r.keyword
   if (key === 'engine') return r.engine
-  if (key === 'frequency') return r.frequency
+  if (FREQS.some((f) => f.key === key)) return r[key as (typeof FREQS)[number]['key']]
   return r.positions[key]?.position ?? null
 }
 
 function PositionsTab({ slug }: { slug: string }) {
   const [sort, setSort] = useState<Sort>({ key: 'found', dir: 1 })
   const [groupBy, setGroupBy] = useState<GroupBy>('none')
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const matrix = useQuery<PositionMatrixResponse>({
     queryKey: ['public', slug, 'positions'],
     queryFn: () => api.get(`/public/${slug}/positions`, { params: { days: 30 } }).then((r) => r.data.data),
@@ -153,13 +162,24 @@ function PositionsTab({ slug }: { slug: string }) {
     return [...map].map(([label, rows]) => ({ label, rows }))
   }, [rows, groupBy])
 
+  const toggleGroup = (label: string) =>
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(label)) next.delete(label)
+      else next.add(label)
+      return next
+    })
+
   // Частоту смотрят от большей, позиции и текст — от меньшей.
   const toggleSort = (key: string) =>
-    setSort((s) => (s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: key === 'frequency' ? -1 : 1 }))
+    setSort((s) =>
+      s.key === key ? { key, dir: s.dir === 1 ? -1 : 1 } : { key, dir: key.startsWith('frequency') ? -1 : 1 },
+    )
 
-  const head = (key: string, label: React.ReactNode, className = '') => (
+  const head = (key: string, label: React.ReactNode, className = '', title?: string) => (
     <th
       key={key}
+      title={title}
       className={`px-2 py-2 font-medium cursor-pointer select-none hover:text-foreground whitespace-nowrap ${className}`}
       onClick={() => toggleSort(key)}
     >
@@ -176,25 +196,44 @@ function PositionsTab({ slug }: { slug: string }) {
 
   return (
     <div className="space-y-3">
-      <Select items={GROUPS} value={groupBy} onValueChange={(v) => setGroupBy(v as GroupBy)}>
-        <SelectTrigger className="w-52">
-          <SelectValue />
-        </SelectTrigger>
-        <SelectContent>
-          {(Object.keys(GROUPS) as GroupBy[]).map((g) => (
-            <SelectItem key={g} value={g} label={GROUPS[g]}>
-              {GROUPS[g]}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <div className="flex flex-wrap items-center gap-2">
+        <Select
+          items={GROUPS}
+          value={groupBy}
+          onValueChange={(v) => {
+            setGroupBy(v as GroupBy)
+            setCollapsed(new Set())
+          }}
+        >
+          <SelectTrigger className="w-52">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {(Object.keys(GROUPS) as GroupBy[]).map((g) => (
+              <SelectItem key={g} value={g} label={GROUPS[g]}>
+                {GROUPS[g]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {groupBy !== 'none' && (
+          <>
+            <Button variant="outline" size="sm" onClick={() => setCollapsed(new Set(groups.map((g) => g.label)))}>
+              Свернуть все
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => setCollapsed(new Set())}>
+              Развернуть все
+            </Button>
+          </>
+        )}
+      </div>
       <div className="overflow-x-auto border rounded-md">
         <table className="text-sm w-full">
           <thead className="bg-muted/50 text-muted-foreground">
             <tr>
               {head('keyword', 'Запрос', 'text-left px-3 sticky left-0 bg-muted')}
               {head('engine', 'ПС')}
-              {head('frequency', 'Частота', 'text-right')}
+              {FREQS.map((f) => head(f.key, f.label, 'text-right', f.title))}
               {dates.map((d) => head(d, formatDate(d), 'text-xs tabular-nums'))}
             </tr>
             {visibility.map((v) => (
@@ -205,7 +244,7 @@ function PositionsTab({ slug }: { slug: string }) {
                 <td className="px-2 py-1.5">
                   <EngineBadge engine={v.engine} />
                 </td>
-                <td />
+                <td colSpan={FREQS.length} />
                 {dates.map((d) => (
                   <td key={d} className="px-2 py-1.5 text-center text-xs font-medium tabular-nums text-foreground">
                     {v.byDate[d] == null ? '—' : `${v.byDate[d]}%`}
@@ -217,38 +256,49 @@ function PositionsTab({ slug }: { slug: string }) {
           {groups.map((g) => (
             <tbody key={g.label}>
               {g.label && (
-                <tr className="border-t bg-muted/30">
-                  <td colSpan={3 + dates.length} className="px-3 py-1.5 font-medium sticky left-0">
-                    {g.label} <span className="text-muted-foreground font-normal">· {g.rows.length}</span>
+                <tr className="border-t bg-muted/30 cursor-pointer select-none" onClick={() => toggleGroup(g.label)}>
+                  <td colSpan={2 + FREQS.length + dates.length} className="px-3 py-1.5 font-medium">
+                    <span className="sticky left-3 inline-flex items-center gap-1">
+                      {collapsed.has(g.label) ? (
+                        <ChevronRight className="size-4" />
+                      ) : (
+                        <ChevronDown className="size-4" />
+                      )}
+                      {g.label} <span className="text-muted-foreground font-normal">· {g.rows.length}</span>
+                    </span>
                   </td>
                 </tr>
               )}
-              {g.rows.map((r) => (
-                <tr key={`${r.keyword_id}-${r.engine}-${r.device}`} className="border-t">
-                  <td className="px-3 py-1.5 sticky left-0 bg-background">{r.keyword}</td>
-                  <td className="px-2 py-1.5">
-                    <EngineBadge engine={r.engine} />
-                  </td>
-                  <td
-                    className="px-2 py-1.5 text-right tabular-nums text-muted-foreground"
-                    title={r.frequency_exact != null ? `Точная: ${r.frequency_exact}` : undefined}
-                  >
-                    {fmtFreq(r.frequency)}
-                  </td>
-                  {dates.map((d) => (
-                    <td key={d} className="px-2 py-1.5 text-center">
-                      {r.positions[d]?.position == null && r.positions[d]?.monitored ? (
-                        <span className="text-muted-foreground text-xs">&gt;100</span>
-                      ) : (
-                        <PositionBadge
-                          position={r.positions[d]?.position ?? null}
-                          change={r.positions[d]?.delta ?? null}
-                        />
-                      )}
+              {!collapsed.has(g.label) &&
+                g.rows.map((r) => (
+                  <tr key={`${r.keyword_id}-${r.engine}-${r.device}`} className="border-t">
+                    <td className="px-3 py-1.5 sticky left-0 bg-background">{r.keyword}</td>
+                    <td className="px-2 py-1.5">
+                      <EngineBadge engine={r.engine} />
                     </td>
-                  ))}
-                </tr>
-              ))}
+                    {FREQS.map((f) => (
+                      <td
+                        key={f.key}
+                        className="px-2 py-1.5 text-right tabular-nums text-muted-foreground"
+                        title={r[f.key]?.toLocaleString('ru-RU')}
+                      >
+                        {fmtFreq(r[f.key])}
+                      </td>
+                    ))}
+                    {dates.map((d) => (
+                      <td key={d} className="px-2 py-1.5 text-center">
+                        {r.positions[d]?.position == null && r.positions[d]?.monitored ? (
+                          <span className="text-muted-foreground text-xs">&gt;100</span>
+                        ) : (
+                          <PositionBadge
+                            position={r.positions[d]?.position ?? null}
+                            change={r.positions[d]?.delta ?? null}
+                          />
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
             </tbody>
           ))}
         </table>
