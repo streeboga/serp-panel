@@ -26,6 +26,14 @@ final class LighthouseJob implements ShouldQueue
 
     public int $tries = 0;
 
+    /**
+     * Попытки не ограничены ради лимитера вежливости: его release не должен
+     * стоить попытки. Но исключение — не release. Ошибка, которую повтор не
+     * лечит, иначе крутится до retryUntil и каждый круг пишет стек-трейс:
+     * 6 сентября так набралось 4 ГБ лога за два часа.
+     */
+    public int $maxExceptions = 3;
+
     public int $timeout = 300;
 
     public function __construct(
